@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { db } from './src/db/index.ts';
 import { 
@@ -176,6 +177,45 @@ async function generateAIResponse(prompt: string, fallbackHtml: string): Promise
 
 const PORT = 3000;
 
+// CSRF Cryptographic Configuration
+const CSRF_SECRET = process.env.CSRF_SECRET || crypto.randomBytes(32).toString('hex');
+
+function generateCsrfToken(): string {
+  const timestamp = Date.now().toString();
+  const randomSalt = crypto.randomBytes(16).toString('hex');
+  const payload = `${timestamp}.${randomSalt}`;
+  const hmac = crypto.createHmac('sha256', CSRF_SECRET);
+  hmac.update(payload);
+  const signature = hmac.digest('hex');
+  return `${payload}.${signature}`;
+}
+
+function validateCsrfToken(token: string): boolean {
+  if (!token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  
+  const [timestampStr, randomSalt, signature] = parts;
+  const timestamp = parseInt(timestampStr, 10);
+  if (isNaN(timestamp)) return false;
+  
+  // Max token age: 24 hours
+  const age = Date.now() - timestamp;
+  const MAX_AGE = 24 * 60 * 60 * 1000;
+  if (age < 0 || age > MAX_AGE) return false;
+  
+  const payload = `${timestampStr}.${randomSalt}`;
+  const hmac = crypto.createHmac('sha256', CSRF_SECRET);
+  hmac.update(payload);
+  const expectedSignature = hmac.digest('hex');
+  
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+  } catch (err) {
+    return false;
+  }
+}
+
 export async function getApp() {
   const app = express();
   app.use(express.json());
@@ -186,6 +226,33 @@ export async function getApp() {
     if (req.url.startsWith('/.netlify/functions/api')) {
       req.url = req.url.replace('/.netlify/functions/api', '/api');
     }
+    next();
+  });
+
+  // CSRF Protection Token Request Route (GET: Safe, always permitted)
+  app.get('/api/csrf-token', (req, res) => {
+    const token = generateCsrfToken();
+    res.json({ csrfToken: token });
+  });
+
+  // Apply CSRF Protection Middleware globally on all write actions (POST, PUT, DELETE, PATCH)
+  app.use('/api', (req, res, next) => {
+    const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+    if (safeMethods.includes(req.method)) {
+      return next();
+    }
+
+    // Exclude CSRF token route (it is a GET anyway, but being safe)
+    if (req.path === '/csrf-token') {
+      return next();
+    }
+
+    const token = req.headers['x-csrf-token'];
+    if (!token || typeof token !== 'string' || !validateCsrfToken(token)) {
+      console.warn(`[CSRF] Blocked unauthorized request from ${req.ip} targeting ${req.method} ${req.originalUrl}`);
+      return res.status(403).json({ error: 'Forbidden: Invalid or missing CSRF token' });
+    }
+
     next();
   });
 
