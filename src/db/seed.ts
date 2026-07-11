@@ -9,7 +9,8 @@ import {
   reviews, 
   galleryItems,
   users,
-  signedContracts
+  signedContracts,
+  teamMembers
 } from './schema.ts';
 import { eq, sql } from 'drizzle-orm';
 
@@ -353,6 +354,42 @@ This article reviews our pre-construction workflow used on the Sanaga Bridge pro
       { title: 'Photovoltaic Glass Placement', imageUrl: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=600&q=80', category: 'Sustainability' },
       { title: 'Kribi Beachfront Estates Construction', imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80', category: 'Residential' },
     ]);
+
+    // 10. Seed Team Members
+    console.log('Seeding team members...');
+    const existingTeam = await db.select().from(teamMembers).limit(1);
+    if (existingTeam.length === 0) {
+      await db.insert(teamMembers).values([
+        {
+          name: 'Eng. Dieudonné Kemgne',
+          role: 'Managing Director & Principal Civil Engineer',
+          specialization: 'Structural Engineering & Heavy Infrastructure Projects (MEng, SEC)',
+          image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80',
+          email: 'd.kemgne@madeccgroup.com'
+        },
+        {
+          name: 'Marcus Ndip',
+          role: 'Lead Architect & BIM Director',
+          specialization: 'Eco-Conscious Building Design, 3D Soil Rendering & BIM Modeling (BArch, RIBA)',
+          image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80',
+          email: 'm.ndip@madeccgroup.com'
+        },
+        {
+          name: 'Dr. Amélie Fotso',
+          role: 'Director of Project Delivery',
+          specialization: 'Strategic Contract Management & Construction Resource Optimization (PhD, PMP)',
+          image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+          email: 'a.fotso@madeccgroup.com'
+        },
+        {
+          name: 'Alain Tchouta',
+          role: 'Senior Health & Safety Officer (HSE)',
+          specialization: 'Regulatory Weekly Site Safety Audits & Compliance Standards (NEBOSH Cert)',
+          image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80',
+          email: 'a.tchouta@madeccgroup.com'
+        }
+      ]);
+    }
 
     console.log('--- Database Seeding Completed Successfully ---');
   } catch (error) {

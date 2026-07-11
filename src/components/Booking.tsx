@@ -73,6 +73,26 @@ export default function Booking() {
 
       const data = await res.json();
       if (res.ok) {
+        // Submit to Netlify forms also
+        try {
+          await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              'form-name': 'booking',
+              'clientName': clientName,
+              'email': clientEmail,
+              'phone': '',
+              'date': appointmentDate,
+              'time': '',
+              'service': serviceName,
+              'notes': notes
+            }).toString()
+          });
+        } catch (netlifyErr) {
+          console.warn('Netlify booking form submission failed:', netlifyErr);
+        }
+
         setStatus('success');
         setMsg('Consultation successfully requested! Our technical planning directors will review availability and dispatch a confirmation email.');
         setClientName('');

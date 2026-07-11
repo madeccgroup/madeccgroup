@@ -4,11 +4,37 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MADECC Group - Compliance Contract & Document Studio</title>
-    <link rel="icon" type="image/jpeg" href="/src/assets/images/madecc_favicon_1783370994073.jpg" />
+    <link rel="icon" type="image/jpeg" href="/madecc_favicon_1783370994073.jpg" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Hidden forms for Netlify static detection -->
+    <form name="contact" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="text" name="subject" />
+      <textarea name="message"></textarea>
+    </form>
+    <form name="booking" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="text" name="clientName" />
+      <input type="email" name="email" />
+      <input type="text" name="phone" />
+      <input type="date" name="date" />
+      <input type="text" name="time" />
+      <input type="text" name="service" />
+      <textarea name="notes"></textarea>
+    </form>
+    <form name="newsletter" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="email" name="email" />
+    </form>
+    <form name="reviews" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="text" name="authorName" />
+      <input type="number" name="rating" />
+      <textarea name="text"></textarea>
+      <input type="text" name="projectName" />
+    </form>
   </body>
 </html>
 

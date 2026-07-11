@@ -43,6 +43,23 @@ export default function Contact() {
       });
       const data = await res.json();
       if (res.ok) {
+        // Submit to Netlify forms also
+        try {
+          await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              'form-name': 'contact',
+              'name': name,
+              'email': email,
+              'subject': subject,
+              'message': message
+            }).toString()
+          });
+        } catch (netlifyErr) {
+          console.warn('Netlify form submission failed, continuing anyway:', netlifyErr);
+        }
+
         setStatus('success');
         setResponseMsg('Your message was successfully submitted to our office. Our directors will review it shortly.');
         setName('');

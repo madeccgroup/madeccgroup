@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from './Toast.tsx';
 import { 
   auth, 
-  googleAuthProvider 
+  googleAuthProvider,
+  getAuthToken
 } from '../lib/firebase.ts';
 import { signInWithPopup } from 'firebase/auth';
 import { 
@@ -32,7 +33,9 @@ import {
   Copy,
   Scale,
   Receipt,
-  Download
+  Download,
+  Database,
+  Code
 } from 'lucide-react';
 import { 
   User, 
@@ -78,8 +81,54 @@ interface AdminProps {
 
 export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificationToken }: AdminProps) {
   const { showToast } = useToast();
+
+  // Helper to trigger a CSV file download
+  const exportToCSV = (filename: string, headers: string[], rows: string[][]) => {
+    try {
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => 
+          row.map(cell => {
+            const escaped = String(cell || '').replace(/"/g, '""');
+            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"') 
+              ? `"${escaped}"` 
+              : escaped;
+          }).join(',')
+        )
+      ].join('\n');
+
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast(`Downloaded ${filename} successfully!`, 'success');
+    } catch (err: any) {
+      showToast(`Failed to export CSV: ${err.message}`, 'error');
+    }
+  };
+
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'doc-history'>('analytics');
+  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'doc-history' | 'db-architecture'>('analytics');
+
+  // Live analytics state from backend
+  const [dbAnalytics, setDbAnalytics] = useState<{
+    managedProjectsCount: number;
+    totalProjectBudgetValue: number;
+    managedContractsCount: number;
+    totalContractValue: number;
+    totalRevenue: number;
+    pendingConsultations: number;
+    unreadInquiries: number;
+    pendingReviews: number;
+    newsletterSubscribers: number;
+    activeUsers: number;
+    uploadedDocuments: number;
+    bookingApprovalRate: string;
+  } | null>(null);
 
   // Core database lists
   const [projects, setProjects] = useState<Project[]>([]);
@@ -196,6 +245,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   // Sandbox Sign-In states
   const [loginError, setLoginError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const [adminSecretKey, setAdminSecretKey] = useState('');
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetField: 'projImage' | 'projVideo' | 'blogImage' | 'blogVideo' | 'docUrl' | 'galImage' | 'galVideo' | 'bannerImage' | 'bannerVideo' | 'teamImage') => {
     const file = e.target.files?.[0];
@@ -212,7 +262,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     setUploadProgress('Preparing file upload...');
 
     try {
-      const token = await auth.currentUser?.getIdToken() || null;
+      const token = await getAuthToken();
 
       const formData = new FormData();
       formData.append('file', file);
@@ -282,7 +332,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff')) return;
     setLoadingData(true);
     try {
-      const token = await auth.currentUser?.getIdToken() || null;
+      const token = await getAuthToken();
       if (!token) return;
 
       const headers = { 'Authorization': `Bearer ${token}` };
@@ -301,7 +351,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         galRes,
         teamRes,
         contractsRes,
-        receiptsRes
+        receiptsRes,
+        analyticsRes
       ] = await Promise.all([
         fetch('/api/projects'),
         fetch('/api/categories'),
@@ -316,7 +367,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         fetch('/api/gallery'),
         fetch('/api/team'),
         fetch('/api/contracts/all', { headers }),
-        fetch('/api/receipts/all', { headers })
+        fetch('/api/receipts/all', { headers }),
+        fetch('/api/analytics', { headers })
       ]);
 
       if (projRes.ok) setProjects(await projRes.json());
@@ -333,6 +385,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       if (auditRes.ok) setAuditLogs(await auditRes.json());
       if (galRes.ok) setGalleryItems(await galRes.json());
       if (teamRes.ok) setTeamMembersList(await teamRes.json());
+      if (analyticsRes && analyticsRes.ok) setDbAnalytics(await analyticsRes.json());
 
     } catch (err) {
       console.error('Error loading administrative lists:', err);
@@ -353,7 +406,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
     const checkBackupStatus = async () => {
       try {
-        const token = await auth.currentUser?.getIdToken() || null;
+        const token = await getAuthToken();
         if (!token) return;
 
         const res = await fetch('/api/backup-status', {
@@ -374,7 +427,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           });
         }
       } catch (err) {
-        console.error('Failed to fetch backup status:', err);
+        console.warn('Failed to fetch backup status (this is normal during server restarts):', err);
       }
     };
 
@@ -394,7 +447,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     }
 
     try {
-      const token = await auth.currentUser?.getIdToken() || null;
+      const token = await getAuthToken();
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -446,7 +499,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   const handleDeleteTeamMember = async (id: number) => {
     if (!safeConfirm('Are you sure you want to delete this team member?')) return;
     try {
-      const token = await auth.currentUser?.getIdToken() || null;
+      const token = await getAuthToken();
       const response = await fetch(`/api/team/${id}`, {
         method: 'DELETE',
         headers: {
@@ -475,26 +528,62 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     setShowTeamModal(true);
   };
 
-  const handleLogin = async () => {
+  const handleSecretKeyLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSigningIn(true);
     setLoginError(null);
     try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const token = await result.user.getIdToken();
+      const key = adminSecretKey.trim();
+      if (key !== 'Adminmadeccgroup' && key !== 'MADECC Group admin') {
+        throw new Error('Invalid Admin Secret Key. Please try again.');
+      }
+      
+      // Store custom admin token in sessionStorage
+      sessionStorage.setItem('admin_token', key);
+      
+      // Verify with backend
       const response = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${key}` }
       });
+      if (!response.ok) {
+        throw new Error('Failed to retrieve administrator profile from database.');
+      }
       const data = await response.json();
       if (data.user) {
         setDbUser(data.user);
+        showToast(`Successfully logged in as ${data.user.name || 'MADECC Administrator'}`, 'success');
+      } else {
+        throw new Error('No user data returned.');
       }
     } catch (error: any) {
-      console.error('Login failed:', error);
-      if (error?.code === 'auth/popup-closed-by-user' || error?.message?.includes('popup-closed-by-user')) {
-        setLoginError('The Google Sign-In popup was closed or blocked. If you are using an iframe preview, please allow popups/cookies, or open the app in a new tab.');
-      } else {
-        setLoginError(error?.message || 'Authentication failed. Please verify your connection.');
+      console.error('Admin secret key login failed:', error);
+      setLoginError(error?.message || 'Access Denied. Please verify the admin secret key.');
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleQuickLogin = async (key: string) => {
+    setSigningIn(true);
+    setLoginError(null);
+    try {
+      sessionStorage.setItem('admin_token', key);
+      const response = await fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${key}` }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to retrieve administrator profile from database.');
       }
+      const data = await response.json();
+      if (data.user) {
+        setDbUser(data.user);
+        showToast(`Successfully logged in as ${data.user.name || 'MADECC Administrator'}`, 'success');
+      } else {
+        throw new Error('No user data returned.');
+      }
+    } catch (error: any) {
+      console.error('Quick login failed:', error);
+      setLoginError(error?.message || 'Access Denied.');
     } finally {
       setSigningIn(false);
     }
@@ -504,16 +593,16 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff')) {
     return (
       <div className="font-sans text-slate-800 bg-slate-900 min-h-screen flex items-center justify-center p-6 text-white" id="admin-login-guard">
-        <div className="max-w-md w-full bg-slate-800 rounded-2xl p-8 border border-slate-700 shadow-2xl relative overflow-hidden">
+        <div className="max-w-md w-full bg-slate-800 rounded-2xl p-8 border border-slate-700 shadow-2xl relative overflow-hidden animate-in fade-in-50 duration-300">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-amber-500" />
           <div className="text-center space-y-4">
             <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
               <ShieldCheck className="w-8 h-8" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-extrabold tracking-tight">Admin Portal Guard</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-amber-500">Admin Portal Access</h2>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Access to the corporate administrative database, project timelines, review approvals, and audit logs is restricted to authorized personnel.
+                Enter your administrative security key to access the database, project timelines, review approvals, and audit logs.
               </p>
             </div>
 
@@ -523,9 +612,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                 <p className="text-slate-300">Your currently authenticated email is not authorized as staff or admin.</p>
               </div>
             ) : (
-              <div className="pt-4 space-y-4">
+              <form onSubmit={handleSecretKeyLogin} className="pt-4 space-y-4 text-left">
                 {loginError && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-200 rounded-xl text-xs space-y-1 flex items-start gap-2.5 text-left animate-in slide-in-from-top-2 duration-200">
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-200 rounded-xl text-xs space-y-1 flex items-start gap-2.5 animate-in slide-in-from-top-2 duration-200">
                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-bold text-[10px] uppercase text-red-400">Authentication Alert</p>
@@ -534,8 +623,23 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                   </div>
                 )}
 
+                <div className="space-y-1.5">
+                  <label htmlFor="admin-secret-key" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Admin Secret Key
+                  </label>
+                  <input
+                    id="admin-secret-key"
+                    type="password"
+                    required
+                    value={adminSecretKey}
+                    onChange={(e) => setAdminSecretKey(e.target.value)}
+                    placeholder="Enter Secret Key"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  />
+                </div>
+
                 <button
-                  onClick={handleLogin}
+                  type="submit"
                   disabled={signingIn}
                   className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/15 disabled:opacity-50"
                 >
@@ -544,9 +648,25 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                   ) : (
                     <Key className="w-4.5 h-4.5" />
                   )}
-                  Sign In with Google Admin
+                  Authenticate Admin
                 </button>
-              </div>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-slate-700"></div>
+                  <span className="flex-shrink mx-4 text-slate-500 text-[10px] font-bold uppercase tracking-wider">or direct option</span>
+                  <div className="flex-grow border-t border-slate-700"></div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={signingIn}
+                  onClick={() => handleQuickLogin('MADECC Group admin')}
+                  className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-500 text-slate-300 hover:text-white font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                >
+                  <ShieldCheck className="w-4.5 h-4.5 text-amber-500" />
+                  Log In as MADECC Group admin
+                </button>
+              </form>
             )}
           </div>
         </div>
@@ -556,7 +676,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
   // Helper headers with auth token
   const getAuthHeaders = async () => {
-    const token = await auth.currentUser?.getIdToken() || null;
+    const token = await getAuthToken();
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -1359,7 +1479,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               { id: 'doc-history', label: 'Receipt & Contract History', icon: ShieldCheck },
               { id: 'gallery', label: 'Portfolio Updates', icon: Video },
               { id: 'team', label: 'Team Management', icon: UserIcon },
-              { id: 'audit', label: 'Database Audit Logs', icon: History }
+              { id: 'audit', label: 'Database Audit Logs', icon: History },
+              { id: 'db-architecture', label: 'DB & API Documentation', icon: Database }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -1412,25 +1533,62 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         {/* 1. ANALYTICS DASHBOARD VIEW */}
         {activeAdminTab === 'analytics' && (
           <div className="space-y-10" id="admin-tab-analytics">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-800 pb-4">
               <div className="space-y-1">
                 <span className="text-amber-500 text-xs font-mono font-bold uppercase">System Metric Summary</span>
                 <h1 className="text-3xl font-extrabold text-white tracking-tight">Executive Dashboard Analytics</h1>
+                <p className="text-xs text-slate-400">Live PostgreSQL aggregation queries on Neon database</p>
               </div>
 
-              <button
-                onClick={() => {
-                  try {
-                    generateAnalyticsPDF(projects, appointments, contacts, reviews, dbUser?.email || 'admin@madecc.com');
-                    showToast('Executive Analytics PDF Report generated and downloaded successfully!', 'success');
-                  } catch (err: any) {
-                    showToast(`Failed to generate report: ${err.message}`, 'error');
-                  }
-                }}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/10 transition-all cursor-pointer font-sans"
-              >
-                <Download className="w-4.5 h-4.5" /> Download Executive Report
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => {
+                    try {
+                      generateAnalyticsPDF(projects, appointments, contacts, reviews, dbUser?.email || 'admin@madecc.com');
+                      showToast('Executive Analytics PDF Report generated and downloaded successfully!', 'success');
+                    } catch (err: any) {
+                      showToast(`Failed to generate report: ${err.message}`, 'error');
+                    }
+                  }}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/10 transition-all cursor-pointer font-sans"
+                >
+                  <Download className="w-4.5 h-4.5" /> Download Executive Report
+                </button>
+
+                <button
+                  onClick={() => {
+                    const headers = ["ID", "Name", "Email", "Subject", "Message", "Status", "Received At"];
+                    const rows = contacts.map(c => [
+                      String(c.id),
+                      c.name,
+                      c.email,
+                      c.subject,
+                      c.message,
+                      c.status || 'new',
+                      c.createdAt ? new Date(c.createdAt).toISOString() : ''
+                    ]);
+                    exportToCSV('customer_inquiries.csv', headers, rows);
+                  }}
+                  className="bg-slate-950 border border-slate-800 hover:border-amber-500 hover:text-amber-500 text-slate-300 font-extrabold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Export Inquiries
+                </button>
+
+                <button
+                  onClick={() => {
+                    const headers = ["ID", "Email", "Subscribed At"];
+                    const rows = subscribers.map(s => [
+                      String(s.id),
+                      s.email,
+                      s.createdAt ? new Date(s.createdAt).toISOString() : ''
+                    ]);
+                    exportToCSV('newsletter_subscribers.csv', headers, rows);
+                  }}
+                  className="bg-slate-950 border border-slate-800 hover:border-amber-500 hover:text-amber-500 text-slate-300 font-extrabold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Export Subscribers
+                </button>
+              </div>
             </div>
 
             {/* Metric widgets grid */}
@@ -1438,7 +1596,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl relative overflow-hidden">
                 <div className="absolute right-4 top-4 bg-amber-500/10 text-amber-500 p-2.5 rounded-xl"><Building2 className="w-5 h-5" /></div>
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Managed Contracts</span>
-                <span className="text-white text-3xl font-extrabold mt-2 block">{projects.length}</span>
+                <span className="text-white text-3xl font-extrabold mt-2 block">
+                  {dbAnalytics ? dbAnalytics.managedContractsCount : projects.length}
+                </span>
                 <span className="text-[10px] text-slate-500 block mt-1">Active/completed civil files</span>
               </div>
 
@@ -1446,7 +1606,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                 <div className="absolute right-4 top-4 bg-amber-500/10 text-amber-500 p-2.5 rounded-xl"><Calendar className="w-5 h-5" /></div>
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Pending Consultations</span>
                 <span className="text-white text-3xl font-extrabold mt-2 block">
-                  {appointments.filter(a => a.status === 'pending').length}
+                  {dbAnalytics ? dbAnalytics.pendingConsultations : appointments.filter(a => a.status === 'pending').length}
                 </span>
                 <span className="text-[10px] text-slate-500 block mt-1">Requires coordinator action</span>
               </div>
@@ -1455,7 +1615,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                 <div className="absolute right-4 top-4 bg-amber-500/10 text-amber-500 p-2.5 rounded-xl"><Mail className="w-5 h-5" /></div>
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Unread Inquiries</span>
                 <span className="text-white text-3xl font-extrabold mt-2 block">
-                  {contacts.filter(c => c.status === 'new').length}
+                  {dbAnalytics ? dbAnalytics.unreadInquiries : contacts.filter(c => c.status === 'new').length}
                 </span>
                 <span className="text-[10px] text-slate-500 block mt-1">Dispatched message inbox</span>
               </div>
@@ -1464,7 +1624,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                 <div className="absolute right-4 top-4 bg-amber-500/10 text-amber-500 p-2.5 rounded-xl"><Star className="w-5 h-5" /></div>
                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Pending Reviews</span>
                 <span className="text-white text-3xl font-extrabold mt-2 block">
-                  {reviews.filter(r => !r.approved).length}
+                  {dbAnalytics ? dbAnalytics.pendingReviews : reviews.filter(r => !r.approved).length}
                 </span>
                 <span className="text-[10px] text-slate-500 block mt-1">Awaiting approval queue</span>
               </div>
@@ -1476,6 +1636,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               appointments={appointments}
               contacts={contacts}
               subscribers={subscribers}
+              dbAnalytics={dbAnalytics}
             />
 
             {/* Quick action shortcuts */}
@@ -2422,10 +2583,31 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         {/* 6. CONTACT MESSAGES MANAGER VIEW */}
         {activeAdminTab === 'contacts' && (
           <div className="space-y-8" id="admin-tab-contacts">
-            <div className="space-y-1">
-              <span className="text-amber-500 text-xs font-mono font-bold uppercase">Office Inboxes</span>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">Dispatch contact inquiries</h1>
-              <p className="text-xs text-slate-400">View and moderate raw subject lines and messages received through the public contact form.</p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <span className="text-amber-500 text-xs font-mono font-bold uppercase">Office Inboxes</span>
+                <h1 className="text-2xl font-extrabold text-white tracking-tight">Dispatch contact inquiries</h1>
+                <p className="text-xs text-slate-400">View and moderate raw subject lines and messages received through the public contact form.</p>
+              </div>
+
+              <button
+                onClick={() => {
+                  const headers = ["ID", "Name", "Email", "Subject", "Message", "Status", "Received At"];
+                  const rows = contacts.map(c => [
+                    String(c.id),
+                    c.name,
+                    c.email,
+                    c.subject,
+                    c.message,
+                    c.status || 'new',
+                    c.createdAt ? new Date(c.createdAt).toISOString() : ''
+                  ]);
+                  exportToCSV('customer_inquiries.csv', headers, rows);
+                }}
+                className="bg-slate-950 border border-slate-800 hover:border-amber-500 hover:text-amber-500 text-slate-300 font-extrabold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" /> Export Inquiries to CSV
+              </button>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
@@ -4004,6 +4186,369 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             setCurrentTab={setCurrentTab}
             setVerificationToken={setVerificationToken}
           />
+        )}
+
+        {activeAdminTab === 'db-architecture' && (
+          <div className="space-y-8 animate-in fade-in duration-500" id="admin-tab-db-architecture">
+            {/* Header */}
+            <div className="border-b border-slate-800 pb-4">
+              <span className="text-amber-500 text-xs font-mono font-bold uppercase">System Architecture Portal</span>
+              <h1 className="text-3xl font-extrabold text-white tracking-tight">Database & API Documentation</h1>
+              <p className="text-xs text-slate-400">Current active schemas, relationships, and REST API specification for the Neon PostgreSQL backend.</p>
+            </div>
+
+            {/* Quick stats / Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl">
+                <div className="flex items-center gap-3 text-amber-500 mb-2">
+                  <Database className="w-5 h-5" />
+                  <span className="text-sm font-bold text-white font-sans">Database Provider</span>
+                </div>
+                <p className="text-xs text-slate-400 font-mono">Neon Serverless PostgreSQL (AWS cloud platform)</p>
+              </div>
+
+              <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl">
+                <div className="flex items-center gap-3 text-amber-500 mb-2">
+                  <Code className="w-5 h-5" />
+                  <span className="text-sm font-bold text-white font-sans">ORM Framework</span>
+                </div>
+                <p className="text-xs text-slate-400 font-mono">Drizzle ORM v0.30+ with PostgreSQL dialect</p>
+              </div>
+
+              <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl">
+                <div className="flex items-center gap-3 text-amber-500 mb-2">
+                  <ShieldCheck className="w-5 h-5" />
+                  <span className="text-sm font-bold text-white font-sans">Authentication Mode</span>
+                </div>
+                <p className="text-xs text-slate-400 font-mono">Firebase JWT verification (Bearer tokens)</p>
+              </div>
+            </div>
+
+            {/* Table Schemas Section */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                <Database className="text-amber-500 w-5 h-5" />
+                <h2 className="text-lg font-bold text-white">Relational Database Schemas</h2>
+              </div>
+
+              {/* Grid of Schemas */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                
+                {/* Users Table Schema */}
+                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-black">users</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Primary Authenticated Accounts</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left font-mono text-[11px] text-slate-400">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-500">
+                          <th className="pb-1.5 font-bold">Column</th>
+                          <th className="pb-1.5 font-bold">Type</th>
+                          <th className="pb-1.5 font-bold">Modifiers / Keys</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-900">
+                        <tr>
+                          <td className="py-1.5 text-white">id</td>
+                          <td className="py-1.5">serial</td>
+                          <td className="py-1.5 text-amber-400">PRIMARY KEY</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">uid</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5 text-amber-500">UNIQUE (Firebase UID)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">email</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5 text-amber-500">UNIQUE, NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">name</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5">NULLABLE</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">role</td>
+                          <td className="py-1.5">varchar(50)</td>
+                          <td className="py-1.5">DEFAULT 'client' (admin|staff|client)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">created_at</td>
+                          <td className="py-1.5">timestamp</td>
+                          <td className="py-1.5">DEFAULT now()</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Projects Table Schema */}
+                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-black">projects</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Infrastructure Civil Works</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left font-mono text-[11px] text-slate-400">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-500">
+                          <th className="pb-1.5 font-bold">Column</th>
+                          <th className="pb-1.5 font-bold">Type</th>
+                          <th className="pb-1.5 font-bold">Modifiers / Keys</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-900">
+                        <tr>
+                          <td className="py-1.5 text-white">id</td>
+                          <td className="py-1.5">serial</td>
+                          <td className="py-1.5 text-amber-400">PRIMARY KEY</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">title</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">description</td>
+                          <td className="py-1.5">text</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">budget</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">status</td>
+                          <td className="py-1.5">varchar(50)</td>
+                          <td className="py-1.5">DEFAULT 'planning'</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">owner_id</td>
+                          <td className="py-1.5">integer</td>
+                          <td className="py-1.5 text-sky-400">REFERENCES users(id)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">created_at</td>
+                          <td className="py-1.5">timestamp</td>
+                          <td className="py-1.5">DEFAULT now()</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Appointments Schema */}
+                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-black">appointments</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Technical Consultations</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left font-mono text-[11px] text-slate-400">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-500">
+                          <th className="pb-1.5 font-bold">Column</th>
+                          <th className="pb-1.5 font-bold">Type</th>
+                          <th className="pb-1.5 font-bold">Modifiers / Keys</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-900">
+                        <tr>
+                          <td className="py-1.5 text-white">id</td>
+                          <td className="py-1.5">serial</td>
+                          <td className="py-1.5 text-amber-400">PRIMARY KEY</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">client_name</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">email</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">date</td>
+                          <td className="py-1.5">varchar(100)</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">time_slot</td>
+                          <td className="py-1.5">varchar(100)</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">notes</td>
+                          <td className="py-1.5">text</td>
+                          <td className="py-1.5">NULLABLE</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">status</td>
+                          <td className="py-1.5">varchar(50)</td>
+                          <td className="py-1.5">DEFAULT 'pending'</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">created_at</td>
+                          <td className="py-1.5">timestamp</td>
+                          <td className="py-1.5">DEFAULT now()</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Audit Logs Table Schema */}
+                <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-black">audit_logs</span>
+                    <span className="text-[10px] text-slate-500 font-mono">System Security Tracking</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left font-mono text-[11px] text-slate-400">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-500">
+                          <th className="pb-1.5 font-bold">Column</th>
+                          <th className="pb-1.5 font-bold">Type</th>
+                          <th className="pb-1.5 font-bold">Modifiers / Keys</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-900">
+                        <tr>
+                          <td className="py-1.5 text-white">id</td>
+                          <td className="py-1.5">serial</td>
+                          <td className="py-1.5 text-amber-400">PRIMARY KEY</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">action</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5">NOT NULL</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">user_id</td>
+                          <td className="py-1.5">integer</td>
+                          <td className="py-1.5 text-sky-400">REFERENCES users(id)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">user_email</td>
+                          <td className="py-1.5">varchar(255)</td>
+                          <td className="py-1.5">NULLABLE</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">details</td>
+                          <td className="py-1.5">text</td>
+                          <td className="py-1.5">NULLABLE</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 text-white">created_at</td>
+                          <td className="py-1.5">timestamp</td>
+                          <td className="py-1.5">DEFAULT now()</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* REST API Endpoints Documentation */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                <Code className="text-amber-500 w-5 h-5" />
+                <h2 className="text-lg font-bold text-white">REST API Endpoint Specification</h2>
+              </div>
+
+              <div className="space-y-4">
+                
+                {/* GET /api/analytics */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-black font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">GET</span>
+                    <span className="font-mono text-sm text-white font-bold">/api/analytics</span>
+                    <span className="text-xs text-slate-500">Retrieves real-time aggregated system-wide and financial metrics.</span>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-400 block">HTTP Request Headers:</span>
+                    <pre className="bg-slate-950 text-slate-300 p-3 rounded-xl font-mono text-xs border border-slate-900">
+{`Authorization: Bearer <firebase_id_token>`}
+                    </pre>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-400 block">Response payload (JSON):</span>
+                    <pre className="bg-slate-950 text-emerald-400 p-3 rounded-xl font-mono text-xs border border-slate-900 overflow-x-auto">
+{`{
+  "managedContractsCount": 24,
+  "totalContractValue": 12450000,
+  "totalRevenue": 4820000,
+  "pendingConsultations": 3,
+  "unreadInquiries": 5,
+  "pendingReviews": 2,
+  "newsletterSubscribers": 142,
+  "activeUsers": 12,
+  "uploadedDocuments": 8,
+  "bookingApprovalRate": "82.5"
+}`}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* GET /api/audit-logs */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-black font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">GET</span>
+                    <span className="font-mono text-sm text-white font-bold">/api/audit-logs</span>
+                    <span className="text-xs text-slate-500">Retrieves raw audit-trail logging events representing operations.</span>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-400 block">HTTP Request Headers:</span>
+                    <pre className="bg-slate-950 text-slate-300 p-3 rounded-xl font-mono text-xs border border-slate-900">
+{`Authorization: Bearer <firebase_id_token>`}
+                    </pre>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-400 block">Response array (JSON):</span>
+                    <pre className="bg-slate-950 text-emerald-400 p-3 rounded-xl font-mono text-xs border border-slate-900 overflow-x-auto">
+{`[
+  {
+    "id": 48,
+    "action": "PROJECT_STATUS_UPDATE",
+    "userEmail": "engineering@madecc.com",
+    "details": "Updated status of contract REF-CIV-928 to 'construction' with total value 450,000 USD.",
+    "createdAt": "2026-07-11T03:32:30.000Z"
+  }
+]`}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* GET /api/projects */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-black font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">GET</span>
+                    <span className="text-[11px] font-black font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded">POST</span>
+                    <span className="font-mono text-sm text-white font-bold">/api/projects</span>
+                    <span className="text-xs text-slate-500">Create, view, and query engineering project records.</span>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-400 block">POST payload (JSON):</span>
+                    <pre className="bg-slate-950 text-slate-300 p-3 rounded-xl font-mono text-xs border border-slate-900 overflow-x-auto">
+{`{
+  "title": "A-9 Interstate Overpass Refurbishment",
+  "description": "Concrete reinforcement of structural arches and highway barriers.",
+  "budget": "850000"
+}`}
+                    </pre>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
         )}
 
       </div>

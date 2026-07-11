@@ -13,7 +13,8 @@ import {
   QrCode,
   Scan,
   RefreshCw,
-  X
+  X,
+  PenTool
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -37,6 +38,117 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
   const [showClientSignaturePad, setShowClientSignaturePad] = useState(false);
   const [isSavingSignature, setIsSavingSignature] = useState(false);
   const [typedSignName, setTypedSignName] = useState('');
+
+  // Sub-tabs for the empty token screen
+  const [portalSubTab, setPortalSubTab] = useState<'verify' | 'submit'>('verify');
+
+  // Compliance Document Submission States
+  const [compName, setCompName] = useState('');
+  const [compEmail, setCompEmail] = useState('');
+  const [compNiu, setCompNiu] = useState('');
+  const [compTitle, setCompTitle] = useState('Client Representative');
+  const [compDocType, setCompDocType] = useState('safety_pledge');
+  const [compProjectName, setCompProjectName] = useState('MADECC Infrastructure Project');
+  const [compSignature, setCompSignature] = useState('');
+  const [isSubmittingComp, setIsSubmittingComp] = useState(false);
+  const [submittingError, setSubmittingError] = useState<string | null>(null);
+
+  const getDocTemplateContent = (type: string) => {
+    switch (type) {
+      case 'safety_pledge':
+        return `I hereby pledge and declare that I, and all personnel under my supervision, will adhere strictly to the MADECC Group zero-harm safety protocols. We commit to wearing standard Personal Protective Equipment (PPE) including high-visibility vests, steel-toed boots, and safety helmets at all times. We will immediately report any structural hazards or near-miss incidents to the lead site manager. This agreement complies with standard ISO 45001 occupational health and safety regulations in Central Africa.`;
+      case 'nda':
+        return `This Mutual Non-Disclosure Agreement governs the exchange of proprietary architectural, structural, and geotechnical blueprints between MADECC Group and the undersigned party. All shared materials, soil profiling data, and structural simulations shall be treated as strictly confidential. Neither party shall disclose or utilize these technical documents for any third-party tenders or projects without express written consent from both executive boards.`;
+      case 'environmental':
+        return `We agree to execute all civil works in strict compliance with the Cameroon National Environmental Management Plan. This includes implementing robust dust-mitigation systems, proper disposal of soil/concrete waste, and protecting local water sources from fuel or chemical contamination. Furthermore, all foundation work shall be executed only after deep soil profiling to prevent structural failures or unexpected seismic damage.`;
+      case 'ethics':
+        return `The undersigned party guarantees that all bids, material quotes, and financial estimates submitted to the MADECC Group tender board are honest, transparent, and completely free of collusive or anticorrupt practices. We pledge to maintain fair pricing standards and absolute integrity throughout the contract awarding process. Any violation of these ethical standards will result in immediate disqualification and reporting to regulatory compliance boards.`;
+      default:
+        return '';
+    }
+  };
+
+  const getDocTypeName = (type: string) => {
+    switch (type) {
+      case 'safety_pledge': return 'Safety Compliance Pledge & Site Guidelines';
+      case 'nda': return 'Mutual Non-Disclosure Agreement (NDA)';
+      case 'environmental': return 'Environmental & Geotechnical Compliance Charter';
+      case 'ethics': return 'Tender Compliance & Anti-Corruption Pledge';
+      default: return 'Compliance Document';
+    }
+  };
+
+  const handleSubmitComplianceDoc = async () => {
+    if (!compName.trim()) {
+      setSubmittingError('Please specify your full name.');
+      return;
+    }
+    if (!compSignature) {
+      setSubmittingError('Please draw your signature using the signature pad.');
+      return;
+    }
+
+    setIsSubmittingComp(true);
+    setSubmittingError(null);
+
+    const docNo = 'CMP-' + Math.floor(100000 + Math.random() * 900000);
+    const scopeText = getDocTemplateContent(compDocType);
+    const docTypeName = getDocTypeName(compDocType);
+
+    try {
+      const response = await fetch('/api/contracts/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractNo: docNo,
+          clientName: compName.trim(),
+          clientNiu: compNiu.trim() || 'N/A',
+          clientEmail: compEmail.trim() || null,
+          clientAddress: 'Yaoundé HQ Direct Sign-in',
+          clientCity: 'Yaoundé',
+          contractProject: docTypeName,
+          contractProjectLocation: compProjectName.trim(),
+          contractValue: '0',
+          contractDuration: 'Permanent Compliance Seal',
+          contractScope: scopeText,
+          contractDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+          contractAgreedBalance: '0',
+          contractAdvancePayment: '0',
+          representativeName: 'MADECC Compliance Officer',
+          representativeTitle: 'Compliance Auditor',
+          signatoryTitle: compTitle.trim() || 'Legal Representative',
+          typedClientSignature: compName.trim(),
+          drawnClientSignature: compSignature,
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to submit compliance signature.');
+      }
+
+      const newDoc = await response.json();
+      
+      // Clear form
+      setCompName('');
+      setCompEmail('');
+      setCompNiu('');
+      setCompSignature('');
+      
+      // Update URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.set('verify', newDoc.verificationToken);
+      window.history.pushState({}, '', url.toString());
+
+      // Set activeToken to the newly created document's token so it displays
+      setActiveToken(newDoc.verificationToken);
+    } catch (err: any) {
+      console.error(err);
+      setSubmittingError(err.message || 'Error occurred while saving compliance document.');
+    } finally {
+      setIsSubmittingComp(false);
+    }
+  };
 
   // Sync token prop changes with activeToken state
   useEffect(() => {
@@ -281,86 +393,381 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
           </div>
         </motion.div>
       ) : !activeToken ? (
-        /* Empty Verification State: Landing Dashboard */
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-950 border border-slate-800 rounded-2xl p-8 space-y-8 shadow-xl"
-        >
-          <div className="text-center space-y-2 max-w-md mx-auto">
-            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-              <QrCode className="w-8 h-8 text-amber-500" />
-            </div>
-            <h1 className="text-lg font-bold text-white uppercase tracking-wider font-mono">MADECC Verification Desk</h1>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Authenticate and audit signed civil works, building plans, and legal contracts registered on the live Neon compliance registry.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-900/60">
-            {/* Card Option A: Device Camera Scan */}
-            <div className="bg-slate-900/40 border border-slate-850 p-6 rounded-xl space-y-4 flex flex-col justify-between hover:border-slate-800 transition-colors">
-              <div className="space-y-1.5">
-                <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full font-mono font-bold uppercase tracking-wider">
-                  Mobile Scan
-                </span>
-                <h3 className="text-sm font-bold text-white font-mono">Device Camera</h3>
-                <p className="text-xs text-slate-400">
-                  Scan the verification QR code stamped on paper/digital contracts for instant validation.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setScannerActive(true)}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors uppercase font-mono tracking-wider"
-              >
-                <Camera className="w-4 h-4" />
-                Launch Camera Scanner
-              </button>
-            </div>
-
-            {/* Card Option B: Manual Input Key */}
-            <form 
-              onSubmit={handleManualVerify}
-              className="bg-slate-900/40 border border-slate-850 p-6 rounded-xl space-y-4 flex flex-col justify-between hover:border-slate-800 transition-colors"
+        /* Empty Verification State: Landing Dashboard with Tabs */
+        <div className="space-y-6">
+          {/* Elegant tab selectors */}
+          <div className="flex bg-slate-950 border border-slate-850 rounded-xl p-1 gap-1 max-w-lg mx-auto">
+            <button
+              onClick={() => setPortalSubTab('verify')}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                portalSubTab === 'verify' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              <div className="space-y-1.5">
-                <span className="text-[10px] bg-slate-850 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full font-mono font-bold uppercase tracking-wider">
-                  Key Input
-                </span>
-                <h3 className="text-sm font-bold text-white font-mono">Verify by Key</h3>
-                <p className="text-xs text-slate-400">
-                  Enter the unique compliance verification token manually below to search the registry.
+              <QrCode className="w-3.5 h-3.5" />
+              Verify Document
+            </button>
+            <button
+              onClick={() => setPortalSubTab('submit')}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                portalSubTab === 'submit' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              Sign Compliance Doc
+            </button>
+          </div>
+
+          {portalSubTab === 'verify' ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-slate-950 border border-slate-800 rounded-2xl p-8 space-y-8 shadow-xl"
+            >
+              <div className="text-center space-y-2 max-w-md mx-auto">
+                <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <QrCode className="w-8 h-8 text-amber-500" />
+                </div>
+                <h1 className="text-lg font-bold text-white uppercase tracking-wider font-mono">MADECC Verification Desk</h1>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Authenticate and audit signed civil works, building plans, and legal contracts registered on the live Neon compliance registry.
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="e.g. CNT-A0X39..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono tracking-wider uppercase text-center"
-                  value={manualInputToken}
-                  onChange={(e) => setManualInputToken(e.target.value)}
-                />
-                <button
-                  type="submit"
-                  disabled={!manualInputToken.trim()}
-                  className="w-full bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors uppercase font-mono tracking-wider border border-slate-700"
-                >
-                  <Scan className="w-4 h-4" />
-                  Validate Code
-                </button>
-              </div>
-            </form>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-900/60">
+                {/* Card Option A: Device Camera Scan */}
+                <div className="bg-slate-900/40 border border-slate-850 p-6 rounded-xl space-y-4 flex flex-col justify-between hover:border-slate-800 transition-colors">
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full font-mono font-bold uppercase tracking-wider">
+                      Mobile Scan
+                    </span>
+                    <h3 className="text-sm font-bold text-white font-mono">Device Camera</h3>
+                    <p className="text-xs text-slate-400">
+                      Scan the verification QR code stamped on paper/digital contracts for instant validation.
+                    </p>
+                  </div>
 
-          {scanError && (
-            <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-              <p className="text-[11px] text-red-400 font-mono leading-normal">{scanError}</p>
-            </div>
+                  <button
+                    onClick={() => setScannerActive(true)}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors uppercase font-mono tracking-wider"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Launch Camera Scanner
+                  </button>
+                </div>
+
+                {/* Card Option B: Manual Input Key */}
+                <form 
+                  onSubmit={handleManualVerify}
+                  className="bg-slate-900/40 border border-slate-850 p-6 rounded-xl space-y-4 flex flex-col justify-between hover:border-slate-800 transition-colors"
+                >
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] bg-slate-850 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full font-mono font-bold uppercase tracking-wider">
+                      Key Input
+                    </span>
+                    <h3 className="text-sm font-bold text-white font-mono">Verify by Key</h3>
+                    <p className="text-xs text-slate-400">
+                      Enter the unique compliance verification token manually below to search the registry.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. CNT-A0X39..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono tracking-wider uppercase text-center"
+                      value={manualInputToken}
+                      onChange={(e) => setManualInputToken(e.target.value)}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!manualInputToken.trim()}
+                      className="w-full bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors uppercase font-mono tracking-wider border border-slate-700"
+                    >
+                      <Scan className="w-4 h-4" />
+                      Validate Code
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {scanError && (
+                <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                  <p className="text-[11px] text-red-400 font-mono leading-normal">{scanError}</p>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            /* Digital Signature Compliance Form Submission using HTML Canvas */
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-slate-950 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6 shadow-xl"
+            >
+              <div className="border-b border-slate-900/60 pb-4">
+                <h2 className="text-sm font-extrabold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                  <PenTool className="w-4 h-4 text-amber-500" />
+                  Digital Compliance Seal Registry
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Draft, read, sign, and execute safety or project guidelines directly from the browser on our live digital ledger.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Form fields & signature pad (Left/7 cols) */}
+                <div className="lg:col-span-7 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Submitter Name */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                        Your Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Jean-Pierre Nguemo"
+                        value={compName}
+                        onChange={(e) => setCompName(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Submitter Email */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                        Email Address (For receipts)
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="e.g. jean@example.com"
+                        value={compEmail}
+                        onChange={(e) => setCompEmail(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Taxpayer NIU */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                        Taxpayer Number (NIU)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. M052012345678X"
+                        value={compNiu}
+                        onChange={(e) => setCompNiu(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono transition-colors uppercase"
+                      />
+                    </div>
+
+                    {/* Designation Title */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                        Your Role / Designation
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Subcontractor Foreman, Client"
+                        value={compTitle}
+                        onChange={(e) => setCompTitle(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Project / Location Context */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                        Associated Project / Site Location
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Yaoundé Site, Douala Port"
+                        value={compProjectName}
+                        onChange={(e) => setCompProjectName(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 transition-colors"
+                      />
+                    </div>
+
+                    {/* Document Type Selection */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                        Compliance Document Type
+                      </label>
+                      <select
+                        value={compDocType}
+                        onChange={(e) => setCompDocType(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white outline-none focus:border-amber-500 transition-colors cursor-pointer"
+                      >
+                        <option value="safety_pledge">Safety Compliance Pledge</option>
+                        <option value="nda">Mutual Non-Disclosure Agreement (NDA)</option>
+                        <option value="environmental">Environmental Compliance Charter</option>
+                        <option value="ethics">Tender & Anti-Corruption Pledge</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* HTML Canvas Signature Pad */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono block">
+                      Compliance Digital Signature Pad *
+                    </label>
+                    {compSignature ? (
+                      <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 max-w-sm">
+                        <span className="text-[9px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                          ✓ Handdrawn Signature Locked
+                        </span>
+                        <div className="bg-slate-900 border border-slate-850 rounded-lg p-2 flex items-center justify-center w-full h-20 overflow-hidden">
+                          <img
+                            src={compSignature}
+                            alt="Locked signature"
+                            className="max-h-full max-w-full object-contain invert brightness-200"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCompSignature('')}
+                          className="text-[10px] text-red-400 hover:text-red-300 hover:underline font-mono"
+                        >
+                          Reset & Redraw Signature
+                        </button>
+                      </div>
+                    ) : (
+                      <SignaturePad
+                        onSave={(dataUrl) => setCompSignature(dataUrl)}
+                        title="Sign inside the canvas below"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Live Paper Document Preview (Right/5 cols) */}
+                <div className="lg:col-span-5 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono block">
+                      Live Document Blueprint Preview
+                    </span>
+                    
+                    {/* The elegant document sheet */}
+                    <div className="bg-white text-slate-950 p-6 rounded-xl shadow-2xl relative border-2 border-slate-300 min-h-[420px] font-sans flex flex-col justify-between">
+                      {/* Holographic Watermark */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5 select-none overflow-hidden">
+                        <span className="text-7xl font-black font-mono tracking-widest text-slate-900 rotate-45 uppercase">
+                          MADECC
+                        </span>
+                      </div>
+
+                      <div className="space-y-4 relative z-10">
+                        {/* Letterhead */}
+                        <div className="border-b-2 border-slate-900 pb-3 text-center">
+                          <h3 className="font-extrabold text-sm uppercase tracking-wide text-slate-900">
+                            MADECC GROUP CIVIL COMPLIANCE
+                          </h3>
+                          <p className="text-[8px] uppercase tracking-widest font-mono text-slate-600">
+                            Yaoundé, Cameroon • Secure Electronic Document Seal
+                          </p>
+                        </div>
+
+                        {/* Title */}
+                        <div className="text-center space-y-1">
+                          <h4 className="font-black text-xs uppercase text-slate-900">
+                            {getDocTypeName(compDocType)}
+                          </h4>
+                          <p className="text-[8px] font-mono text-slate-500 uppercase">
+                            EXECUTION DATE: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </p>
+                        </div>
+
+                        {/* Submitter Metadata */}
+                        <div className="bg-slate-50 p-2.5 rounded border border-slate-200 text-[10px] space-y-1">
+                          <p>
+                            <strong>Declarant Name:</strong> {compName || <span className="text-slate-400 italic">Jean-Pierre Nguemo</span>}
+                          </p>
+                          <p>
+                            <strong>Position / Role:</strong> {compTitle || <span className="text-slate-400 italic">Foreman / Client</span>}
+                          </p>
+                          <p>
+                            <strong>Associated Site:</strong> {compProjectName || <span className="text-slate-400 italic">Yaoundé Stadium Site</span>}
+                          </p>
+                          <p>
+                            <strong>Taxpayer NIU:</strong> <span className="font-mono">{compNiu || <span className="text-slate-400 italic">M052012345678X</span>}</span>
+                          </p>
+                        </div>
+
+                        {/* Scope Body */}
+                        <div className="text-[10px] leading-relaxed text-slate-700 whitespace-pre-line text-justify border-t border-slate-100 pt-2 font-serif">
+                          {getDocTemplateContent(compDocType)}
+                        </div>
+                      </div>
+
+                      {/* Signature Lines */}
+                      <div className="grid grid-cols-2 gap-4 border-t-2 border-slate-900/10 pt-4 mt-6 relative z-10">
+                        <div className="text-center">
+                          <span className="text-[7px] text-slate-500 uppercase font-mono block">MADECC Representative</span>
+                          <div className="h-10 flex items-center justify-center font-mono font-bold text-[8px] text-amber-600 border border-dashed border-slate-200 rounded mt-1 bg-slate-50/50 uppercase tracking-widest">
+                            / Compliance Officer /
+                          </div>
+                          <span className="text-[8px] font-bold text-slate-900 block mt-1">MADECC Compliance</span>
+                        </div>
+
+                        <div className="text-center">
+                          <span className="text-[7px] text-slate-500 uppercase font-mono block">Signatory Signature</span>
+                          <div className="h-10 flex items-center justify-center mt-1 border border-dashed border-slate-200 rounded bg-slate-50 overflow-hidden">
+                            {compSignature ? (
+                              <img src={compSignature} alt="Declarant Signature" className="max-h-full object-contain" />
+                            ) : (
+                              <span className="text-[8px] text-slate-400 font-mono italic">Pending Signature</span>
+                            )}
+                          </div>
+                          <span className="text-[8px] font-bold text-slate-900 block mt-1 truncate">
+                            {compName || 'Declarant'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submission and error indicators */}
+                  <div className="pt-6 space-y-3">
+                    {submittingError && (
+                      <div className="bg-red-500/5 border border-red-500/20 p-3.5 rounded-xl flex items-center gap-2.5">
+                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                        <p className="text-[11px] text-red-400 font-mono leading-normal">{submittingError}</p>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleSubmitComplianceDoc}
+                      disabled={isSubmittingComp || !compName.trim() || !compSignature}
+                      className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold py-3 px-6 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors uppercase font-mono tracking-wider shadow-lg shadow-emerald-500/15 border border-emerald-400/20"
+                    >
+                      {isSubmittingComp ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Cryptographically Sealing Document...
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4" />
+                          Digitally Execute & Submit Compliance Seal
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           )}
-        </motion.div>
+        </div>
       ) : error ? (
         /* Validation Failed View */
         <motion.div

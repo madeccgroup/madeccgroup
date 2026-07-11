@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -184,10 +181,32 @@ export async function getApp() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Support Netlify Serverless environment path forwarding
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/.netlify/functions/api')) {
+      req.url = req.url.replace('/.netlify/functions/api', '/api');
+    }
+    next();
+  });
+
   // Ensure uploads directory exists and serve it statically
-  const uploadDir = path.join(process.cwd(), 'uploads');
+  const isServerlessEnvironment = 
+    process.env.NETLIFY === 'true' || 
+    process.env.NETLIFY === '1' ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
+    process.env.LAMBDA_TASK_ROOT !== undefined ||
+    process.env.FUNCTIONS_SIGNATURE !== undefined;
+
+  const uploadDir = isServerlessEnvironment 
+    ? '/tmp/uploads' 
+    : path.join(process.cwd(), 'uploads');
+
   if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+    try {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    } catch (err) {
+      console.error('Error creating uploads directory:', err);
+    }
   }
   app.use('/uploads', express.static(uploadDir));
 
@@ -208,13 +227,78 @@ export async function getApp() {
     limits: { fileSize: 150 * 1024 * 1024 } // 150MB limit
   });
 
-  // Upload endpoint (accepts any file, including up to 150MB videos)
-  app.post('/api/upload', requireAuth, upload.single('file'), (req: any, res) => {
+  // Upload endpoint (accepts any file, including up to 150MB videos, with cloud storage support)
+  app.post('/api/upload', requireAuth, upload.single('file'), async (req: any, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl, filename: req.file.filename, size: req.file.size });
+
+    try {
+      let fileUrl = `/uploads/${req.file.filename}`;
+
+      // 1. Detect and upload to Supabase Storage if configured (production-ready)
+      if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+          const fileBuffer = fs.readFileSync(req.file.path);
+          const bucketName = process.env.SUPABASE_BUCKET || 'madecc-assets';
+          const fileName = `uploads/${Date.now()}-${req.file.originalname}`;
+
+          const { error } = await supabase.storage
+            .from(bucketName)
+            .upload(fileName, fileBuffer, {
+              contentType: req.file.mimetype,
+              cacheControl: '3600',
+              upsert: true
+            });
+
+          if (error) throw error;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(fileName);
+
+          fileUrl = publicUrl;
+          console.log(`[STORAGE] Successfully uploaded ${req.file.originalname} to Supabase Storage: ${fileUrl}`);
+          
+          // Remove local file after successful cloud upload
+          fs.unlinkSync(req.file.path);
+        } catch (supabaseErr) {
+          console.error('[STORAGE-FALLBACK] Failed to upload to Supabase Storage, falling back to disk:', supabaseErr);
+        }
+      }
+      // 2. Detect and upload to Cloudinary if configured
+      else if (process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY)) {
+        try {
+          const cloudinary = await import('cloudinary');
+          cloudinary.v2.config({
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET
+          });
+
+          const result = await cloudinary.v2.uploader.upload(req.file.path, {
+            resource_type: 'auto',
+            folder: 'madecc'
+          });
+
+          fileUrl = result.secure_url;
+          console.log(`[STORAGE] Successfully uploaded ${req.file.originalname} to Cloudinary: ${fileUrl}`);
+          
+          // Remove local file after successful cloud upload
+          fs.unlinkSync(req.file.path);
+        } catch (cloudinaryErr) {
+          console.error('[STORAGE-FALLBACK] Failed to upload to Cloudinary, falling back to disk:', cloudinaryErr);
+        }
+      }
+
+      // Return metadata and public-facing secure URL to store in Neon PostgreSQL
+      res.json({ url: fileUrl, filename: req.file.filename, size: req.file.size });
+    } catch (err: any) {
+      console.error('File upload handler error:', err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // --- RATE LIMITER FOR CONTACT FORM ---
@@ -246,8 +330,18 @@ export async function getApp() {
   // --- AUTH ENDPOINTS ---
   // ==========================================
 
-  // Verify token, return DB profile
-  app.get('/api/auth/me', requireAuth, (req: any, res) => {
+  // Verify token, return DB profile with persistent login history logging
+  app.get('/api/auth/me', requireAuth, async (req: any, res) => {
+    try {
+      await logAudit(
+        req.dbUser.uid,
+        req.dbUser.email,
+        'LOGIN_SUCCESS',
+        `User ${req.dbUser.name} initiated session successfully with role: ${req.dbUser.role}`
+      );
+    } catch (auditErr) {
+      console.error('Failed to log session start audit:', auditErr);
+    }
     res.json({ user: req.dbUser });
   });
 
@@ -292,7 +386,7 @@ export async function getApp() {
 Your role is to assist website visitors with their construction inquiries in a polite, highly informative, and professional manner.
 
 MADECC Group Corporate Profiles:
-- Headquarters: Yaounde, Cameroon.
+- Headquarters: Rue Joss, Bonanjo, Douala, Cameroon.
 - Phone Numbers for customer calls & Whatsapp:
   * +237 683 316 486 (General & WhatsApp)
   * +237 671 063 511 (Operations)
@@ -889,8 +983,68 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
         .where(eq(appointments.id, appointmentId))
         .returning();
 
+      const updatedAppointment = result[0];
+
+      // Trigger automated email confirmation to the client when a project consultation is updated/confirmed
+      if (status && status !== existing[0].status) {
+        const clientEmail = existing[0].clientEmail;
+        if (clientEmail && clientEmail.trim()) {
+          const clientName = existing[0].clientName;
+          const serviceName = existing[0].serviceName;
+          const apptDate = new Date(existing[0].appointmentDate);
+          
+          let statusText = '';
+          let statusTitle = '';
+          let statusColor = '#475569';
+          
+          if (status === 'confirmed') {
+            statusTitle = 'Consultation Confirmed';
+            statusText = `We are pleased to inform you that your consultation has been officially confirmed by our team.`;
+            statusColor = '#10b981'; // Green
+          } else if (status === 'cancelled') {
+            statusTitle = 'Consultation Cancelled';
+            statusText = `We regret to inform you that your consultation request has been cancelled. If you believe this was in error, please contact us.`;
+            statusColor = '#ef4444'; // Red
+          } else if (status === 'completed') {
+            statusTitle = 'Consultation Completed';
+            statusText = `Thank you for attending your consultation session with MADECC Group. We appreciate the opportunity to collaborate.`;
+            statusColor = '#3b82f6'; // Blue
+          } else {
+            statusTitle = `Consultation Update`;
+            statusText = `Your consultation status has been updated.`;
+          }
+
+          const emailSubject = `[MADECC Group] ${statusTitle}: ${serviceName}`;
+          const emailHtml = `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f8fafc; color: #0f172a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+              <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
+                <h2 style="color: #d97706; margin: 0 0 4px 0; font-weight: 800; font-size: 26px;">MADECC Group</h2>
+                <p style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.15em; margin: 0; font-weight: 700;">Consultation Booking Desk</p>
+              </div>
+              <h3 style="color: ${statusColor}; font-size: 20px; margin-top: 0; font-weight: 700;">${statusTitle}</h3>
+              <p style="font-size: 15px; line-height: 1.6; margin: 16px 0;">Dear <strong>${clientName}</strong>,</p>
+              <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">${statusText}</p>
+              <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 14px; color: #475569;">Session Details:</p>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #0f172a;">
+                  <li><strong>Service:</strong> ${serviceName}</li>
+                  <li><strong>Date/Time:</strong> ${apptDate.toLocaleString()}</li>
+                  <li><strong>Current Status:</strong> <span style="color: ${statusColor}; font-weight: bold; text-transform: uppercase;">${status}</span></li>
+                </ul>
+              </div>
+              <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">If you need to make changes or have questions, please reach out to us at <a href="mailto:contact@madecc.com" style="color: #d97706; text-decoration: none; font-weight: 600;">contact@madecc.com</a>.</p>
+              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+              <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">MADECC Group &bull; Douala, Cameroon</p>
+            </div>
+          `;
+          sendEmail(clientEmail.trim(), emailSubject, `Dear ${clientName},\n\nYour consultation booking for "${serviceName}" status has been updated to "${status}".\n\nWarm regards,\nMADECC Group`, emailHtml).catch(err => {
+            console.error('[SMTP_ERROR] Failed to send appointment update email notification:', err);
+          });
+        }
+      }
+
       await logAudit(req.dbUser.uid, req.dbUser.email, 'UPDATE_APPOINTMENT', `Updated appointment ID: ${appointmentId} to status: ${status}`);
-      res.json(result[0]);
+      res.json(updatedAppointment);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1452,6 +1606,96 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
     res.json({ lastBackupTime: lastBackupTime.toISOString() });
   });
 
+  // ==========================================
+  // --- ANALYTICS DASHBOARD METRICS ---
+  // ==========================================
+  app.get('/api/analytics', requireAdmin, async (req, res) => {
+    try {
+      // 1. Managed Contracts (count)
+      const contractsCountRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM signed_contracts`)).rows[0] as any;
+      const managedContractsCount = contractsCountRes?.count || 0;
+
+      // 2. Total Contract Value (sum of contractValue with regex replace of non-numeric characters)
+      const contractValueRes = (await db.execute(sql`
+        SELECT COALESCE(SUM(CAST(REGEXP_REPLACE(contract_value, '[^0-9.]', '', 'g') AS NUMERIC)), 0)::double precision as total 
+        FROM signed_contracts
+      `)).rows[0] as any;
+      const totalContractValue = contractValueRes?.total || 0;
+
+      // 3. Total Revenue (sum of receiptAmount in signedReceipts)
+      const revenueRes = (await db.execute(sql`
+        SELECT COALESCE(SUM(CAST(REGEXP_REPLACE(receipt_amount, '[^0-9.]', '', 'g') AS NUMERIC)), 0)::double precision as total 
+        FROM signed_receipts
+      `)).rows[0] as any;
+      const totalRevenue = revenueRes?.total || 0;
+
+      // 4. Pending Consultations (count of appointments where status = 'pending')
+      const pendingApptsRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM appointments WHERE status = 'pending'`)).rows[0] as any;
+      const pendingConsultations = pendingApptsRes?.count || 0;
+
+      // 5. Unread Inquiries (count of contactMessages where status = 'new')
+      const unreadInquiriesRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM contact_messages WHERE status = 'new'`)).rows[0] as any;
+      const unreadInquiries = unreadInquiriesRes?.count || 0;
+
+      // 6. Pending Reviews (count of reviews where approved is false)
+      const pendingReviewsRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM reviews WHERE approved = false OR approved IS NULL`)).rows[0] as any;
+      const pendingReviews = pendingReviewsRes?.count || 0;
+
+      // 7. Newsletter Subscribers (count)
+      const newsletterSubscribersRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM newsletter_subscribers`)).rows[0] as any;
+      const newsletterSubscribers = newsletterSubscribersRes?.count || 0;
+
+      // 8. Active Users (count)
+      const activeUsersRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM users`)).rows[0] as any;
+      const activeUsers = activeUsersRes?.count || 0;
+
+      // 9. Uploaded Documents (count)
+      const uploadedDocsRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM company_documents`)).rows[0] as any;
+      const uploadedDocuments = uploadedDocsRes?.count || 0;
+
+      // 10. Managed Projects (count)
+      const projectsCountRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM projects`)).rows[0] as any;
+      const managedProjectsCount = projectsCountRes?.count || 0;
+
+      // 11. Total Project Budget Value
+      const projectBudgetRes = (await db.execute(sql`
+        SELECT COALESCE(SUM(budget), 0)::double precision as total 
+        FROM projects
+      `)).rows[0] as any;
+      const totalProjectBudgetValue = projectBudgetRes?.total || 0;
+
+      // 12. Booking Approval Rate (confirmed or completed relative to total)
+      const totalApptsRes = (await db.execute(sql`SELECT COUNT(*)::integer as count FROM appointments`)).rows[0] as any;
+      const totalApptsCount = totalApptsRes?.count || 0;
+      let bookingApprovalRate = "0.0";
+      if (totalApptsCount > 0) {
+        const approvedApptsRes = (await db.execute(sql`
+          SELECT COUNT(*)::integer as count FROM appointments WHERE status = 'confirmed' OR status = 'completed'
+        `)).rows[0] as any;
+        const approvedCount = approvedApptsRes?.count || 0;
+        bookingApprovalRate = ((approvedCount / totalApptsCount) * 100).toFixed(1);
+      }
+
+      res.json({
+        managedProjectsCount,
+        totalProjectBudgetValue,
+        managedContractsCount,
+        totalContractValue,
+        totalRevenue,
+        pendingConsultations,
+        unreadInquiries,
+        pendingReviews,
+        newsletterSubscribers,
+        activeUsers,
+        uploadedDocuments,
+        bookingApprovalRate
+      });
+    } catch (error: any) {
+      console.error('Error fetching dashboard analytics:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
 
   // ==========================================
   // --- AUDIT LOGS ENDPOINT ---
@@ -1634,7 +1878,89 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
         .where(eq(signedContracts.verificationToken, token))
         .returning();
 
-      res.json(updated[0]);
+      const contract = updated[0];
+
+      // Trigger automated email confirmation when a contract is successfully verified and signed
+      if (contract.clientEmail && contract.clientEmail.trim()) {
+        const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+        const verificationUrl = `${appUrl}/?verify=${contract.verificationToken}`;
+
+        const subject = `[MADECC Group] Contract Successfully Executed & Verified: Ref ${contract.contractNo}`;
+        const text = `Dear ${contract.clientName},\n\nWe are pleased to inform you that your infrastructure contract has been successfully executed and verified on the MADECC Group digital ledger.\n\nContract Reference: ${contract.contractNo}\nProject: ${contract.contractProject}\n\nYou can access your fully-signed, verified digital contract at any time here: ${verificationUrl}\n\nThank you for partnering with MADECC Group.\n\nWarm regards,\nMADECC Group Compliance Team`;
+
+        const html = `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f8fafc; color: #0f172a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
+              <h2 style="color: #10b981; margin: 0 0 4px 0; font-weight: 800; font-size: 26px; letter-spacing: -0.025em;">MADECC Group</h2>
+              <p style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.15em; margin: 0; font-weight: 700;">Digital Ledger & Compliance Verification</p>
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 24px;">
+              <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 50%; padding: 12px; margin-bottom: 12px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <h3 style="color: #065f46; margin: 0; font-size: 20px; font-weight: 700;">Contract Executed & Verified</h3>
+              <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">Cryptographically recorded in the secure MADECC registry</p>
+            </div>
+
+            <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
+              Dear <strong>${contract.clientName}</strong>,
+            </p>
+            
+            <p style="font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+              Thank you for completing the digital verification and signature process. We are pleased to inform you that your infrastructure contract has been successfully executed by all parties and is now fully active on our secure compliance registry.
+            </p>
+            
+            <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 0 0 24px 0;">
+              <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">Execution Details</h4>
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 40%;">Contract Ref:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-family: monospace; font-weight: bold;">${contract.contractNo}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Project Name:</td>
+                  <td style="padding: 6px 0; color: #0f172a;">${contract.contractProject}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Contract Value:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${parseFloat(contract.contractValue).toLocaleString()} XAF</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Verification Status:</td>
+                  <td style="padding: 6px 0; color: #10b981; font-weight: bold;">SIGNED & COMPLIANT</td>
+                </tr>
+              </table>
+            </div>
+            
+            <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
+              You can access your digitally-sealed document, audit log, and QR security code at any time via the verification portal below:
+            </p>
+            
+            <div style="text-align: center; margin: 0 0 28px 0;">
+              <a href="${verificationUrl}" style="background-color: #10b981; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
+                View Verified Contract
+              </a>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">MADECC Group Compliance Portal &bull; Rue Joss, Bonanjo, Douala, Cameroon</p>
+          </div>
+        `;
+
+        sendEmail(contract.clientEmail.trim(), subject, text, html).catch(err => {
+          console.error('[SMTP_ERROR] Failed to send contract verification confirmation email:', err);
+        });
+
+        // Also notify the admin kreboya603@gmail.com
+        const adminSubject = `[registry-alert] Contract Ref ${contract.contractNo} fully signed by client`;
+        const adminText = `The contract Ref ${contract.contractNo} for "${contract.contractProject}" has been verified and fully signed by the client ${contract.clientName}.\n\nYou can view the active digital contract at: ${verificationUrl}`;
+        sendNotificationEmail(adminSubject, adminText, adminText).catch(err => {
+          console.error('[SMTP_ERROR] Failed to notify admin of signed contract:', err);
+        });
+      }
+
+      res.json(contract);
     } catch (error: any) {
       console.error('[PUBLIC_SIGN_ERROR]', error);
       res.status(500).json({ error: error.message });
@@ -2000,6 +2326,14 @@ async function startServer() {
   });
 }
 
-if (!process.env.NETLIFY) {
+// Robust detection of serverless environments (Netlify / AWS Lambda)
+const isServerless = 
+  process.env.NETLIFY === 'true' || 
+  process.env.NETLIFY === '1' ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
+  process.env.LAMBDA_TASK_ROOT !== undefined ||
+  process.env.FUNCTIONS_SIGNATURE !== undefined;
+
+if (!isServerless) {
   startServer();
 }

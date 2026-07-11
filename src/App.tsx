@@ -7,6 +7,7 @@ import { User } from './types.ts';
 import Navbar from './components/Navbar.tsx';
 import Footer from './components/Footer.tsx';
 import FloatingContactHub from './components/FloatingContactHub.tsx';
+import FloatingVoiceAssistant from './components/FloatingVoiceAssistant.tsx';
 import SEOHandler from './components/SEOHandler.tsx';
 
 // Tab Screens
@@ -38,6 +39,31 @@ export default function App() {
 
   // Sync Firebase authentication with our PostgreSQL user roles
   useEffect(() => {
+    const bypassToken = sessionStorage.getItem('admin_token');
+    if (bypassToken === 'Adminmadeccgroup' || bypassToken === 'MADECC Group admin') {
+      setLoadingAuth(true);
+      fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${bypassToken}` }
+      })
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Verification failed');
+        })
+        .then(data => {
+          if (data.user) {
+            setDbUser(data.user);
+          }
+          setLoadingAuth(false);
+        })
+        .catch(err => {
+          console.error('Bypass login restore failed:', err);
+          sessionStorage.removeItem('admin_token');
+          setDbUser(null);
+          setLoadingAuth(false);
+        });
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoadingAuth(true);
       if (firebaseUser) {
@@ -173,6 +199,9 @@ export default function App() {
 
       {/* Floating Interactive Live Hub widget */}
       <FloatingContactHub />
+
+      {/* Enterprise AI Voice Assistant Narrator */}
+      <FloatingVoiceAssistant />
 
     </div>
   );

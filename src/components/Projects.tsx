@@ -17,6 +17,15 @@ import {
 import { Project, Category, ProjectProgress, GalleryItem } from '../types.ts';
 import { getOptimizedImageUrl } from '../lib/utils.ts';
 import { ProjectListSkeleton } from './Skeleton.tsx';
+import { 
+  PortfolioHero, 
+  BeforeAfterGallery, 
+  CompanyTimeline, 
+  FAQSection, 
+  CompanyStats, 
+  TestimonialsAndPartners, 
+  AdSenseReadinessBlock 
+} from './PortfolioAddons.tsx';
 
 interface ProjectsProps {
   selectedProjectId: number | null;
@@ -343,16 +352,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
     <div className="font-sans text-slate-200 bg-[#0A0A0B] min-h-screen">
       
       {/* Portfolio Header */}
-      <section className="bg-slate-950/80 border-b border-slate-850/60 text-white py-16 relative overflow-hidden" id="projects-header">
-        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <span className="text-xs font-bold font-mono uppercase text-amber-500 tracking-widest block mb-2">Contracts Record</span>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Projects Portfolio</h1>
-          <p className="text-slate-400 text-sm mt-2 max-w-xl">
-            Review detailed case files regarding our active civil infrastructure developments, residential estates, and carbon-neutral complexes.
-          </p>
-        </div>
-      </section>
+      <PortfolioHero />
 
       {/* Portfolio Browser Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -568,6 +568,14 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
         )}
 
       </div>
+
+      {/* Premium Modular Portfolio Sections */}
+      <CompanyStats />
+      <BeforeAfterGallery />
+      <CompanyTimeline />
+      <TestimonialsAndPartners />
+      <FAQSection />
+      <AdSenseReadinessBlock />
 
     </div>
   );

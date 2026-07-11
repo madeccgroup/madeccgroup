@@ -7,12 +7,17 @@ import {
   Calendar, 
   Users, 
   ShieldCheck, 
-  HeartHandshake 
+  HeartHandshake,
+  Mail,
+  Briefcase,
+  GraduationCap
 } from 'lucide-react';
-import { CompanyDocument } from '../types.ts';
+import { CompanyDocument, TeamMember } from '../types.ts';
 
 export default function About() {
   const [documents, setDocuments] = useState<CompanyDocument[]>([]);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [loadingTeam, setLoadingTeam] = useState(true);
 
   useEffect(() => {
     const fetchDocs = async () => {
@@ -25,7 +30,22 @@ export default function About() {
         console.error('Error fetching documents:', err);
       }
     };
+
+    const fetchTeam = async () => {
+      try {
+        const res = await fetch('/api/team');
+        if (res.ok) {
+          setTeam(await res.json());
+        }
+      } catch (err) {
+        console.error('Error fetching team members:', err);
+      } finally {
+        setLoadingTeam(false);
+      }
+    };
+
     fetchDocs();
+    fetchTeam();
   }, []);
 
   return (
@@ -173,6 +193,97 @@ export default function About() {
 
           </div>
 
+        </div>
+
+        {/* Our Team Section */}
+        <div className="mt-24 border-t border-slate-900 pt-16 space-y-12" id="our-team-section">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-xs font-bold font-mono uppercase text-amber-500 tracking-widest block animate-pulse">Corporate Leadership</span>
+            <h2 className="text-3xl font-extrabold text-white tracking-tight">Meet Our Chartered Experts</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Our multidisciplinary squad comprises chartered engineers, eco-conscious architects, and certified site managers carrying elite international qualifications.
+            </p>
+          </div>
+
+          {loadingTeam ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="bg-slate-900/40 border border-slate-850 rounded-2xl p-5 animate-pulse space-y-4">
+                  <div className="aspect-square bg-slate-800 rounded-xl w-full" />
+                  <div className="h-4 bg-slate-800 rounded w-2/3" />
+                  <div className="h-3 bg-slate-800 rounded w-1/2" />
+                  <div className="h-3 bg-slate-800 rounded w-5/6" />
+                </div>
+              ))}
+            </div>
+          ) : team.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {team.map((member) => (
+                <div 
+                  key={member.id} 
+                  className="bg-slate-900/30 border border-slate-850 hover:border-amber-500/50 rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                  itemScope 
+                  itemType="https://schema.org/Person"
+                >
+                  <div className="space-y-4">
+                    {/* Headshot */}
+                    <div className="aspect-square rounded-xl overflow-hidden relative bg-slate-950 border border-slate-850">
+                      {member.image ? (
+                        <img 
+                          src={member.image} 
+                          alt={member.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          itemProp="image"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
+                          <Users className="w-12 h-12 stroke-[1.5]" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+
+                    {/* Meta info */}
+                    <div className="space-y-1">
+                      <h3 itemProp="name" className="font-bold text-white text-base group-hover:text-amber-400 transition-colors">
+                        {member.name}
+                      </h3>
+                      <p itemProp="jobTitle" className="text-xs font-bold text-amber-500 tracking-wide">
+                        {member.role}
+                      </p>
+                    </div>
+
+                    {/* Specialization & Credentials */}
+                    <div className="space-y-2 text-xs text-slate-400 border-t border-slate-850/80 pt-3">
+                      <div className="flex items-start gap-2.5">
+                        <GraduationCap className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                        <span className="leading-relaxed font-sans">{member.specialization}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact info */}
+                  {member.email && (
+                    <div className="pt-4 mt-4 border-t border-slate-850/50">
+                      <a 
+                        href={`mailto:${member.email}`}
+                        className="inline-flex items-center gap-2 text-xs text-slate-400 hover:text-amber-400 transition-colors"
+                        itemProp="email"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>{member.email}</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-12 bg-slate-900/30 border border-slate-850 rounded-2xl text-slate-500 text-sm">
+              No leadership personnel listed currently.
+            </div>
+          )}
         </div>
 
       </div>

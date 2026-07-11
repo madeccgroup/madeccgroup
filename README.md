@@ -105,4 +105,3 @@ This project is pre-configured to build the frontend and bundle the backend Expr
 | `npm run db:push` | Pushes local database schemas to the remote database |
 | `npm run db:seed` | Seeds the remote/local database with starter content |
 | `npm run lint` | Runs TypeScript type verification checking for any build-time errors |
-"# madeccgroup" 

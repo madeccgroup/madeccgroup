@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pkg from 'pg';
 const { Pool } = pkg;
@@ -26,8 +25,8 @@ export const createPool = () => {
   const isLocalHost = connectionString.includes('localhost') || 
                       connectionString.includes('127.0.0.1');
   
-  // Enable SSL in production unless explicitly disabled or connecting to localhost.
-  const needsSsl = hasForceEnable || (!isLocalHost && !hasForceDisable && process.env.NODE_ENV === 'production');
+  // Enable SSL for remote database connections unless explicitly disabled or connecting to localhost.
+  const needsSsl = hasForceEnable || (!isLocalHost && !hasForceDisable);
 
   return new Pool({
     connectionString,

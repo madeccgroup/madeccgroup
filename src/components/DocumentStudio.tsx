@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { QRCodeSVG } from 'qrcode.react';
 import SignaturePad from './SignaturePad.tsx';
-import { auth } from '../lib/firebase.ts';
+import { auth, getAuthToken } from '../lib/firebase.ts';
 import { 
   FileText, 
   Signature, 
@@ -338,7 +338,7 @@ export default function DocumentStudio({
   const fetchSavedContracts = async () => {
     setIsLoadingContracts(true);
     try {
-      const authToken = await auth.currentUser?.getIdToken() || null;
+      const authToken = await getAuthToken();
       const headers: any = {};
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
@@ -348,10 +348,10 @@ export default function DocumentStudio({
         const data = await response.json();
         setSavedContracts(data);
       } else {
-        console.error('Failed to load contracts:', await response.text());
+        console.warn('Failed to load contracts:', await response.text());
       }
     } catch (err) {
-      console.error('Error fetching contracts:', err);
+      console.warn('Error fetching contracts (this is normal during server restarts or when unauthenticated):', err);
     } finally {
       setIsLoadingContracts(false);
     }
@@ -360,7 +360,7 @@ export default function DocumentStudio({
   const fetchSavedReceipts = async () => {
     setIsLoadingReceipts(true);
     try {
-      const authToken = await auth.currentUser?.getIdToken() || null;
+      const authToken = await getAuthToken();
       const headers: any = {};
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
@@ -370,10 +370,10 @@ export default function DocumentStudio({
         const data = await response.json();
         setSavedReceipts(data);
       } else {
-        console.error('Failed to load receipts:', await response.text());
+        console.warn('Failed to load receipts:', await response.text());
       }
     } catch (err) {
-      console.error('Error fetching receipts:', err);
+      console.warn('Error fetching receipts (this is normal during server restarts or when unauthenticated):', err);
     } finally {
       setIsLoadingReceipts(false);
     }
@@ -392,7 +392,7 @@ export default function DocumentStudio({
       return;
     }
     try {
-      const authToken = await auth.currentUser?.getIdToken() || null;
+      const authToken = await getAuthToken();
       const headers: any = {};
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
@@ -426,7 +426,7 @@ export default function DocumentStudio({
       return;
     }
     try {
-      const authToken = await auth.currentUser?.getIdToken() || null;
+      const authToken = await getAuthToken();
       const headers: any = {};
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
@@ -559,7 +559,7 @@ export default function DocumentStudio({
     setIsSigningInProgress(true);
     try {
       const activeClientName = clientName.trim() || typedClientSignature.trim() || 'Client';
-      const authToken = await auth.currentUser?.getIdToken() || null;
+      const authToken = await getAuthToken();
       const headers: any = { 'Content-Type': 'application/json' };
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
@@ -645,7 +645,7 @@ export default function DocumentStudio({
     setIsSigningReceiptInProgress(true);
     try {
       const activeClientName = receiptClient.trim() || 'Client';
-      const authToken = await auth.currentUser?.getIdToken() || null;
+      const authToken = await getAuthToken();
       const headers: any = { 'Content-Type': 'application/json' };
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
@@ -739,7 +739,7 @@ export default function DocumentStudio({
 
     setIsEmailingReceipt(true);
     try {
-      const authToken = await auth.currentUser?.getIdToken() || null;
+      const authToken = await getAuthToken();
       const headers: any = {
         'Content-Type': 'application/json',
       };

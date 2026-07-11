@@ -5,62 +5,245 @@ interface SEOHandlerProps {
   selectedProjectId: number | null;
 }
 
-const TAB_META: Record<string, { title: string; description: string }> = {
+const TAB_META: Record<string, { title: string; description: string; keywords: string; ogType?: string }> = {
   home: {
     title: 'MADECC Group | Premier Engineering & Construction Firm in Cameroon',
     description: 'Cameroon’s leading multi-disciplinary construction company. Turning blueprints into sustainable architectural masterpieces, custom commercial spaces, and smart estates.',
+    keywords: 'construction Cameroon, engineering firm Douala, civil engineering Yaounde, architectural blueprints, sustainable buildings, commercial estate construction, MADECC Group, building contractors Douala, civil tech Africa',
+    ogType: 'website'
   },
   about: {
     title: 'About Us | MADECC Group Construction & Engineering',
     description: 'Learn about MADECC Group’s legacy of precision, ISO certified standards, and elite multi-disciplinary team driving sustainable development across Central Africa.',
+    keywords: 'about MADECC Group, civil engineers Cameroon, construction standards, sustainable development Cameroon, engineering leadership, structural safety, Cameroon builders, construction quality control',
+    ogType: 'profile'
   },
   projects: {
     title: 'Contract Portfolio & Landmark Projects | MADECC Group',
     description: 'Explore our construction milestones and landmark projects in Cameroon. View real-time value budgets, location updates, and completed works.',
+    keywords: 'construction portfolio, infrastructure projects Cameroon, road construction Cameroon, commercial builds, building milestones, project tracker, public contracts, civil development',
+    ogType: 'website'
   },
   blog: {
     title: 'Industry Insights, News & Civil Tech Blog | MADECC Group',
     description: 'Stay updated with civil engineering trends, construction updates, and expert structural guidelines from MADECC Group experts in Central Africa.',
+    keywords: 'civil tech blog, construction news Douala, engineering trends, structural guidelines, concrete testing, safety standards Africa, builders diary Cameroon',
+    ogType: 'blog'
   },
   contact: {
     title: 'Contact Engineering Support & Offices | MADECC Group',
     description: 'Get in touch with MADECC Group. Schedule secure on-site inspections, coordinate with engineers, or request professional service proposals.',
+    keywords: 'contact construction company, civil engineering support, Douala office, Yaounde engineering, get quote, project consultation, building builders Cameroon',
+    ogType: 'website'
   },
   booking: {
     title: 'Book a Construction Consultation & Inspection | MADECC Group',
     description: 'Securely book professional structural assessments, project planning sessions, and soil testing with our multi-disciplinary experts.',
+    keywords: 'book construction inspection, schedule soil test, engineering consultation, project estimate Cameroon, structural assessment booking, architect interview Douala',
+    ogType: 'website'
   },
   admin: {
     title: 'Secure Operations Command Center | MADECC Group Admin',
     description: 'Authorized administrative panel for managing contract progress, audit logs, banner slides, and appointment scheduling.',
+    keywords: 'admin panel, backend, security operations, user management',
+    ogType: 'website'
   },
 };
 
 /**
- * High-fidelity SEO handler that dynamically updates document title and
- * meta description as the user navigates different applet sections.
+ * High-fidelity SEO handler that dynamically updates document title,
+ * meta tags, Open Graph properties, Twitter cards, and appends 
+ * rich structured JSON-LD schemas as the user navigates.
  */
 export default function SEOHandler({ currentTab, selectedProjectId }: SEOHandlerProps) {
   useEffect(() => {
     let title = TAB_META[currentTab]?.title || 'MADECC Group | Construction & Engineering';
     let description = TAB_META[currentTab]?.description || 'Cameroon’s leading multi-disciplinary construction and engineering firm.';
+    let keywords = TAB_META[currentTab]?.keywords || 'construction, engineering, Cameroon, MADECC';
+    let ogType = TAB_META[currentTab]?.ogType || 'website';
 
     if (currentTab === 'projects' && selectedProjectId) {
       title = `Project Timeline #${selectedProjectId} | MADECC Group Portfolio`;
       description = `View real-time construction progress, budget value, and project history for contract #${selectedProjectId}.`;
+      keywords = `project timeline, project #${selectedProjectId}, progress milestones, budget tracking, MADECC portfolio`;
+      ogType = 'article';
     }
 
-    // Set document title
+    // 1. Set Document Title
     document.title = title;
 
-    // Set or create meta description
-    let metaDescription = document.querySelector('meta[name="description"]');
-    if (!metaDescription) {
-      metaDescription = document.createElement('meta');
-      metaDescription.setAttribute('name', 'description');
-      document.head.appendChild(metaDescription);
+    // Helper to set or update dynamic meta tags
+    const setMetaTag = (attrName: string, attrVal: string, content: string) => {
+      let el = document.querySelector(`meta[${attrName}="${attrVal}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attrName, attrVal);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    const origin = window.location.origin;
+    const currentUrl = window.location.href;
+    const shareImage = `${origin}/images/hero-banner-placeholder.jpg`; // Fallback shareable preview image
+
+    // 2. Set Standard Meta Tags
+    setMetaTag('name', 'description', description);
+    setMetaTag('name', 'keywords', keywords);
+    setMetaTag('name', 'author', 'MADECC Group');
+    setMetaTag('name', 'robots', 'index, follow');
+
+    // 3. Set Open Graph Tags
+    setMetaTag('property', 'og:title', title);
+    setMetaTag('property', 'og:description', description);
+    setMetaTag('property', 'og:type', ogType);
+    setMetaTag('property', 'og:url', currentUrl);
+    setMetaTag('property', 'og:image', shareImage);
+    setMetaTag('property', 'og:site_name', 'MADECC Group');
+
+    // 4. Set Twitter Card Tags
+    setMetaTag('name', 'twitter:card', 'summary_large_image');
+    setMetaTag('name', 'twitter:title', title);
+    setMetaTag('name', 'twitter:description', description);
+    setMetaTag('name', 'twitter:image', shareImage);
+
+    // 5. Generate JSON-LD Structured Schema
+    let schemaObj: any = null;
+
+    if (currentTab === 'home') {
+      schemaObj = {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'Organization',
+            '@id': `${origin}/#organization`,
+            'name': 'MADECC Group',
+            'url': origin,
+            'logo': `${origin}/images/logo.png`,
+            'description': 'Cameroon’s premier multi-disciplinary civil engineering and construction firm.',
+            'sameAs': [
+              'https://www.facebook.com/madeccgroup',
+              'https://www.linkedin.com/company/madeccgroup'
+            ]
+          },
+          {
+            '@type': 'LocalBusiness',
+            '@id': `${origin}/#localbusiness`,
+            'name': 'MADECC Group Cameroon HQ',
+            'description': 'Cameroon’s leading multi-disciplinary construction and civil engineering firm.',
+            'telephone': '+237600000000',
+            'email': 'kreboya603@gmail.com',
+            'address': {
+              '@type': 'PostalAddress',
+              'streetAddress': 'Rue de la Joie, Akwa',
+              'addressLocality': 'Douala',
+              'addressRegion': 'Littoral',
+              'postalCode': '00237',
+              'addressCountry': 'CM'
+            },
+            'geo': {
+              '@type': 'GeoCoordinates',
+              'latitude': '4.0511',
+              'longitude': '9.7679'
+            },
+            'url': origin,
+            'image': shareImage
+          },
+          {
+            '@type': 'Service',
+            'name': 'Civil Engineering & Structural Design',
+            'provider': { '@id': `${origin}/#organization` },
+            'description': 'Advanced structural engineering, foundation calculations, concrete analysis, and customized blueprints using ISO certified standards.'
+          },
+          {
+            '@type': 'Service',
+            'name': 'Commercial & Residential Construction',
+            'provider': { '@id': `${origin}/#organization` },
+            'description': 'Turnkey commercial hubs, luxury high-rises, logistics warehouses, and smart residential estates built with high-fidelity materials.'
+          }
+        ]
+      };
+    } else if (currentTab === 'about') {
+      schemaObj = {
+        '@context': 'https://schema.org',
+        '@type': 'AboutPage',
+        'name': 'About MADECC Group',
+        'description': 'MADECC Group’s legacy of engineering precision, ISO certifications, and elite multi-disciplinary team driving sustainable development across Cameroon.',
+        'publisher': {
+          '@type': 'Organization',
+          'name': 'MADECC Group',
+          'url': origin
+        }
+      };
+    } else if (currentTab === 'projects') {
+      if (selectedProjectId) {
+        schemaObj = {
+          '@context': 'https://schema.org',
+          '@type': 'CreativeWork',
+          'name': `Construction Contract Milestone #${selectedProjectId}`,
+          'description': `Real-time construction progress and timeline verification for milestone ID ${selectedProjectId}.`,
+          'creator': {
+            '@type': 'Organization',
+            'name': 'MADECC Group',
+            'url': origin
+          }
+        };
+      } else {
+        schemaObj = {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          'name': 'Landmark Projects Portfolio | MADECC Group',
+          'description': 'Review public and private construction projects, smart estates, and civil developments managed by MADECC Group.',
+          'publisher': {
+            '@type': 'Organization',
+            'name': 'MADECC Group',
+            'url': origin
+          }
+        };
+      }
+    } else if (currentTab === 'blog') {
+      schemaObj = {
+        '@context': 'https://schema.org',
+        '@type': 'Blog',
+        'name': 'MADECC Group Civil Tech & Engineering Blog',
+        'description': 'Professional construction tech insights, structural engineering news, and planning guidelines from MADECC Group senior directors.',
+        'publisher': {
+          '@type': 'Organization',
+          'name': 'MADECC Group',
+          'url': origin
+        }
+      };
+    } else if (currentTab === 'contact' || currentTab === 'booking') {
+      schemaObj = {
+        '@context': 'https://schema.org',
+        '@type': 'ContactPage',
+        'name': 'Contact and Consultation Booking | MADECC Group',
+        'description': 'Connect directly with senior estimators and civil engineers for assessments, proposals, or inspections.',
+        'publisher': {
+          '@type': 'Organization',
+          'name': 'MADECC Group',
+          'url': origin
+        }
+      };
     }
-    metaDescription.setAttribute('content', description);
+
+    // Append/update JSON-LD script tag in the document head
+    if (schemaObj) {
+      let jsonLdScript = document.getElementById('seo-jsonld') as HTMLScriptElement | null;
+      if (!jsonLdScript) {
+        jsonLdScript = document.createElement('script');
+        jsonLdScript.id = 'seo-jsonld';
+        jsonLdScript.type = 'application/ld+json';
+        document.head.appendChild(jsonLdScript);
+      }
+      jsonLdScript.textContent = JSON.stringify(schemaObj);
+    } else {
+      // Remove script tag if not on a page that needs custom JSON-LD
+      const jsonLdScript = document.getElementById('seo-jsonld');
+      if (jsonLdScript) {
+        jsonLdScript.remove();
+      }
+    }
   }, [currentTab, selectedProjectId]);
 
   return null; // Renderless helper

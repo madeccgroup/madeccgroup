@@ -17,13 +17,27 @@ import {
   Cell,
 } from 'recharts';
 import { Project, Appointment, ContactMessage, NewsletterSubscriber } from '../types.ts';
-import { Calendar, Building, Mail, Users, TrendingUp, DollarSign } from 'lucide-react';
+import { Calendar, Building, Mail, Users, TrendingUp, DollarSign, Award } from 'lucide-react';
 
 interface DashboardChartsProps {
   projects: Project[];
   appointments: Appointment[];
   contacts: ContactMessage[];
   subscribers: NewsletterSubscriber[];
+  dbAnalytics?: {
+    managedProjectsCount: number;
+    totalProjectBudgetValue: number;
+    managedContractsCount: number;
+    totalContractValue: number;
+    totalRevenue: number;
+    pendingConsultations: number;
+    unreadInquiries: number;
+    pendingReviews: number;
+    newsletterSubscribers: number;
+    activeUsers: number;
+    uploadedDocuments: number;
+    bookingApprovalRate: string;
+  } | null;
 }
 
 export default function DashboardCharts({
@@ -31,6 +45,7 @@ export default function DashboardCharts({
   appointments,
   contacts,
   subscribers,
+  dbAnalytics,
 }: DashboardChartsProps) {
   // 1. Process Booking / Consultation Trends (Grouped by Month/Year)
   const bookingTrendsData = useMemo(() => {
@@ -149,22 +164,32 @@ export default function DashboardCharts({
   // 5. Compute aggregate metrics
   const aggregateMetrics = useMemo(() => {
     let totalValue = 0;
-    projects.forEach((p) => {
-      if (p.budget) {
-        const cleaned = p.budget.replace(/[^0-9.]/g, '');
-        totalValue += parseFloat(cleaned) || 0;
-      }
-    });
+    let totalRevenue = 0;
 
-    const conversionRate = appointments.length > 0
-      ? ((appointments.filter(a => a.status === 'confirmed' || a.status === 'completed').length / appointments.length) * 100).toFixed(1)
-      : '0.0';
+    if (dbAnalytics) {
+      totalValue = dbAnalytics.totalContractValue;
+      totalRevenue = dbAnalytics.totalRevenue;
+    } else {
+      projects.forEach((p) => {
+        if (p.budget) {
+          const cleaned = p.budget.replace(/[^0-9.]/g, '');
+          totalValue += parseFloat(cleaned) || 0;
+        }
+      });
+    }
+
+    const conversionRate = dbAnalytics 
+      ? dbAnalytics.bookingApprovalRate 
+      : (appointments.length > 0
+        ? ((appointments.filter(a => a.status === 'confirmed' || a.status === 'completed').length / appointments.length) * 100).toFixed(1)
+        : '0.0');
 
     return {
       totalValue,
+      totalRevenue,
       conversionRate,
     };
-  }, [projects, appointments]);
+  }, [projects, appointments, dbAnalytics]);
 
   const currencyFormatter = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -178,7 +203,7 @@ export default function DashboardCharts({
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* Dynamic Key metrics summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
           <div className="bg-emerald-500/10 p-3 rounded-xl text-emerald-400">
             <DollarSign className="w-6 h-6" />
@@ -192,8 +217,20 @@ export default function DashboardCharts({
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
-          <div className="bg-amber-500/10 p-3 rounded-xl text-amber-400">
+          <div className="bg-emerald-500/10 p-3 rounded-xl text-emerald-400">
             <TrendingUp className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Total Live Revenue</span>
+            <span className="text-white text-2xl font-extrabold mt-0.5 block">
+              {currencyFormatter(aggregateMetrics.totalRevenue)}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
+          <div className="bg-amber-500/10 p-3 rounded-xl text-amber-400">
+            <Award className="w-6 h-6" />
           </div>
           <div>
             <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Booking Approval Rate</span>
@@ -208,9 +245,9 @@ export default function DashboardCharts({
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Audited Operator Activity</span>
+            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Active Subscribers</span>
             <span className="text-white text-2xl font-extrabold mt-0.5 block">
-              {subscribers.length + contacts.length}
+              {dbAnalytics ? dbAnalytics.newsletterSubscribers : subscribers.length}
             </span>
           </div>
         </div>

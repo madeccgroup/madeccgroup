@@ -53,6 +53,10 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
   // Carousel State
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
+  // Review Carousel State
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [isHoveringReviews, setIsHoveringReviews] = useState(false);
+
   // Review Submission State
   const [newAuthor, setNewAuthor] = useState('');
   const [newRating, setNewRating] = useState(5);
@@ -114,6 +118,15 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
     return () => clearInterval(timer);
   }, [banners]);
 
+  // Auto transition review carousel every 5s (pauses on hover)
+  useEffect(() => {
+    if (approvedReviews.length <= 1 || isHoveringReviews) return;
+    const timer = setInterval(() => {
+      setCurrentReviewIndex((prev) => (prev + 1) % approvedReviews.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [approvedReviews, isHoveringReviews]);
+
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAuthor || !newText) return;
@@ -140,6 +153,23 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
       });
 
       if (response.ok) {
+        // Submit to Netlify forms also
+        try {
+          await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              'form-name': 'reviews',
+              'authorName': newAuthor,
+              'rating': String(newRating),
+              'text': newText,
+              'projectName': newProject
+            }).toString()
+          });
+        } catch (netlifyErr) {
+          console.warn('Netlify review form submission failed:', netlifyErr);
+        }
+
         setReviewSuccess(true);
         setNewAuthor('');
         setNewText('');
@@ -498,34 +528,104 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
               </div>
 
               {approvedReviews.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6">
-                  {approvedReviews.map((review) => (
-                    <div key={review.id} className="bg-slate-900/50 rounded-xl border border-slate-800/80 p-6 relative shadow-sm">
-                      <Quote className="absolute right-6 top-6 w-10 h-10 text-slate-800/40" />
-                      
-                      <div className="flex gap-1 text-amber-500 mb-3">
-                        {Array.from({ length: review.rating }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
+                <div 
+                  className="relative group/carousel overflow-hidden bg-slate-950/40 border border-slate-850 rounded-2xl p-2 md:p-4"
+                  onMouseEnter={() => setIsHoveringReviews(true)}
+                  onMouseLeave={() => setIsHoveringReviews(false)}
+                >
+                  {/* Sliding Window */}
+                  <div className="overflow-hidden relative w-full">
+                    <div 
+                      className="flex transition-transform duration-500 ease-in-out"
+                      style={{ transform: `translateX(-${currentReviewIndex * 100}%)` }}
+                    >
+                      {approvedReviews.map((review) => (
+                        <div 
+                          key={review.id} 
+                          className="w-full shrink-0 px-4 py-8 relative"
+                          itemScope 
+                          itemType="https://schema.org/Review"
+                        >
+                          {/* Rich SEO Microdata */}
+                          <meta itemProp="datePublished" content={review.createdAt || new Date().toISOString()} />
+                          <div itemProp="reviewRating" itemScope itemType="https://schema.org/Rating" className="hidden">
+                            <meta itemProp="ratingValue" content={String(review.rating)} />
+                            <meta itemProp="bestRating" content="5" />
+                          </div>
+                          
+                          <Quote className="absolute right-6 top-4 w-12 h-12 text-slate-800/20 pointer-events-none" />
+                          
+                          {/* Stars */}
+                          <div className="flex gap-1 text-amber-500 mb-5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star 
+                                key={i} 
+                                className={`w-4.5 h-4.5 ${i < review.rating ? 'fill-current' : 'text-slate-700'}`} 
+                              />
+                            ))}
+                          </div>
+
+                          {/* Review Text */}
+                          <p itemProp="reviewBody" className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 italic min-h-[80px]">
+                            "{review.text}"
+                          </p>
+
+                          {/* Author & Project Details */}
+                          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-900/80 text-xs">
+                            <div itemProp="author" itemScope itemType="https://schema.org/Person">
+                              <span itemProp="name" className="font-extrabold text-white text-sm block">
+                                {review.authorName}
+                              </span>
+                              {review.projectName && (
+                                <span className="text-[10px] text-slate-500 font-mono tracking-wider block uppercase mt-0.5">
+                                  Project: <span itemProp="itemReviewed">{review.projectName}</span>
+                                </span>
+                              )}
+                            </div>
+                            
+                            <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 select-none">
+                              <CheckCircle className="w-3.5 h-3.5" /> Verified Handover
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Manual Navigation Chevrons */}
+                  {approvedReviews.length > 1 && (
+                    <div className="flex items-center justify-between mt-4 px-4 pb-2 border-t border-slate-900/40 pt-4">
+                      {/* Left button */}
+                      <button
+                        onClick={() => setCurrentReviewIndex((prev) => (prev - 1 + approvedReviews.length) % approvedReviews.length)}
+                        className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white hover:border-amber-500 transition-all"
+                        aria-label="Previous testimonial"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+
+                      {/* Dots indicators */}
+                      <div className="flex gap-1.5">
+                        {approvedReviews.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentReviewIndex(idx)}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentReviewIndex ? 'w-5 bg-amber-500' : 'w-1.5 bg-slate-800 hover:bg-slate-700'}`}
+                            aria-label={`Go to slide ${idx + 1}`}
+                          />
                         ))}
                       </div>
 
-                      <p className="text-slate-300 text-sm leading-relaxed mb-4 italic">
-                        "{review.text}"
-                      </p>
-
-                      <div className="flex items-center justify-between text-xs">
-                        <div>
-                          <span className="font-bold text-white block">{review.authorName}</span>
-                          {review.projectName && (
-                            <span className="text-[10px] text-slate-500 font-mono tracking-wider block uppercase">Project: {review.projectName}</span>
-                          )}
-                        </div>
-                        <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
-                          <CheckCircle className="w-3.5 h-3.5" /> Verified Handover
-                        </span>
-                      </div>
+                      {/* Right button */}
+                      <button
+                        onClick={() => setCurrentReviewIndex((prev) => (prev + 1) % approvedReviews.length)}
+                        className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white hover:border-amber-500 transition-all"
+                        aria-label="Next testimonial"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
-                  ))}
+                  )}
                 </div>
               ) : (
                 <div className="bg-slate-900/50 border border-slate-800 p-12 text-center rounded-xl text-slate-500">

@@ -16,7 +16,7 @@
 # 1. Route all API calls to our Express Serverless Function
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
 # 2. Support standard React Router SPA paths (fallback to index.html for frontend routing)

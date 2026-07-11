@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+// @ts-ignore
+import logoImg from '../assets/images/madecc_logo_1783370981722.jpg';
 import { 
   auth, 
   googleAuthProvider 
@@ -37,32 +39,41 @@ export default function Navbar({
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const [adminSecretKey, setAdminSecretKey] = useState('');
 
-  const handleLogin = async () => {
+  const handleAdminSecretLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const key = adminSecretKey.trim();
+    if (key !== 'Adminmadeccgroup' && key !== 'MADECC Group admin') {
+      setLoginError('Invalid Admin Secret Key. Access denied.');
+      return;
+    }
+
     setSigningIn(true);
     setLoginError(null);
     try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const token = await result.user.getIdToken();
+      sessionStorage.setItem('admin_token', key);
       
-      // Call our backend API to synchronize user
       const response = await fetch('/api/auth/me', {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${key}`
         }
       });
+      if (!response.ok) {
+        throw new Error('Failed to retrieve administrator profile from database.');
+      }
       const data = await response.json();
       if (data.user) {
         setDbUser(data.user);
         setLoginModalOpen(false);
+        setAdminSecretKey('');
+      } else {
+        throw new Error('No user data returned.');
       }
     } catch (error: any) {
-      console.error('Login failed:', error);
-      if (error?.code === 'auth/popup-closed-by-user' || error?.message?.includes('popup-closed-by-user')) {
-        setLoginError('The Google Sign-In popup was closed or blocked. If you are using an iframe preview, please allow popups/cookies, or open the app in a new tab.');
-      } else {
-        setLoginError(error?.message || 'Authentication failed. Please verify your connection.');
-      }
+      console.error('Admin key login failed:', error);
+      setLoginError(error?.message || 'Access Denied. Please verify the admin secret key.');
+      sessionStorage.removeItem('admin_token');
     } finally {
       setSigningIn(false);
     }
@@ -71,6 +82,7 @@ export default function Navbar({
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      sessionStorage.removeItem('admin_token');
       setDbUser(null);
       setUserDropdownOpen(false);
       setCurrentTab('home');
@@ -101,7 +113,13 @@ export default function Navbar({
           >
             <div className="h-12 w-12 bg-slate-950 rounded-xl flex items-center justify-center overflow-hidden border border-slate-800/80 shadow-inner">
               <img 
-                src="/src/assets/images/madecc_logo_1783370981722.jpg" 
+                src={logoImg} 
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== '/logo.png') {
+                    target.src = '/logo.png';
+                  }
+                }}
                 alt="MADECC Group Logo" 
                 className="h-full w-full object-contain"
                 referrerPolicy="no-referrer"
@@ -206,7 +224,7 @@ export default function Navbar({
                   id="login-btn"
                 >
                   <Key className="w-4 h-4" />
-                  Sign In with Google
+                  Admin Sign In
                 </button>
               )}
             </div>
@@ -295,7 +313,7 @@ export default function Navbar({
                 className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 shadow"
               >
                 <Key className="w-4 h-4" />
-                Sign In with Google
+                Admin Sign In
               </button>
             )}
           </div>
@@ -318,10 +336,10 @@ export default function Navbar({
             {/* Header */}
             <div className="text-center space-y-2 mb-6">
               <div className="bg-amber-500/10 text-amber-500 p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto shadow-inner">
-                <ShieldCheck className="w-6 h-6 animate-pulse" />
+                <ShieldCheck className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-extrabold tracking-tight text-white font-sans">MADECC Group Access</h3>
-              <p className="text-xs text-slate-400">Sign in to manage projects, consults, and accounts.</p>
+              <p className="text-xs text-slate-400">Enter your admin secret key to authenticate.</p>
             </div>
 
             {/* Error Message */}
@@ -336,24 +354,36 @@ export default function Navbar({
             )}
 
             {/* Actions */}
-            <div className="space-y-4">
-              {/* Primary Google Auth */}
+            <form onSubmit={handleAdminSecretLogin} className="space-y-4 text-left">
+              <div className="space-y-1.5">
+                <label htmlFor="navbar-admin-secret-key" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Admin Secret Key
+                </label>
+                <input
+                  id="navbar-admin-secret-key"
+                  type="password"
+                  required
+                  value={adminSecretKey}
+                  onChange={(e) => setAdminSecretKey(e.target.value)}
+                  placeholder="Enter Secret Key"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+              </div>
+
               <button
-                onClick={handleLogin}
+                type="submit"
                 disabled={signingIn}
                 className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-amber-500/15 disabled:opacity-50"
-                id="modal-google-signin-btn"
+                id="modal-admin-signin-btn"
               >
                 {signingIn ? (
                   <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Key className="w-4.5 h-4.5" />
                 )}
-                Sign In with Google
+                Authenticate Access
               </button>
-
-
-            </div>
+            </form>
           </div>
         </div>
       )}

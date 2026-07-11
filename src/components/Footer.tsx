@@ -44,6 +44,20 @@ export default function Footer({ setCurrentTab }: FooterProps) {
       });
       const data = await response.json();
       if (response.ok) {
+        // Submit to Netlify forms also
+        try {
+          await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              'form-name': 'newsletter',
+              'email': email
+            }).toString()
+          });
+        } catch (netlifyErr) {
+          console.warn('Netlify newsletter form submission failed:', netlifyErr);
+        }
+
         setStatus('success');
         setMsg('Successfully subscribed to newsletter!');
         setEmail('');
