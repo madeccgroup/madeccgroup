@@ -31,6 +31,11 @@ export async function fetchCsrfToken(): Promise<string | null> {
   return tokenPromise;
 }
 
+export async function getCsrfHeaders(): Promise<Record<string, string>> {
+  const token = await fetchCsrfToken();
+  return token ? { 'X-CSRF-Token': token } : {};
+}
+
 export function initCsrfProtection(): void {
   if (typeof window === 'undefined') return;
 
@@ -59,7 +64,9 @@ export function initCsrfProtection(): void {
 
         if (token) {
           const headers = new Headers(init?.headers || {});
-          headers.set('X-CSRF-Token', token);
+          if (!headers.has('X-CSRF-Token')) {
+            headers.set('X-CSRF-Token', token);
+          }
           
           if (!init) {
             init = {};
@@ -71,19 +78,24 @@ export function initCsrfProtection(): void {
       return originalFetchFn ? originalFetchFn.call(this || window, input, init) : fetch(input, init);
     };
 
-    try {
-      window.fetch = patchedFetch;
-    } catch (e) {
-      // If direct assignment fails (e.g. read-only properties in custom iframe proxies), use Object.defineProperty
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'fetch');
+    if (descriptor && !descriptor.writable && !descriptor.configurable) {
+      console.warn('[CSRF] window.fetch is non-writable and non-configurable in this environment. Utilizing manual/explicit getCsrfHeaders() fallback.');
+    } else {
       try {
-        Object.defineProperty(window, 'fetch', {
-          value: patchedFetch,
-          writable: true,
-          configurable: true,
-          enumerable: true
-        });
-      } catch (innerErr) {
-        console.warn('Unable to redefine window.fetch with Object.defineProperty:', innerErr);
+        window.fetch = patchedFetch;
+      } catch (e) {
+        // If direct assignment fails (e.g. read-only properties in custom iframe proxies), use Object.defineProperty
+        try {
+          Object.defineProperty(window, 'fetch', {
+            value: patchedFetch,
+            writable: true,
+            configurable: true,
+            enumerable: true
+          });
+        } catch (innerErr) {
+          console.warn('Unable to redefine window.fetch with Object.defineProperty:', innerErr);
+        }
       }
     }
   } catch (err) {

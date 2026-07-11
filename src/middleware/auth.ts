@@ -26,19 +26,41 @@ export async function getOrCreateUser(uid: string, email: string, name: string) 
     // 1. Check if user exists by UID
     const existingByUid = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
     if (existingByUid.length > 0) {
-      return existingByUid[0];
+      const user = existingByUid[0];
+      // Defensive: Ensure the admin role is enforced on this critical user
+      if (email.toLowerCase() === 'kreboya603@gmail.com' && user.role !== 'admin') {
+        const updated = await db.update(users)
+          .set({ role: 'admin' })
+          .where(eq(users.id, user.id))
+          .returning();
+        return updated[0];
+      }
+      return user;
     }
 
     // 2. If not found by UID, check if user exists by email (since email is unique)
     if (email) {
       const existingByEmail = await db.select().from(users).where(eq(users.email, email)).limit(1);
       if (existingByEmail.length > 0) {
+        const user = existingByEmail[0];
+        const updateFields: any = {};
         // If the UID is different, update it to the requested UID to keep it synced and avoid duplicate key errors.
-        const updated = await db.update(users)
-          .set({ uid })
-          .where(eq(users.id, existingByEmail[0].id))
-          .returning();
-        return updated[0];
+        if (user.uid !== uid) {
+          updateFields.uid = uid;
+        }
+        // Ensure admin role is set if they exist by email but don't have it
+        if (email.toLowerCase() === 'kreboya603@gmail.com' && user.role !== 'admin') {
+          updateFields.role = 'admin';
+        }
+
+        if (Object.keys(updateFields).length > 0) {
+          const updated = await db.update(users)
+            .set(updateFields)
+            .where(eq(users.id, user.id))
+            .returning();
+          return updated[0];
+        }
+        return user;
       }
     }
 

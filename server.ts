@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import crypto from 'crypto';
-import { createServer as createViteServer } from 'vite';
 import { db } from './src/db/index.ts';
 import { 
   users, 
@@ -55,10 +54,10 @@ function getTransporter() {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.SMTP_PORT || '587');
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
 
   if (!user || !pass) {
-    console.warn('[SMTP] Missing SMTP credentials. Mail notifications will be output to console logs.');
+    console.warn('[SMTP] Missing SMTP credentials (SMTP_USER and SMTP_PASS/SMTP_PASSWORD). Mail notifications will be output to console logs.');
     return null;
   }
 
@@ -83,8 +82,9 @@ async function sendNotificationEmail(subject: string, text: string, html: string
   }
 
   try {
+    const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@madecc.com';
     const info = await transporter.sendMail({
-      from: `"MADECC Group Portal" <${process.env.SMTP_USER}>`,
+      from: `"MADECC Group Portal" <${fromAddress}>`,
       to: recipient,
       subject,
       text,
@@ -247,10 +247,24 @@ export async function getApp() {
       return next();
     }
 
+    // Requests with an Authorization Bearer header are structurally immune to CSRF.
+    // They are explicitly triggered via JS headers and do not rely on implicit browser cookies.
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
     const token = req.headers['x-csrf-token'];
     if (!token || typeof token !== 'string' || !validateCsrfToken(token)) {
-      console.warn(`[CSRF] Blocked unauthorized request from ${req.ip} targeting ${req.method} ${req.originalUrl}`);
-      return res.status(403).json({ error: 'Forbidden: Invalid or missing CSRF token' });
+      const isMissing = !token;
+      const debugDetail = isMissing 
+        ? 'Missing CSRF token header (X-CSRF-Token).' 
+        : 'Invalid or expired CSRF token.';
+        
+      console.warn(`[CSRF] Blocked unauthorized request from ${req.ip} targeting ${req.method} ${req.originalUrl}: ${debugDetail}`);
+      return res.status(403).json({ 
+        error: `Forbidden: ${debugDetail} To resolve, please refresh the webpage or ensure that your browser allows cookies and local storage, and then submit again.` 
+      });
     }
 
     next();
@@ -2375,6 +2389,7 @@ async function startServer() {
   // --- VITE MIDDLEWARE SETUP ---
   // ==========================================
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

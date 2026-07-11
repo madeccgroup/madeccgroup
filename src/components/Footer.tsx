@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getCsrfHeaders } from '../lib/csrf.ts';
 import { 
   HardHat, 
   Mail, 
@@ -37,9 +38,13 @@ export default function Footer({ setCurrentTab }: FooterProps) {
     setCaptchaError(false);
     setStatus('loading');
     try {
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/subscribers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...csrfHeaders
+        },
         body: JSON.stringify({ email }),
       });
       const data = await response.json();

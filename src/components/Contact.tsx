@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getCsrfHeaders } from '../lib/csrf.ts';
 import { 
   Mail, 
   Phone, 
@@ -36,9 +37,13 @@ export default function Contact() {
     setCaptchaError(false);
     setStatus('submitting');
     try {
+      const csrfHeaders = await getCsrfHeaders();
       const res = await fetch('/api/contacts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...csrfHeaders
+        },
         body: JSON.stringify({ name, email, subject, message }),
       });
       const data = await res.json();
