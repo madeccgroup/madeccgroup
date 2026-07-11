@@ -1,8 +1,29 @@
+# Dependencies
 node_modules/
-build/
+
+# Build output
 dist/
+build/
 coverage/
-.DS_Store
+
+# Logs
 *.log
-.env*
+
+# Environment secrets
+.env
+.env.*
 !.env.example
+
+# Uploads
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Firebase secrets
+firebase-service-account*.json
