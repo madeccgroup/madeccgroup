@@ -5,3 +5,51 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
+
+/* Print Stylesheet overrides for perfect document alignments */
+@media print {
+  /* Hide the rest of the application UI */
+  body > *:not(#root), #root > * {
+    display: none !important;
+  }
+
+  #root {
+    background-color: white !important;
+  }
+
+  /* Only show the print preview modal's core document content */
+  .print-modal-container {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    visibility: visible !important;
+  }
+
+  /* Make sure the printed content itself is visible */
+  .print-preview-content, .print-preview-content * {
+    visibility: visible !important;
+  }
+
+  /* Hide print buttons and controls */
+  .print-hide-element {
+    display: none !important;
+  }
+
+  /* Reset layout constraints and background styles for printer */
+  .bg-slate-900, .bg-white, .bg-slate-100 {
+    background-color: transparent !important;
+  }
+  
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+}

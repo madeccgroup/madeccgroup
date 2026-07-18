@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Host & Sitemap
+Host: https://madecc-group.com
+Sitemap: https://madecc-group.com/sitemap.xml

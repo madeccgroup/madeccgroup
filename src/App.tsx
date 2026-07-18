@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase.ts';
 import { User } from './types.ts';
@@ -20,89 +20,31 @@ import Booking from './components/Booking.tsx';
 import Admin from './components/Admin.tsx';
 import VerifyContract from './components/VerifyContract.tsx';
 
-export default function App() {
-  const [currentTab, setCurrentTab] = useState<string>('home');
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [dbUser, setDbUser] = useState<User | null>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  const [verificationToken, setVerificationToken] = useState<string>('');
+import { ThemeProvider, useTheme } from './lib/ThemeContext.tsx';
+import { LanguageProvider } from './lib/LanguageContext.tsx';
 
-  // Sync contract verification tokens from query parameters
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const verifyToken = params.get('verify') || params.get('verifyToken');
-    if (verifyToken) {
-      setVerificationToken(verifyToken);
-      setCurrentTab('verify');
-    }
-  }, []);
-
-  // Sync Firebase authentication with our PostgreSQL user roles
-  useEffect(() => {
-    const bypassToken = sessionStorage.getItem('admin_token');
-    if (bypassToken === 'Adminmadeccgroup' || bypassToken === 'MADECC Group admin') {
-      setLoadingAuth(true);
-      fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${bypassToken}` }
-      })
-        .then(res => {
-          if (res.ok) return res.json();
-          throw new Error('Verification failed');
-        })
-        .then(data => {
-          if (data.user) {
-            setDbUser(data.user);
-          }
-          setLoadingAuth(false);
-        })
-        .catch(err => {
-          console.error('Bypass login restore failed:', err);
-          sessionStorage.removeItem('admin_token');
-          setDbUser(null);
-          setLoadingAuth(false);
-        });
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoadingAuth(true);
-      if (firebaseUser) {
-        try {
-          const token = await firebaseUser.getIdToken();
-          const response = await fetch('/api/auth/me', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (data.user) {
-              setDbUser(data.user);
-            }
-          }
-        } catch (error) {
-          console.error('Error synchronizing authenticated profile:', error);
-        }
-      } else {
-        setDbUser(null);
-      }
-      setLoadingAuth(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Scroll to top of page whenever tab transitions occur
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentTab, selectedProjectId]);
-
-  // Handle instant redirect if admin/staff role is revoked during sandbox toggling
-  useEffect(() => {
-    if (currentTab === 'admin') {
-      if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff')) {
-        setCurrentTab('home');
-      }
-    }
-  }, [dbUser, currentTab]);
+function AppContent({
+  currentTab,
+  setCurrentTab,
+  selectedProjectId,
+  setSelectedProjectId,
+  dbUser,
+  setDbUser,
+  loadingAuth,
+  verificationToken,
+  setVerificationToken
+}: {
+  currentTab: string;
+  setCurrentTab: (tab: string) => void;
+  selectedProjectId: number | null;
+  setSelectedProjectId: (id: number | null) => void;
+  dbUser: User | null;
+  setDbUser: React.Dispatch<React.SetStateAction<User | null>>;
+  loadingAuth: boolean;
+  verificationToken: string;
+  setVerificationToken: (t: string) => void;
+}) {
+  const { theme } = useTheme();
 
   const renderActiveScreen = () => {
     switch (currentTab) {
@@ -162,7 +104,11 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A0A0B] text-slate-200 font-sans selection:bg-amber-500 selection:text-slate-950">
+    <div className={`flex flex-col min-h-screen font-sans transition-colors duration-300 ${
+      theme === 'light'
+        ? 'bg-slate-50 text-slate-800 selection:bg-amber-200 selection:text-slate-900'
+        : 'bg-[#0A0A0B] text-slate-200 selection:bg-amber-500 selection:text-slate-950'
+    }`}>
       <SEOHandler currentTab={currentTab} selectedProjectId={selectedProjectId} />
       
       {/* Header Navigation Section */}
@@ -181,8 +127,8 @@ export default function App() {
       <main className="flex-grow">
         {loadingAuth ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-            <div className="w-10 h-10 border-4 border-slate-800 border-t-amber-500 rounded-full animate-spin" />
-            <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Verifying secure profile...</span>
+            <div className={`w-10 h-10 border-4 rounded-full animate-spin ${theme === 'light' ? 'border-slate-300 border-t-amber-500' : 'border-slate-800 border-t-amber-500'}`} />
+            <span className={`text-xs font-mono uppercase tracking-widest ${theme === 'light' ? 'text-slate-400' : 'text-slate-500'}`}>Verifying secure profile...</span>
           </div>
         ) : (
           renderActiveScreen()
@@ -204,5 +150,127 @@ export default function App() {
       <FloatingVoiceAssistant />
 
     </div>
+  );
+}
+
+export default function App() {
+  const [currentTab, setCurrentTab] = useState<string>('home');
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [dbUser, setDbUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [verificationToken, setVerificationToken] = useState<string>('');
+
+  // Sync contract verification tokens from query parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verifyToken = params.get('verify') || params.get('verifyToken');
+    if (verifyToken) {
+      setVerificationToken(verifyToken);
+      setCurrentTab('verify');
+    }
+  }, []);
+
+  // Sync Firebase authentication with our PostgreSQL user roles
+  useEffect(() => {
+    const bypassToken = sessionStorage.getItem('admin_token');
+    if (bypassToken === 'Adminmadeccgroup' || bypassToken === 'MADECC Group admin') {
+      setLoadingAuth(true);
+
+      const fetchWithRetry = (retries = 3, delay = 1000): Promise<any> => {
+        return fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${bypassToken}` }
+        })
+          .then(res => {
+            if (res.ok) return res.json();
+            throw new Error('Verification failed');
+          })
+          .catch(err => {
+            if (retries > 0 && err.message !== 'Verification failed') {
+              console.warn(`Bypass login fetch failed, retrying in ${delay}ms... (${retries} retries left)`);
+              return new Promise(resolve => setTimeout(resolve, delay))
+                .then(() => fetchWithRetry(retries - 1, delay * 1.5));
+            }
+            throw err;
+          });
+      };
+
+      fetchWithRetry()
+        .then(data => {
+          if (data.user) {
+            setDbUser(data.user);
+          }
+          setLoadingAuth(false);
+        })
+        .catch(err => {
+          console.error('Bypass login restore failed:', err);
+          // Only remove token if it was a definitive verification rejection, not a temporary network failure
+          if (err.message === 'Verification failed' || err.message.includes('Unauthorized')) {
+            sessionStorage.removeItem('admin_token');
+          }
+          setDbUser(null);
+          setLoadingAuth(false);
+        });
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoadingAuth(true);
+      if (firebaseUser) {
+        try {
+          const token = await firebaseUser.getIdToken();
+          (window as any).firebaseUserToken = token;
+
+          const response = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.user) {
+              setDbUser(data.user);
+            }
+          }
+        } catch (error) {
+          console.error('Error synchronizing authenticated profile:', error);
+        }
+      } else {
+        setDbUser(null);
+        (window as any).firebaseUserToken = undefined;
+      }
+      setLoadingAuth(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Scroll to top of page whenever tab transitions occur
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentTab, selectedProjectId]);
+
+  // Handle instant redirect if admin/staff role is revoked during sandbox toggling
+  useEffect(() => {
+    if (currentTab === 'admin') {
+      if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff')) {
+        setCurrentTab('home');
+      }
+    }
+  }, [dbUser, currentTab]);
+
+  return (
+    <LanguageProvider>
+      <ThemeProvider dbUser={dbUser}>
+        <AppContent
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          selectedProjectId={selectedProjectId}
+          setSelectedProjectId={setSelectedProjectId}
+          dbUser={dbUser}
+          setDbUser={setDbUser}
+          loadingAuth={loadingAuth}
+          verificationToken={verificationToken}
+          setVerificationToken={setVerificationToken}
+        />
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }

@@ -57,6 +57,8 @@ import {
 } from '../types.ts';
 import DashboardCharts from './DashboardCharts.tsx';
 import DocumentStudio, { generateAnalyticsPDF } from './DocumentStudio.tsx';
+import CareerStudio from './CareerStudio.tsx';
+import ProposalStudio from './ProposalStudio.tsx';
 
 const safeConfirm = (message: string): boolean => {
   if (typeof window === 'undefined') return true;
@@ -112,7 +114,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   };
 
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'doc-history' | 'db-architecture'>('analytics');
+  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio'>('analytics');
 
   // Live analytics state from backend
   const [dbAnalytics, setDbAnalytics] = useState<{
@@ -1475,7 +1477,10 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               { id: 'banners', label: 'Home Hero Sliders', icon: Sliders },
               { id: 'documents', label: 'Company Documents', icon: FileText },
               { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
+              { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
               { id: 'receipts', label: 'Receipt Generator', icon: Receipt },
+              { id: 'cv-generator', label: 'CV Builder', icon: Award },
+              { id: 'letter-generator', label: 'Application Letters', icon: FileText },
               { id: 'doc-history', label: 'Receipt & Contract History', icon: ShieldCheck },
               { id: 'gallery', label: 'Portfolio Updates', icon: Video },
               { id: 'team', label: 'Team Management', icon: UserIcon },
@@ -4185,6 +4190,27 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             mode="receipts"
             setCurrentTab={setCurrentTab}
             setVerificationToken={setVerificationToken}
+          />
+        )}
+
+        {activeAdminTab === 'cv-generator' && (
+          <CareerStudio
+            mode="cv"
+            showToast={showToast}
+          />
+        )}
+
+        {activeAdminTab === 'letter-generator' && (
+          <CareerStudio
+            mode="letter"
+            showToast={showToast}
+          />
+        )}
+
+        {activeAdminTab === 'proposal-studio' && (
+          <ProposalStudio
+            showToast={showToast}
+            setActiveAdminTab={setActiveAdminTab}
           />
         )}
 

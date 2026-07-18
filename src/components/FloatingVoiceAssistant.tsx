@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fetchUserSyncData, saveUserSyncData } from '../lib/syncService.ts';
 import { 
   Volume2, 
   VolumeX, 
@@ -96,21 +97,46 @@ export default function FloatingVoiceAssistant() {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    // Load saved preferences
-    const savedVolume = localStorage.getItem('voice_volume');
-    if (savedVolume !== null) setVolume(parseFloat(savedVolume));
+    // Load saved preferences from Neon database with local cache fallback
+    let syncActive = true;
+    const loadDbPreferences = async () => {
+      const syncData = await fetchUserSyncData();
+      if (!syncActive) return;
 
-    const savedRate = localStorage.getItem('voice_rate');
-    if (savedRate !== null) setRate(parseFloat(savedRate));
+      const dbVol = syncData['voice_volume'];
+      if (dbVol !== undefined) setVolume(parseFloat(dbVol));
+      else {
+        const localVal = localStorage.getItem('voice_volume');
+        if (localVal !== null) setVolume(parseFloat(localVal));
+      }
 
-    const savedAutoplay = localStorage.getItem('voice_autoplay');
-    if (savedAutoplay !== null) setAutoplayEnabled(savedAutoplay === 'true');
+      const dbRate = syncData['voice_rate'];
+      if (dbRate !== undefined) setRate(parseFloat(dbRate));
+      else {
+        const localVal = localStorage.getItem('voice_rate');
+        if (localVal !== null) setRate(parseFloat(localVal));
+      }
 
-    const savedMute = localStorage.getItem('voice_muted');
-    if (savedMute !== null) setIsMuted(savedMute === 'true');
+      const dbAutoplay = syncData['voice_autoplay'];
+      if (dbAutoplay !== undefined) setAutoplayEnabled(dbAutoplay === 'true');
+      else {
+        const localVal = localStorage.getItem('voice_autoplay');
+        if (localVal !== null) setAutoplayEnabled(localVal === 'true');
+      }
+
+      const dbMuted = syncData['voice_muted'];
+      if (dbMuted !== undefined) setIsMuted(dbMuted === 'true');
+      else {
+        const localVal = localStorage.getItem('voice_muted');
+        if (localVal !== null) setIsMuted(localVal === 'true');
+      }
+    };
+
+    loadDbPreferences();
 
     // Clean up on unmount
     return () => {
+      syncActive = false;
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
@@ -267,7 +293,7 @@ export default function FloatingVoiceAssistant() {
   const toggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
-    localStorage.setItem('voice_muted', String(newMuted));
+    saveUserSyncData('voice_muted', String(newMuted));
     
     if (utteranceRef.current) {
       utteranceRef.current.volume = newMuted ? 0 : volume;
@@ -277,7 +303,7 @@ export default function FloatingVoiceAssistant() {
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setVolume(val);
-    localStorage.setItem('voice_volume', String(val));
+    saveUserSyncData('voice_volume', String(val));
     if (utteranceRef.current) {
       utteranceRef.current.volume = isMuted ? 0 : val;
     }
@@ -286,7 +312,7 @@ export default function FloatingVoiceAssistant() {
   const handleRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setRate(val);
-    localStorage.setItem('voice_rate', String(val));
+    saveUserSyncData('voice_rate', String(val));
     // Restart to apply rate changes smoothly
     if (isPlaying && !isPaused) {
       speakScript(scriptIndex);
@@ -296,7 +322,7 @@ export default function FloatingVoiceAssistant() {
   const handleAutoplayToggle = () => {
     const nextVal = !autoplayEnabled;
     setAutoplayEnabled(nextVal);
-    localStorage.setItem('voice_autoplay', String(nextVal));
+    saveUserSyncData('voice_autoplay', String(nextVal));
   };
 
   if (!isSynthesizingSupported) {

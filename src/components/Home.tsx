@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getCsrfHeaders } from '../lib/csrf.ts';
+import { useLanguage } from '../lib/LanguageContext.tsx';
 import { 
   ArrowRight, 
   ChevronLeft, 
@@ -44,6 +46,7 @@ const DEFAULT_BANNERS: HeroBanner[] = [
 ];
 
 export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps) {
+  const { t } = useLanguage();
   const [banners, setBanners] = useState<HeroBanner[]>(DEFAULT_BANNERS);
   const [services, setServices] = useState<Service[]>([]);
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
@@ -141,9 +144,13 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
     setReviewErrorMsg('');
     setSubmittingReview(true);
     try {
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/reviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...csrfHeaders
+        },
         body: JSON.stringify({
           authorName: newAuthor,
           rating: newRating,
@@ -266,23 +273,23 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
                       <ShieldCheck className="w-3.5 h-3.5" /> ISO 9001 & 14001 Certified
                     </span>
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none">
-                      {banner.title}
+                      {banner.title === 'Precision Construction. Absolute Integrity.' ? t('hero_title') : banner.title}
                     </h1>
                     <p className="text-lg text-slate-300 leading-relaxed font-normal">
-                      {banner.subtitle}
+                      {banner.title === 'Precision Construction. Absolute Integrity.' || banner.subtitle.includes('premier') ? t('hero_subtitle') : banner.subtitle}
                     </p>
                     <div className="flex flex-wrap gap-4 pt-2">
                       <button
                         onClick={() => setCurrentTab('booking')}
                         className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-7 py-3.5 rounded-lg text-sm transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2"
                       >
-                        Book Free Consultation <ArrowRight className="w-4 h-4" />
+                        {t('hero_cta_booking')} <ArrowRight className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setCurrentTab('projects')}
                         className="bg-transparent hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-lg text-sm border-2 border-slate-800 hover:border-slate-700 transition-all"
                       >
-                        Explore Our Portfolio
+                        {t('hero_cta_projects')}
                       </button>
                     </div>
                   </div>

@@ -13,6 +13,7 @@ export interface AuthRequest extends Request {
     email: string;
     name: string;
     role: string;
+    theme?: string;
     createdAt: Date;
   };
 }

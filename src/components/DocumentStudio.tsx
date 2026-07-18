@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { QRCodeSVG } from 'qrcode.react';
 import SignaturePad from './SignaturePad.tsx';
+import PrintPreviewModal from './PrintPreviewModal.tsx';
 import { auth, getAuthToken } from '../lib/firebase.ts';
 import { 
   FileText, 
@@ -25,7 +26,8 @@ import {
   Edit,
   Copy,
   Plus,
-  Eye
+  Eye,
+  Sparkles
 } from 'lucide-react';
 import { Project, Appointment, ContactMessage, Review } from '../types.ts';
 
@@ -241,6 +243,8 @@ export default function DocumentStudio({
   setVerificationToken
 }: DocumentStudioProps) {
 
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+
   // ==========================================
   // --- CONTRACT GENERATOR STATE ---
   // ==========================================
@@ -308,6 +312,416 @@ export default function DocumentStudio({
   const [receiptDrawnSignature, setReceiptDrawnSignature] = useState('');
   const [showReceiptSignaturePad, setShowReceiptSignaturePad] = useState(false);
   const [isEmailingReceipt, setIsEmailingReceipt] = useState(false);
+
+  // ==========================================
+  // --- ARTICLES OF ASSOCIATION STATE & HELPERS ---
+  // ==========================================
+  const [contractSubMode, setContractSubMode] = useState<'works' | 'articles'>('works');
+  const [aoaCompanyName, setAoaCompanyName] = useState('MADECC CIVIL WORKS SARL');
+  const [aoaLegalForm, setAoaLegalForm] = useState('SARL (Société à Responsabilité Limitée)');
+  const [aoaJurisdiction, setAoaJurisdiction] = useState('Cameroon (OHADA Uniform Act) & Worldwide');
+  const [aoaHeadOffice, setAoaHeadOffice] = useState('Akwa Boulevard, Douala, Cameroon');
+  const [aoaDurationYears, setAoaDurationYears] = useState('99');
+  const [aoaShareCapital, setAoaShareCapital] = useState('10,000,000 FCFA');
+  const [aoaSharesCount, setAoaSharesCount] = useState('1,000');
+  const [aoaShareValue, setAoaShareValue] = useState('10,000 FCFA');
+  const [aoaInitialManager, setAoaInitialManager] = useState('Dr. Marcel Mbida');
+  const [aoaScopeOfActivity, setAoaScopeOfActivity] = useState(
+    'Execution of all civil works, building construction, road infrastructure, hydraulic and maritime engineering, and project supply chain logistics.'
+  );
+  const [aoaCustomPrompt, setAoaCustomPrompt] = useState('');
+  const [aoaGeneratedData, setAoaGeneratedData] = useState<any>(null);
+  const [isAoaGenerating, setIsAoaGenerating] = useState(false);
+
+  const getOfflineFallbackArticles = () => {
+    return {
+      title: `ARTICLES OF ASSOCIATION OF ${aoaCompanyName.toUpperCase()}`,
+      metadata: `Governed under the provisions of the OHADA Uniform Act on Commercial Companies and Economic Interest Groups (AUDSCGIE) and applicable international business laws. Jurisdiction: ${aoaJurisdiction}. Registered office: ${aoaHeadOffice}.`,
+      articles: [
+        {
+          number: 1,
+          title: "ARTICLE 1: LEGAL FORM AND DENOMINATION",
+          content: `**1.1. Purpose & Scope:** This Article establishes the formal legal existence, corporate form, and denomination of the company to operate within Cameroon and international markets.\n\n**1.2. Legal Authority:** Conforming to Article 1 and Articles 309 to 384 of the OHADA Uniform Act Relating to Commercial Companies and Economic Interest Groups (AUDSCGIE).\n\n**1.3. Corporate Form:** The company is established in the form of a ${aoaLegalForm}. It operates as a limited liability entity where the shareholders' liabilities are strictly limited to the amount of their respective contributions to the share capital.\n\n**1.4. Corporate Name:** The company operates under the official corporate denomination: "${aoaCompanyName}". This name must appear on all deeds, bills, invoices, letters, receipts, and publications issued by the company, followed immediately by its legal form, registered office address, and its registered share capital.\n\n**1.5. Protection & Penalties:** Any unauthorized third-party use of the company name is strictly prohibited and subject to civil and criminal penalties under Cameroonian trade laws. The General Manager is authorized to initiate intellectual property protection filings under OAPI guidelines.`
+        },
+        {
+          number: 2,
+          title: "ARTICLE 2: REGISTERED OFFICE (SIÈGE SOCIAL) AND DOMICILE",
+          content: `**2.1. Purpose & Scope:** Establishing the official address for statutory notices, tax declarations, and legal jurisdictions.\n\n**2.2. Legal Authority:** OHADA AUDSCGIE Articles 24 to 26 and Cameroonian tax residence statutes.\n\n**2.3. Location:** The registered office is located at: ${aoaHeadOffice}.\n\n**2.4. Procedures for Transfer:** The registered office designates the legal forum for any notification, administrative filing, or judicial action. The General Manager (Gérant) is authorized to transfer the registered office within the same city or territory by simple management decision. A transfer to a different city or region requires approval from the shareholders through an Extraordinary General Meeting (EGM) and subsequent update of the Trade and Personal Property Credit Register (RCCM).\n\n**2.5. Record Keeping:** All official letters, court writs, and regulatory notifications received at the registered office must be recorded in an incoming mail ledger overseen by the Company Secretary.`
+        },
+        {
+          number: 3,
+          title: "ARTICLE 3: CORPORATE PURPOSE (OBJET SOCIAL) AND INDUSTRIAL SPECIFICATIONS",
+          content: `**3.1. Purpose & Scope:** Defining the commercial, technical, and engineering bounds of the company's operations.\n\n**3.2. Legal Authority:** OHADA AUDSCGIE Articles 19 to 21.\n\n**3.3. Permissible Construction & Engineering Scope:** The primary corporate purpose of the company consists of high-standard construction, civil engineering, and infrastructure operations, including:\n- 3.3.1. Execution of all civil engineering works, building construction, public works, road networks, bridge building, hydraulic dams, and structural installations.\n- 3.3.2. General contracting, infrastructure development, real estate development, and heavy equipment leasing.\n- 3.3.3. Technical design, architectural procurement, quantity surveying, supply chain logistics, and project management of complex industrial structures.\n- 3.3.4. Participation in public and private tenders, the formation of joint ventures (JVs), consortia, and partnerships.\n- 3.3.5. Any commercial, financial, industrial, or real estate operations directly or indirectly linked to the achievement of this corporate purpose.\n\n**3.4. Exceptions & Exclusions:** The company shall not engage in financial or banking activities reserved for accredited credit institutions under COBAC regulations.`
+        },
+        {
+          number: 4,
+          title: "ARTICLE 4: CORPORATE DURATION (DURÉE)",
+          content: `**4.1. Purpose & Scope:** Defining the legal lifespan of the company and rules for extension or early dissolution.\n\n**4.2. Legal Authority:** OHADA AUDSCGIE Article 28.\n\n**4.3. Lifespan:** The company is established for a duration of ninety-nine (99) years starting from its formal registration in the RCCM of Cameroon.\n\n**4.4. Procedures for Extension:** At least one (1) year prior to the expiration of the company's term, the General Manager must convene an Extraordinary General Meeting of shareholders to decide whether the company's duration should be extended. This decision must be made in accordance with the voting requirements of an EGM and filed with the notary public and the RCCM.\n\n**4.5. Failures and Penalties:** If the Manager fails to convene this meeting, any shareholder may petition the President of the competent commercial court to appoint a corporate representative to hold the meeting, with costs borne by the company.`
+        },
+        {
+          number: 5,
+          title: "ARTICLE 5: SHARE CAPITAL AND SHARES DISTRIBUTION",
+          content: `**5.1. Purpose & Scope:** Detailing the capital structure, share valuation, and shareholder certificates.\n\n**5.2. Legal Authority:** OHADA AUDSCGIE Articles 311 to 316.\n\n**5.3. Capitalization:** The share capital is fixed at the sum of ${aoaShareCapital}, divided into ${aoaSharesCount} equal shares with a nominal value of ${aoaShareValue} each, fully subscribed and paid up by the initial founders.\n\n**5.4. Certificates and Share Register:** Shares are nominative and represented by physical or digital Share Certificates signed by the General Manager. All transactions must be recorded in the company's physical and digital Share Transfer Register (Registre des transferts de parts) kept at the registered office.\n\n**5.5. Certificate Replacement:** If a certificate is lost or destroyed, a duplicate is issued upon proof of ownership, a 30-day public notice, and a signed indemnity bond. Capital increases or reductions must be authorized by an EGM.`
+        },
+        {
+          number: 6,
+          title: "ARTICLE 6: STATUTORY MANAGEMENT & LIMITATIONS OF POWER (GÉRANCE)",
+          content: `**6.1. Purpose & Scope:** Governing the executive management of the company and limiting the powers of the Gérant.\n\n**6.2. Legal Authority:** OHADA AUDSCGIE Articles 323 to 328.\n\n**6.3. Appointment:** The company is managed and legally bound by its initial General Manager (Gérant): ${aoaInitialManager}, appointed for an indefinite term, unless removed by the shareholders.\n\n**6.4. Scope of Authority:** The Gérant has the broadest executive powers to act in all circumstances in the name of the company and conduct civil works operations. However, the Manager's authority is subject to board-approved limits.\n\n**6.5. Mandated Limitations of Power:** The Gérant is strictly prohibited from executing borrowing agreements exceeding 50% of the company's share capital, or selling substantial corporate real estate and assets, without the prior written authorization of the shareholders in a General Meeting. Violations of these limitations shall constitute grounds for immediate dismissal and personal liability for damages.`
+        },
+        {
+          number: 7,
+          title: "ARTICLE 7: SHAREHOLDERS' GENERAL MEETINGS (VOTING & NOTICES)",
+          content: `**7.1. Purpose & Legal Authority:** Governing all collective decisions of the company's shareholders. Governed strictly under OHADA AUDSCGIE Articles 546 to 561.\n\n**7.2. Annual General Meeting (AGM) Mandates:**\n- 7.2.1. Held mandatorily within six (6) months of the close of each financial year (by June 30th).\n- 7.2.2. Responsibilities: Approval of the annual financial statements; appointment or removal of directors and statutory managers; appointment of external auditors; declaration of dividends; approval of strategic projects and major construction contracts exceeding 50% of capital; and authorizations for capital increases.\n\n**7.3. Extraordinary General Meeting (EGM) Mandates:**\n- 7.3.1. Convened by the Gérant, the statutory auditor, or shareholders representing at least twenty percent (20%) of the share capital in emergency circumstances.\n- 7.3.2. Responsibilities: Authorizing mergers, acquisitions, splits, spin-offs, early voluntary liquidation, amendments to these Articles of Association, sale of substantial corporate real estate or capital assets, and borrowing beyond approved limits.\n\n**7.4. Notice of Meetings & Documents:**\n- 7.4.1. Notice Period: Written notification delivered by hand against signature, registered post with acknowledgment of receipt, or official electronic mail (email) with read-receipt, sent at least fifteen (15) calendar days prior to the meeting date.\n- 7.4.2. Supporting Documents: Convocations must contain a precise Agenda and must be accompanied by draft resolutions, financial statements, the General Manager's report, and the Auditor's report.\n\n**7.5. Quorums, Adjournments & Voting Rights:**\n- 7.5.1. AGM Quorum: On first call, representing at least one-quarter (25%) of the shares. On second call, no quorum is required. Resolutions are passed by a simple majority of votes cast (50% + 1 vote).\n- 7.5.2. EGM Quorum: On first call, representing at least one-half (50%) of the share capital. On second call, representing at least one-quarter (25%) of the share capital. Resolutions require a two-thirds (66.67%) majority of votes present or represented.\n- 7.5.3. Voting Rights: Strictly "one share, one vote". Voting may be executed in person, by proxy to another shareholder, or through secure electronic voting. Ballots may be cast by show of hands, or secret ballot upon request of any shareholder. The Chairman shall have a casting vote only where expressly authorized.\n\n**7.6. Minutes & Record Keeping:** All deliberations must be recorded in formal Minutes (Procès-verbaux), signed by the General Manager/Chairman and the secretary of the assembly, and permanently stored in a sequential, numbered corporate minutes register (Registre des délibérations) preserved at the registered office. Failure to maintain correct records shall incur administrative penalties of 500,000 FCFA per instance.`
+        },
+        {
+          number: 8,
+          title: "ARTICLE 8: TRANSFER, TRANSMISSION, AND PLEDGING OF SHARES",
+          content: `**8.1. Purpose & Legal Authority:** Regulating any changes in share ownership to maintain corporate stability and protect shareholders' assets under OHADA AUDSCGIE Articles 317 to 322.\n\n**8.2. Right of First Refusal (Pre-emption Right):** Existing shareholders enjoy an absolute right of first refusal. Any shareholder desiring to transfer shares to a non-shareholder third party must submit a written request via registered post to the General Manager, specifying the name of the transferee, the number of shares, and the agreed price. The General Manager shall notify all shareholders within seven (7) business days. Shareholders have thirty (30) calendar days from receipt to exercise their pre-emption rights proportionally.\n\n**8.3. Board Approval (Consent Clause):** Any transfer of shares to a non-shareholder third party requires mandatory prior approval by the General Meeting of shareholders representing at least three-quarters (75%) of the company's capital.\n\n**8.4. Valuation of Shares:** In the event of a dispute over the fair value of shares, the price shall be determined by an independent certified accountant/valuation expert (Expert-Comptable Agréé CEMAC) appointed by mutual agreement of the parties or, failing that, by the President of the competent commercial court of Cameroon.\n\n**8.5. Share Certificates & Transfer Register:** Shares are nominative and represented by Share Certificates signed by the General Manager. All transactions must be recorded in the company's physical and digital Share Transfer Register (Registre des transferts de parts). If lost or destroyed, a replacement certificate is issued only after a 30-day public notice period and submission of a sworn indemnity bond.\n\n**8.6. Transmission upon Death of a Shareholder:** Heirs, successions, and executors do not automatically become active voting partners. The company's operations shall continue. Heirs must submit certified probate documents and be formally approved by the remaining shareholders within ninety (90) days. Executor powers are limited to estate preservation until approval.\n\n**8.7. Bankruptcy & Insolvency:** In the event of bankruptcy of a shareholder, the company reserves the right to purchase the bankrupt shareholder's shares at fair market value (determined by an expert) to prevent creditors from seizing voting controls.\n\n**8.8. Compliance Restrictions & Penalties:** Transfers that would create severe conflicts of interest, breach national security laws, violate Cameroonian public procurement regulations, or breach OHADA maximum shareholding guidelines are strictly prohibited and void *ab initio*. Violators shall be penalized via temporary suspension of dividend rights.`
+        },
+        {
+          number: 9,
+          title: "ARTICLE 9: ACCOUNTS, FINANCE, AUDIT AND PROFIT DISTRIBUTION",
+          content: `**9.1. Purpose & Legal Authority:** Ensuring strict financial transparency, internal control, and compliance with national and international accounting frameworks under SYSCOHADA, IFRS guidelines, and International Standards on Auditing (ISAs).\n\n**9.2. Fiscal Year:** Commences on January 1st and terminates on December 31st of each calendar year.\n\n**9.3. Financial Statements:** The General Manager must establish and submit the annual financial statements within four (4) months of the close of the financial year (by April 30th), including: Statement of Financial Position (Bilan), Income Statement, Cash Flow Statement, Statement of Changes in Equity, and Notes to Accounts (Notes annexes) detailing site contingencies, performance guarantees, and retention money.\n\n**9.4. Construction Financial Controls & Budget Approval:** The company shall maintain robust construction internal controls. The annual operating and capital expenditure (CAPEX & OPEX) budgets must be submitted by the General Manager and approved by the shareholders before December 15th of the preceding fiscal year. All expenditures exceeding 10,000,000 FCFA outside the approved budget require board or general manager approval.\n\n**9.5. External Statutory Audit:** Appointment of an independent External Auditor (Commissaire aux Comptes) enrolled in the One-Order of Chartered Accountants of Cameroon (ONCCA) is mandatory if the company exceeds the statutory OHADA thresholds. The auditor is appointed for a three-year term and is responsible for certifying the accounts and submitting an independent audit report to the AGM.\n\n**9.6. Internal Audit Function:** A dedicated Internal Auditor shall monitor site-level expenditure, material waste, supplier invoices, and compliance with anti-corruption and HSE policies, reporting quarterly directly to the audit committee.\n\n**9.7. Profit Distribution & Reserves:** Net profit consists of total revenues minus operating costs, depreciation, and interest. Distribution Procedures:\n- 1. Deduct ten percent (10%) of net profit to form the mandatory Legal Reserve, until this reserve reaches twenty percent (20%) of the share capital.\n- 2. Allocate a minimum of fifteen percent (15%) to an **Equipment Replacement Reserve** for heavy machinery fleet.\n- 3. Allocate ten percent (10%) to a **Project Emergency Reserve** to cover defects liability and site incidents.\n- 4. Allocate five percent (5%) to a **Reinvestment & Capital Expansion Reserve**.\n- 5. Allocate the remaining balance to Retained Earnings or distribute as **Dividends** as approved by the AGM. Dividend payments must be executed within nine (9) months of approval.\n\n**9.8. Financial Transparency & Confidentiality:** Shareholders have a permanent right to inspect all corporate ledgers, invoices, payroll sheets, and audit reports at the registered office. All inspectors must execute a binding non-disclosure agreement to protect trade secrets and sensitive bidding prices.`
+        },
+        {
+          number: 10,
+          title: "ARTICLE 10: DISSOLUTION, LIQUIDATION AND DISPUTE RESOLUTION",
+          content: `**10.1. Purpose & Legal Authority:** Managing the orderly winding up, debt settlement, and asset distribution of the company in case of cessation of business under OHADA AUDSCGIE Articles 200 to 241.\n\n**10.2. Grounds for Dissolution:** Voluntary decision by shareholders in an EGM (requiring 75% approval); Judicial court order by the competent court of Cameroon due to persistent insolvency or shareholder deadlock; Merger, acquisition, division, or corporate split; Expiration of the company's 99-year duration without extension.\n\n**10.3. Liquidation Process & Liquidator Appointment:** Dissolution immediately puts the company into "liquidation" status. The EGM shall appoint one or more professional Liquidators (usually a certified receiver or corporate attorney) and define their specific remuneration and powers. Upon appointment, all powers of the General Manager and Board of Directors shall terminate.\n\n**10.4. Liquidator Powers & Debt Settlement:** The liquidator has full power to realize all corporate assets, complete active construction projects under execution, collect outstanding receivables from government contracts, and settle liabilities.\nPriority of Settlement:\n- 1. First Priority: Employee statutory wages, outstanding HSE/accident compensation, and social insurance contributions (CNPS).\n- 2. Second Priority: Legal, liquidation, and court-mandated administrative fees.\n- 3. Third Priority: National tax liabilities, custom duties, and public municipal dues in Cameroon.\n- 4. Fourth Priority: Secured creditors, project bank loans, and supplier invoices.\n- 5. Fifth Priority: Unsecured creditors.\n\n**10.5. Final Accounts & Asset Distribution:** After complete debt settlement, the liquidator shall draft the final accounts. The remaining net assets (boni de liquidation) shall be distributed among the shareholders in proportion to their paid-up share capital.\n\n**10.6. Removal from Registry:** The liquidator must file the closing minutes, register the final accounts, and publish a notice of closure in a Journal of Legal Notices (JAL). The company is then formally removed from the RCCM in Cameroon.`
+        },
+        {
+          number: 11,
+          title: "ARTICLE 11: CORPORATE GOVERNANCE & EXECUTIVE MANAGEMENT",
+          content: `**11.1. Purpose & Scope:** Establishing a robust, dual-tier corporate governance framework to steer strategic direction and operations.\n\n**11.2. Board of Directors:** Composed of three (3) to twelve (12) members appointed by the AGM for a term of four (4) years. The Board is responsible for defining the strategic direction of the company, approving tenders exceeding 500,000,000 FCFA, and supervising executive management.\n\n**11.3. Managing Director (Directeur Général):** Appointed by the Board of Directors to execute daily operations, manage engineering sites, sign commercial agreements, and represent the company vis-à-vis clients and authorities.\n\n**11.4. Company Secretary (Secrétaire Général):** Responsible for statutory compliance, legal filings, organizing general meetings, ensuring that directors are kept fully informed of their legal duties under Cameroonian and OHADA laws, and preserving physical and digital corporate records.`
+        },
+        {
+          number: 12,
+          title: "ARTICLE 12: PUBLIC PROCUREMENT, TENDER PROCEDURES, AND FIDIC CONTRACTS",
+          content: `**12.1. Scope & Applicability:** All public contracts, infrastructure tenders, and private engineering agreements under Cameroon MINMAP guidelines.\n\n**12.2. FIDIC Adherence:** All international and high-value domestic construction agreements must utilize standard international construction templates, specifically the International Federation of Consulting Engineers (FIDIC) standard forms (Red, Yellow, or Silver Books depending on the project structure).\n\n**12.3. Joint Ventures (JV) and Consortia:** Participation in tenders through JVs or consortia must be backed by a comprehensive Joint Venture Agreement detailing the division of civil engineering works, percentage of financial participation, mutual indemnities, and joint and several liability (responsabilité solidaire) before Cameroonian authorities.\n\n**12.4. Subcontractors and Consultants:** All subcontractors, consultants, architects, and surveyors must be vetted through a rigorous pre-qualification procurement policy, ensuring compliance with HSE norms, technical capacity, and financial solvency.`
+        },
+        {
+          number: 13,
+          title: "ARTICLE 13: SITE OPERATIONS, HSE, AND DEFECTS LIABILITY",
+          content: `**13.1. Purpose & Scope:** Establishing standards for physical engineering works, worker safety, and client construction guarantees.\n\n**13.2. Occupational Health, Safety, and Environment (HSE):** The company enforces a zero-accident policy across all active construction sites. Daily site safety briefings, mandatory certified Personal Protective Equipment (PPE), and continuous safety inspections are mandatory.\n\n**13.3. Environmental Protection:** All civil projects must conduct a prior Environmental Impact Assessment (EIA) in compliance with Cameroonian environmental legislation and secure the necessary building permits.\n\n**13.4. Defects Liability Period (DLP) & Warranties:** The company formally guarantees its constructions. Every project shall incorporate a Defects Liability Period of twelve (12) months during which all engineering and technical defects must be repaired at the company's cost.\n\n**13.5. Garanti Décennal (Ten-Year Structural Guarantee):** In accordance with Article 1792 of the Civil Code in force in Cameroon, the company maintains a strict ten-year structural guarantee covering the complete stability and solid foundation of all built infrastructures.`
+        },
+        {
+          number: 14,
+          title: "ARTICLE 14: INSURANCE, BANKING AND BORROWING POWERS",
+          content: `**14.1. Purpose & Scope:** Managing corporate assets, financial facilities, and operational risk mitigation.\n\n**14.2. Banking & Borrowing:** The company shall maintain dedicated, separate corporate bank accounts with accredited commercial banks in Cameroon under COBAC supervision. Borrowing powers must be exercised responsibly by the executive management within board-authorized thresholds.\n\n**14.3. Insurance Requirements:** To safeguard against operational risks, the company must maintain extensive insurance coverage, including Contractors' All Risks (CAR) insurance, professional indemnity, and mandatory workers' compensation.\n\n**14.4. Guarantees and Bonds:** Execution of performance guarantees, advance payment guarantees, and retention money bonds must be backed by reputable financial institutions in Cameroon.`
+        },
+        {
+          number: 15,
+          title: "ARTICLE 15: PROFESSIONAL ETHICS, ANTI-CORRUPTION & ESG",
+          content: `**15.1. Purpose & Scope:** Enforcing business integrity, transparency, and sustainable construction values.\n\n**15.2. Anti-Corruption & Anti-Bribery:** Meticulous zero-tolerance policy against any form of bribery, bid-rigging, collusion, or facilitation payments in public or private tenders. Violations shall result in immediate termination of employment.\n\n**15.3. Whistleblower Protection:** Any employee or contractor reporting financial misconduct or safety breaches shall be provided complete anonymity and absolute protection from retaliatory measures.\n\n**15.4. Conflict of Interest:** Directors, engineers, and procurement leads must submit an annual Conflict of Interest disclosure. No director or manager may participate in bids or suppliers where they have a direct or indirect financial interest.\n\n**15.5. ESG Principles:** Commitment to sustainable construction practices, utilization of eco-friendly building materials, reduction of carbon footprint, fair wage structures, and local community development programs in regions of active operations.`
+        },
+        {
+          number: 16,
+          title: "ARTICLE 16: DISPUTE RESOLUTION, ARBITRATION, AND GOVERNING LAW",
+          content: `**16.1. Purpose & Scope:** Regulating conflicts between shareholders, or between the company and third-party developers.\n\n**16.2. Governing Law:** These Articles, corporate operations, and construction contracts are governed by and construed in accordance with the laws of the Republic of Cameroon and the OHADA Uniform Acts.\n\n**16.3. Amicable Settlement (Mediation):** Any dispute arising from these Articles or corporate operations shall first be submitted to mandatory amicable mediation before a certified corporate mediator within thirty (30) days.\n\n**16.4. Arbitration:** Failing amicable resolution, the dispute shall be finally settled under the Rules of Arbitration of the GICAM Arbitration Center (Centre d'Arbitrage du GICAM) in Douala, or the Common Court of Justice and Arbitration (CCJA) of OHADA in Abidjan, Côte d'Ivoire. Deliberations shall be held in French or English.\n\n**16.5. Force Majeure:** Neither party nor the company shall be liable for delays or failures resulting from acts of God, war, severe civil unrest, regional lockouts, or extreme natural disasters beyond control.`
+        }
+      ],
+      signoff: `Done in good faith and executed by the initial founders on this date.\n\nGeneral Manager: ${aoaInitialManager}\nRepresentative Stamp: MADECC COMPLIANCE LEDGER SEAL`
+    };
+  };
+
+  const [aoaArticles, setAoaArticles] = useState<{ number: number; title: string; content: string }[]>([]);
+  const [editingArticleIndex, setEditingArticleIndex] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+
+  // Synchronize state with fallback or AI generated data
+  useEffect(() => {
+    if (aoaGeneratedData && aoaGeneratedData.articles) {
+      setAoaArticles(aoaGeneratedData.articles);
+    } else {
+      setAoaArticles(getOfflineFallbackArticles().articles);
+    }
+  }, [
+    aoaGeneratedData,
+    aoaCompanyName,
+    aoaLegalForm,
+    aoaJurisdiction,
+    aoaHeadOffice,
+    aoaDurationYears,
+    aoaShareCapital,
+    aoaSharesCount,
+    aoaShareValue,
+    aoaInitialManager,
+    aoaScopeOfActivity
+  ]);
+
+  // --- ARTICLE EDIT HANDLERS ---
+  const handleEditArticle = (index: number) => {
+    setEditingArticleIndex(index);
+    setEditTitle(aoaArticles[index].title);
+    setEditContent(aoaArticles[index].content);
+  };
+
+  const handleSaveArticle = (index: number) => {
+    const updated = [...aoaArticles];
+    updated[index] = {
+      ...updated[index],
+      title: editTitle,
+      content: editContent
+    };
+    setAoaArticles(updated);
+    setEditingArticleIndex(null);
+    showToast('Article updated successfully.', 'success');
+  };
+
+  const handleDuplicateArticle = (index: number) => {
+    const target = aoaArticles[index];
+    const updated = [...aoaArticles];
+    const duplicated = {
+      number: updated.length + 1,
+      title: `COPY OF ${target.title}`,
+      content: target.content
+    };
+    updated.splice(index + 1, 0, duplicated);
+    // Re-index all articles
+    const reindexed = updated.map((art, i) => ({
+      ...art,
+      number: i + 1
+    }));
+    setAoaArticles(reindexed);
+    showToast(`Duplicated article ${target.number}.`, 'success');
+  };
+
+  const handleDeleteArticle = (index: number) => {
+    const updated = aoaArticles.filter((_, i) => i !== index);
+    // Re-index all articles
+    const reindexed = updated.map((art, i) => ({
+      ...art,
+      number: i + 1
+    }));
+    setAoaArticles(reindexed);
+    showToast('Article deleted successfully.', 'success');
+  };
+
+  const handleAddArticle = () => {
+    const newArt = {
+      number: aoaArticles.length + 1,
+      title: `ARTICLE ${aoaArticles.length + 1}: CUSTOM ARTICLE TITLE`,
+      content: 'Provide detailed content for this custom article here.'
+    };
+    setAoaArticles([...aoaArticles, newArt]);
+    showToast('New article added.', 'success');
+  };
+
+  const handleCopyAoaToClipboard = () => {
+    const textParts = [
+      `ARTICLES OF ASSOCIATION OF ${aoaCompanyName.toUpperCase()}`,
+      `Governed under the laws of the Republic of Cameroon (OHADA Uniform Act) & general international corporate regulations.`,
+      `Jurisdiction: ${aoaJurisdiction}`,
+      `Registered office: ${aoaHeadOffice}\n`,
+      aoaArticles.map(art => `${art.title}\n${art.content}`).join('\n\n'),
+      `\nDone in good faith and executed by the initial founders.\nGeneral Manager: ${aoaInitialManager}\nMADECC COMPLIANCE LEDGER SEAL`
+    ];
+    navigator.clipboard.writeText(textParts.join('\n'));
+    showToast('Articles of Association copied to clipboard!', 'success');
+  };
+
+  const exportAoaToWord = () => {
+    const headerHtml = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Articles of Association - ${aoaCompanyName}</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 2cm;
+          }
+          body {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #333333;
+          }
+          h1 {
+            font-family: 'Arial', sans-serif;
+            font-size: 18pt;
+            text-align: center;
+            text-transform: uppercase;
+            color: #0f172a;
+            margin-bottom: 5pt;
+          }
+          h2 {
+            font-family: 'Arial', sans-serif;
+            font-size: 14pt;
+            text-align: center;
+            text-transform: uppercase;
+            color: #d97706;
+            margin-bottom: 15pt;
+          }
+          h3 {
+            font-family: 'Arial', sans-serif;
+            font-size: 12pt;
+            text-transform: uppercase;
+            color: #0f172a;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 3pt;
+            margin-top: 20pt;
+            margin-bottom: 8pt;
+          }
+          p {
+            margin-bottom: 10pt;
+            text-align: justify;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20pt;
+          }
+          th, td {
+            border: 1px solid #cbd5e1;
+            padding: 8px;
+            text-align: left;
+            font-size: 10pt;
+          }
+          th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: bold;
+          }
+          .header-table {
+            border: none;
+            margin-bottom: 30pt;
+          }
+          .header-table td {
+            border: none;
+            padding: 0;
+          }
+          .right-align {
+            text-align: right;
+          }
+          .center-align {
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td>
+              <strong>REPUBLIC OF CAMEROON</strong><br>
+              Peace - Work - Fatherland
+            </td>
+            <td class="right-align">
+              <strong>REPUBLIQUE DU CAMEROUN</strong><br>
+              Paix - Travail - Patrie
+            </td>
+          </tr>
+        </table>
+
+        <h1>Articles of Association</h1>
+        <h2>Statuts Constitutifs - ${aoaCompanyName.toUpperCase()}</h2>
+        
+        <p class="center-align"><em>Governed under the provisions of the OHADA Uniform Act on Commercial Companies and Economic Interest Groups (AUDSCGIE) and applicable international business laws.</em></p>
+        
+        <h3>Corporate Registry Parameters</h3>
+        <table>
+          <tr>
+            <th>Parameter</th>
+            <th>Specification Details</th>
+          </tr>
+          <tr>
+            <td><strong>Company Name</strong></td>
+            <td>${aoaCompanyName}</td>
+          </tr>
+          <tr>
+            <td><strong>Legal Structure</strong></td>
+            <td>${aoaLegalForm}</td>
+          </tr>
+          <tr>
+            <td><strong>Registered Office</strong></td>
+            <td>${aoaHeadOffice}</td>
+          </tr>
+          <tr>
+            <td><strong>Corporate Duration</strong></td>
+            <td>${aoaDurationYears} Years</td>
+          </tr>
+          <tr>
+            <td><strong>Share Capital</strong></td>
+            <td>${aoaShareCapital} (${aoaSharesCount} shares of ${aoaShareValue} each)</td>
+          </tr>
+          <tr>
+            <td><strong>Statutory Manager</strong></td>
+            <td>${aoaInitialManager}</td>
+          </tr>
+          <tr>
+            <td><strong>Jurisdiction</strong></td>
+            <td>${aoaJurisdiction}</td>
+          </tr>
+        </table>
+    `;
+
+    const articlesHtml = aoaArticles.map(art => `
+      <h3>${art.title}</h3>
+      <p>${art.content.replace(/\n/g, '<br>')}</p>
+    `).join('');
+
+    const footerHtml = `
+        <div style="margin-top: 40px; border-top: 2px solid #d97706; padding-top: 10px; text-align: center;">
+          <p><strong>MADECC COMPLIANCE LEDGER SEAL</strong></p>
+          <p>Done in good faith and executed by the initial founders on this date.</p>
+          <p>General Manager: ${aoaInitialManager}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const fullHtml = headerHtml + articlesHtml + footerHtml;
+    const blob = new Blob(['\ufeff' + fullHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Articles_of_Association_${aoaCompanyName.replace(/\s+/g, '_')}.doc`;
+    link.click();
+    showToast('Articles of Association exported to A4 Word Document (.doc) successfully!', 'success');
+  };
+
+  const getAoaDataToRender = () => {
+    if (aoaGeneratedData) return aoaGeneratedData;
+    return getOfflineFallbackArticles();
+  };
+
+  const generateAoaWithAI = async () => {
+    setIsAoaGenerating(true);
+    try {
+      const response = await fetch('/api/documents/generate-articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName: aoaCompanyName,
+          legalForm: aoaLegalForm,
+          jurisdiction: aoaJurisdiction,
+          headOffice: aoaHeadOffice,
+          durationYears: aoaDurationYears,
+          shareCapital: aoaShareCapital,
+          sharesCount: aoaSharesCount,
+          shareValue: aoaShareValue,
+          initialManager: aoaInitialManager,
+          scopeOfActivity: aoaScopeOfActivity,
+          customPrompt: aoaCustomPrompt
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate Articles of Association with AI');
+      }
+
+      const data = await response.json();
+      setAoaGeneratedData(data);
+      showToast('Articles of Association successfully drafted by Gemini AI.', 'success');
+    } catch (err: any) {
+      console.error(err);
+      showToast('Applied compliant OHADA template standard.', 'info');
+      const fallback = getOfflineFallbackArticles();
+      setAoaGeneratedData(fallback);
+    } finally {
+      setIsAoaGenerating(false);
+    }
+  };
 
   // ==========================================
   // --- SIGNING STAMPS ---
@@ -489,22 +903,41 @@ export default function DocumentStudio({
 
   const handleDuplicateContract = (contract: any) => {
     setEditingContractId(null);
-    setClientName(contract.clientName || '');
-    setClientNiu(contract.clientNiu || '');
-    setClientEmail(contract.clientEmail || '');
-    setClientAddress(contract.clientAddress || '');
-    setClientCity(contract.clientCity || 'Douala');
-    setContractProject(contract.contractProject || '');
-    setContractProjectLocation(contract.contractProjectLocation || '');
-    setContractValue(contract.contractValue || '');
-    setContractDuration(contract.contractDuration || '');
-    setContractScope(contract.contractScope || '');
-    setContractDate(contract.contractDate || '');
-    setContractAgreedBalance(contract.contractAgreedBalance || '');
-    setContractAdvancePayment(contract.contractAdvancePayment || '');
-    setRepresentativeName(contract.representativeName || 'Dr. Marcel Mbida');
-    setRepresentativeTitle(contract.representativeTitle || 'Managing Director');
-    setSignatoryTitle(contract.signatoryTitle || 'Client Legal Representative');
+    if (contract.contractProject && contract.contractProject.startsWith('Articles of Association')) {
+      setContractSubMode('articles');
+      setAoaCompanyName(contract.clientName || '');
+      setAoaLegalForm(contract.clientNiu || '');
+      setAoaHeadOffice(contract.clientAddress || '');
+      setAoaJurisdiction(contract.clientCity || '');
+      setAoaShareCapital(contract.contractValue || '');
+      setAoaDurationYears(contract.contractDuration ? contract.contractDuration.replace(' Years', '') : '99');
+      setAoaInitialManager(contract.representativeName || '');
+      try {
+        const parsed = JSON.parse(contract.contractScope || '');
+        setAoaGeneratedData(parsed);
+      } catch (e) {
+        setAoaScopeOfActivity(contract.contractScope || '');
+        setAoaGeneratedData(null);
+      }
+    } else {
+      setContractSubMode('works');
+      setClientName(contract.clientName || '');
+      setClientNiu(contract.clientNiu || '');
+      setClientEmail(contract.clientEmail || '');
+      setClientAddress(contract.clientAddress || '');
+      setClientCity(contract.clientCity || 'Douala');
+      setContractProject(contract.contractProject || '');
+      setContractProjectLocation(contract.contractProjectLocation || '');
+      setContractValue(contract.contractValue || '');
+      setContractDuration(contract.contractDuration || '');
+      setContractScope(contract.contractScope || '');
+      setContractDate(contract.contractDate || '');
+      setContractAgreedBalance(contract.contractAgreedBalance || '');
+      setContractAdvancePayment(contract.contractAdvancePayment || '');
+      setRepresentativeName(contract.representativeName || 'Dr. Marcel Mbida');
+      setRepresentativeTitle(contract.representativeTitle || 'Managing Director');
+      setSignatoryTitle(contract.signatoryTitle || 'Client Legal Representative');
+    }
     setTypedClientSignature(contract.typedClientSignature || '');
     setDrawnClientSignature(contract.drawnClientSignature || '');
     setContractNo(`${contract.contractNo || ''}-COPY-${Math.floor(100 + Math.random() * 900)}`);
@@ -516,22 +949,41 @@ export default function DocumentStudio({
 
   const handleEditContract = (contract: any) => {
     setEditingContractId(contract.id);
-    setClientName(contract.clientName || '');
-    setClientNiu(contract.clientNiu || '');
-    setClientEmail(contract.clientEmail || '');
-    setClientAddress(contract.clientAddress || '');
-    setClientCity(contract.clientCity || 'Douala');
-    setContractProject(contract.contractProject || '');
-    setContractProjectLocation(contract.contractProjectLocation || '');
-    setContractValue(contract.contractValue || '');
-    setContractDuration(contract.contractDuration || '');
-    setContractScope(contract.contractScope || '');
-    setContractDate(contract.contractDate || '');
-    setContractAgreedBalance(contract.contractAgreedBalance || '');
-    setContractAdvancePayment(contract.contractAdvancePayment || '');
-    setRepresentativeName(contract.representativeName || 'Dr. Marcel Mbida');
-    setRepresentativeTitle(contract.representativeTitle || 'Managing Director');
-    setSignatoryTitle(contract.signatoryTitle || 'Client Legal Representative');
+    if (contract.contractProject && contract.contractProject.startsWith('Articles of Association')) {
+      setContractSubMode('articles');
+      setAoaCompanyName(contract.clientName || '');
+      setAoaLegalForm(contract.clientNiu || '');
+      setAoaHeadOffice(contract.clientAddress || '');
+      setAoaJurisdiction(contract.clientCity || '');
+      setAoaShareCapital(contract.contractValue || '');
+      setAoaDurationYears(contract.contractDuration ? contract.contractDuration.replace(' Years', '') : '99');
+      setAoaInitialManager(contract.representativeName || '');
+      try {
+        const parsed = JSON.parse(contract.contractScope || '');
+        setAoaGeneratedData(parsed);
+      } catch (e) {
+        setAoaScopeOfActivity(contract.contractScope || '');
+        setAoaGeneratedData(null);
+      }
+    } else {
+      setContractSubMode('works');
+      setClientName(contract.clientName || '');
+      setClientNiu(contract.clientNiu || '');
+      setClientEmail(contract.clientEmail || '');
+      setClientAddress(contract.clientAddress || '');
+      setClientCity(contract.clientCity || 'Douala');
+      setContractProject(contract.contractProject || '');
+      setContractProjectLocation(contract.contractProjectLocation || '');
+      setContractValue(contract.contractValue || '');
+      setContractDuration(contract.contractDuration || '');
+      setContractScope(contract.contractScope || '');
+      setContractDate(contract.contractDate || '');
+      setContractAgreedBalance(contract.contractAgreedBalance || '');
+      setContractAdvancePayment(contract.contractAdvancePayment || '');
+      setRepresentativeName(contract.representativeName || 'Dr. Marcel Mbida');
+      setRepresentativeTitle(contract.representativeTitle || 'Managing Director');
+      setSignatoryTitle(contract.signatoryTitle || 'Client Legal Representative');
+    }
     setTypedClientSignature(contract.typedClientSignature || '');
     setDrawnClientSignature(contract.drawnClientSignature || '');
     setContractNo(contract.contractNo || '');
@@ -565,7 +1017,27 @@ export default function DocumentStudio({
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const payload = {
+      const payload = contractSubMode === 'articles' ? {
+        contractNo: contractNo || `AOA-2026-${Math.floor(10000 + Math.random() * 90000)}`,
+        clientName: aoaCompanyName,
+        clientNiu: aoaLegalForm,
+        clientEmail: 'compliance@madecc.com',
+        clientAddress: aoaHeadOffice,
+        clientCity: aoaJurisdiction,
+        contractProject: `Articles of Association - ${aoaCompanyName}`,
+        contractProjectLocation: 'Global / Cameroon',
+        contractValue: aoaShareCapital,
+        contractDuration: `${aoaDurationYears} Years`,
+        contractScope: JSON.stringify(getAoaDataToRender()),
+        contractDate: new Date().toLocaleDateString('en-GB'),
+        contractAgreedBalance: '0',
+        contractAdvancePayment: '0',
+        representativeName: aoaInitialManager,
+        representativeTitle: 'Statutory General Manager',
+        signatoryTitle: 'Founder Legal Representative',
+        typedClientSignature: typedClientSignature || aoaInitialManager,
+        drawnClientSignature: drawnClientSignature || null
+      } : {
         contractNo: contractNo || 'MADECC-2026-LA-089',
         clientName: activeClientName,
         clientNiu,
@@ -1487,284 +1959,484 @@ export default function DocumentStudio({
                CONTRACTS FORM
                ========================================================================= */
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-lg">
-              <h2 className="text-sm font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-amber-500" /> Contract Particulars
-              </h2>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Client Name / Corporate</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Douala Port Authority"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
-                      value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Client Email Address</label>
-                    <input
-                      type="email"
-                      placeholder="e.g. client@example.com"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                      value={clientEmail}
-                      onChange={(e) => setClientEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Client Valid ID Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Passport, CNI, or Taxpayer ID"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                      value={clientNiu}
-                      onChange={(e) => setClientNiu(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Street Address</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 14 Boulevard de la Maritime"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                      value={clientAddress}
-                      onChange={(e) => setClientAddress(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">City</label>
-                    <select
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer"
-                      value={clientCity}
-                      onChange={(e) => setClientCity(e.target.value)}
-                    >
-                      <option value="Douala">Douala</option>
-                      <option value="Yaoundé">Yaoundé</option>
-                      <option value="Kribi">Kribi</option>
-                      <option value="Garoua">Garoua</option>
-                      <option value="Bamenda">Bamenda</option>
-                      <option value="Bafoussam">Bafoussam</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-500 font-bold uppercase block">Link to Active Infrastructure Project</label>
-                  <select
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer font-medium"
-                    value={contractProject}
-                    onChange={(e) => setContractProject(e.target.value)}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-3">
+                <h2 className="text-sm font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-amber-500" /> Legal Builder Panel
+                </h2>
+                
+                {/* Sub-mode Tab Toggles */}
+                <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px] w-full sm:w-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setContractSubMode('works')}
+                    className={`flex-1 sm:flex-none text-center px-3 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                      contractSubMode === 'works' 
+                        ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
                   >
-                    <option value="">-- Choose active project --</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.title}>
-                        {p.title} (Budget: {parseFloat(p.budget || '0').toLocaleString()} XAF)
-                      </option>
-                    ))}
-                    <option value="Custom Project Assignment">Custom Project Assignment</option>
-                  </select>
+                    Civil Works Contract
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContractSubMode('articles')}
+                    className={`flex-1 sm:flex-none text-center px-3 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                      contractSubMode === 'articles' 
+                        ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Articles of Association
+                  </button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Settlement Value</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 25000000"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                      value={contractValue}
-                      onChange={(e) => setContractValue(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Currency Unit</label>
-                    <select
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer"
-                      value={contractCurrency}
-                      onChange={(e) => setContractCurrency(e.target.value)}
-                    >
-                      <option value="XAF">XAF (FCFA)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Execution Schedule</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 6 Months"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                      value={contractDuration}
-                      onChange={(e) => setContractDuration(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Signee Authority Title</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Managing Director"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                      value={signatoryTitle}
-                      onChange={(e) => setSignatoryTitle(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-900/60 pt-4 space-y-4">
-                  <span className="text-[11px] text-amber-500 font-bold uppercase tracking-wider block">
-                    MADECC Representative (Contractor Particulars)
-                  </span>
+              {contractSubMode === 'works' ? (
+                /* =========================================================================
+                   SUB-MODE A: CIVIL WORKS AGREEMENT FORM
+                   ========================================================================= */
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Rep. Name</label>
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Client Name / Corporate</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Douala Port Authority"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Client Email Address</label>
+                      <input
+                        type="email"
+                        placeholder="e.g. client@example.com"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={clientEmail}
+                        onChange={(e) => setClientEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Client Valid ID Number</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Passport, CNI, or Taxpayer ID"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={clientNiu}
+                        onChange={(e) => setClientNiu(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Street Address</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 14 Boulevard de la Maritime"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={clientAddress}
+                        onChange={(e) => setClientAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">City</label>
+                      <select
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer"
+                        value={clientCity}
+                        onChange={(e) => setClientCity(e.target.value)}
+                      >
+                        <option value="Douala">Douala</option>
+                        <option value="Yaoundé">Yaoundé</option>
+                        <option value="Kribi">Kribi</option>
+                        <option value="Garoua">Garoua</option>
+                        <option value="Bamenda">Bamenda</option>
+                        <option value="Bafoussam">Bafoussam</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Link to Active Infrastructure Project</label>
+                    <select
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer font-medium"
+                      value={contractProject}
+                      onChange={(e) => setContractProject(e.target.value)}
+                    >
+                      <option value="">-- Choose active project --</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.title}>
+                          {p.title} (Budget: {parseFloat(p.budget || '0').toLocaleString()} XAF)
+                        </option>
+                      ))}
+                      <option value="Custom Project Assignment">Custom Project Assignment</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Settlement Value</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 25000000"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={contractValue}
+                        onChange={(e) => setContractValue(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Currency Unit</label>
+                      <select
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer"
+                        value={contractCurrency}
+                        onChange={(e) => setContractCurrency(e.target.value)}
+                      >
+                        <option value="XAF">XAF (FCFA)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Execution Schedule</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 6 Months"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={contractDuration}
+                        onChange={(e) => setContractDuration(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Signee Authority Title</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Managing Director"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={signatoryTitle}
+                        onChange={(e) => setSignatoryTitle(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-900/60 pt-4 space-y-4">
+                    <span className="text-[11px] text-amber-500 font-bold uppercase tracking-wider block">
+                      MADECC Representative (Contractor Particulars)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Rep. Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Dr. Marcel Mbida"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                          value={representativeName}
+                          onChange={(e) => setRepresentativeName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Rep. Title</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Managing Director"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                          value={representativeTitle}
+                          onChange={(e) => setRepresentativeTitle(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Rep. Valid ID No</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. M081612457896A"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                          value={representativeId}
+                          onChange={(e) => setRepresentativeId(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-900/60 pt-4 space-y-4">
+                    <span className="text-[11px] text-amber-500 font-bold uppercase tracking-wider block">
+                      Head Office & Contract Identifiers
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Head Office</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Yaoundé, Cameroon"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                          value={contractHeadOffice}
+                          onChange={(e) => setContractHeadOffice(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Contract No.</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. MADECC-2026-LA-089"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                          value={contractNo}
+                          onChange={(e) => setContractNo(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Project Location</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Yaoundé, Cameroon"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                          value={contractProjectLocation}
+                          onChange={(e) => setContractProjectLocation(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Contract Date</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. July 5, 2026"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                          value={contractDate}
+                          onChange={(e) => setContractDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Contractor Tel</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. +237 683..."
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                          value={contractTel}
+                          onChange={(e) => setContractTel(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Contractor Email</label>
+                        <input
+                          type="email"
+                          placeholder="e.g. contact@madecc.com"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                          value={contractEmail}
+                          onChange={(e) => setContractEmail(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-900/60 pt-4 space-y-4">
+                    <span className="text-[11px] text-amber-500 font-bold uppercase tracking-wider block">
+                      Agreed Balance & Payment Milestones (FCFA)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Agreed Payable Balance</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 872000"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                          value={contractAgreedBalance}
+                          onChange={(e) => setContractAgreedBalance(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500 font-bold uppercase block">Advance Payment Amount</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 372000"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                          value={contractAdvancePayment}
+                          onChange={(e) => setContractAdvancePayment(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Scope of Structural Works</label>
+                    <textarea
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans"
+                      value={contractScope}
+                      onChange={(e) => setContractScope(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* =========================================================================
+                   SUB-MODE B: CORPORATE ARTICLES OF ASSOCIATION FORM
+                   ========================================================================= */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Enterprise Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. MADECC GLOBAL INFRASTRUCTURES SARL"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                        value={aoaCompanyName}
+                        onChange={(e) => setAoaCompanyName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Legal Corporate Form</label>
+                      <select
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer font-medium"
+                        value={aoaLegalForm}
+                        onChange={(e) => setAoaLegalForm(e.target.value)}
+                      >
+                        <option value="SARL (Société à Responsabilité Limitée)">SARL (Société à Responsabilité Limitée)</option>
+                        <option value="SA (Société Anonyme) with Board">SA (Société Anonyme) with Board of Directors</option>
+                        <option value="SAS (Société par Actions Simplifiée)">SAS (Société par Actions Simplifiée)</option>
+                        <option value="LLC (Limited Liability Company) Standard">LLC (Limited Liability Company)</option>
+                        <option value="SNC (Société en Nom Collectif)">SNC (Société en Nom Collectif)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Regulatory Jurisdiction</label>
+                      <select
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer"
+                        value={aoaJurisdiction}
+                        onChange={(e) => setAoaJurisdiction(e.target.value)}
+                      >
+                        <option value="Cameroon (OHADA Uniform Act) & Worldwide">Cameroon (OHADA) & Worldwide Standards</option>
+                        <option value="Cameroon (OHADA Uniform Act) Only">Republic of Cameroon (OHADA Law) Only</option>
+                        <option value="International Business Rules (Global Corporate)">Global International Corporate Standard</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Registered Siège Social (Head Office)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Akwa Boulevard, Douala, Cameroon"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={aoaHeadOffice}
+                        onChange={(e) => setAoaHeadOffice(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Share Capital</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 10,000,000 FCFA"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={aoaShareCapital}
+                        onChange={(e) => setAoaShareCapital(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Total Shares Count</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 1,000"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={aoaSharesCount}
+                        onChange={(e) => setAoaSharesCount(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Nominal Value per Share</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 10,000 FCFA"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={aoaShareValue}
+                        onChange={(e) => setAoaShareValue(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Initial General Manager / CEO</label>
                       <input
                         type="text"
                         placeholder="e.g. Dr. Marcel Mbida"
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
-                        value={representativeName}
-                        onChange={(e) => setRepresentativeName(e.target.value)}
+                        value={aoaInitialManager}
+                        onChange={(e) => setAoaInitialManager(e.target.value)}
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Rep. Title</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Managing Director"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
-                        value={representativeTitle}
-                        onChange={(e) => setRepresentativeTitle(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Rep. Valid ID No</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. M081612457896A"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                        value={representativeId}
-                        onChange={(e) => setRepresentativeId(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-900/60 pt-4 space-y-4">
-                  <span className="text-[11px] text-amber-500 font-bold uppercase tracking-wider block">
-                    Head Office & Contract Identifiers
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Head Office</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Yaoundé, Cameroon"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
-                        value={contractHeadOffice}
-                        onChange={(e) => setContractHeadOffice(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Contract No.</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. MADECC-2026-LA-089"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                        value={contractNo}
-                        onChange={(e) => setContractNo(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Project Location</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Yaoundé, Cameroon"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                        value={contractProjectLocation}
-                        onChange={(e) => setContractProjectLocation(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Contract Date</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. July 5, 2026"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                        value={contractDate}
-                        onChange={(e) => setContractDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Contractor Tel</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. +237 683..."
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                        value={contractTel}
-                        onChange={(e) => setContractTel(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Contractor Email</label>
-                      <input
-                        type="email"
-                        placeholder="e.g. contact@madecc.com"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                        value={contractEmail}
-                        onChange={(e) => setContractEmail(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-900/60 pt-4 space-y-4">
-                  <span className="text-[11px] text-amber-500 font-bold uppercase tracking-wider block">
-                    Agreed Balance & Payment Milestones (FCFA)
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Agreed Payable Balance</label>
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Corporate Duration</label>
                       <input
                         type="number"
-                        placeholder="e.g. 872000"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                        value={contractAgreedBalance}
-                        onChange={(e) => setContractAgreedBalance(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Advance Payment Amount</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 372000"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                        value={contractAdvancePayment}
-                        onChange={(e) => setContractAdvancePayment(e.target.value)}
+                        placeholder="e.g. 99"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={aoaDurationYears}
+                        onChange={(e) => setAoaDurationYears(e.target.value)}
                       />
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-500 font-bold uppercase block">Scope of Structural Works</label>
-                  <textarea
-                    rows={3}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans"
-                    value={contractScope}
-                    onChange={(e) => setContractScope(e.target.value)}
-                  />
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Construction Enterprises Scope & Activities</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Specify the company's technical specializations..."
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans leading-relaxed text-slate-200"
+                      value={aoaScopeOfActivity}
+                      onChange={(e) => setAoaScopeOfActivity(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Custom Legal Clauses & Directives (AI Input)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Include a clause for arbitration under Douala GIMAC/OHADA courts..."
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans leading-relaxed text-slate-200"
+                      value={aoaCustomPrompt}
+                      onChange={(e) => setAoaCustomPrompt(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                    <button
+                      type="button"
+                      onClick={generateAoaWithAI}
+                      disabled={isAoaGenerating}
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 text-slate-950 text-xs font-black py-3 px-4 rounded-xl uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/10"
+                    >
+                      {isAoaGenerating ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                          Drafting with Gemini AI...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-slate-950 animate-pulse" />
+                          Generate Statutes with AI
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAoaGeneratedData(null);
+                        showToast('Articles of Association synchronized with compliant OHADA model.', 'success');
+                      }}
+                      className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold py-3 px-4 rounded-xl uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Sync Local Form
+                    </button>
+                  </div>
                 </div>
+              )}
 
                 {/* E-Signing panel */}
                 <div className="pt-4 border-t border-slate-900 space-y-4">
@@ -1911,8 +2583,7 @@ export default function DocumentStudio({
                 </div>
 
               </div>
-            </div>
-          ) : (
+            ) : (
             /* =========================================================================
                RECEIPTS FORM
                ========================================================================= */
@@ -2154,6 +2825,12 @@ export default function DocumentStudio({
               >
                 <Download className="w-3.5 h-3.5" /> Export A5 PDF
               </button>
+              <button
+                onClick={() => setIsPrintPreviewOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2 px-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors shadow-lg shadow-emerald-600/10"
+              >
+                <Printer className="w-3.5 h-3.5 animate-pulse" /> Print Preview
+              </button>
               {mode === 'receipts' && (
                 <>
                   <button
@@ -2206,100 +2883,222 @@ export default function DocumentStudio({
             )}
 
             {mode === 'contracts' ? (
-              /* =========================================================================
-                 PREVIEW: CONTRACT (CONSTRUCTION LABOR AGREEMENT)
-                 ========================================================================= */
-              <div className="space-y-4 text-[9px] leading-relaxed">
-                
-                {/* Office Header */}
-                <div className="flex justify-between items-start pb-2 border-b border-slate-200">
-                  <div className="space-y-0.5">
-                    <h3 className="font-sans font-extrabold text-[10px] text-slate-800 uppercase tracking-tight">MADECC GROUP SARL</h3>
-                    <p className="font-sans text-[7.5px] text-slate-500">Head Office: {contractHeadOffice}</p>
-                    <p className="font-sans text-[7px] text-slate-400">Tel: {contractTel} | Email: {contractEmail}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-mono text-[8px] font-bold text-slate-500 block">Contract No:</span>
-                    <span className="font-mono text-[8.5px] font-bold text-slate-800">{contractNo}</span>
-                  </div>
-                </div>
-
-                {/* Main Legal Title */}
-                <div className="text-center py-1">
-                  <h1 className="font-sans font-black text-[10.5px] text-slate-900 tracking-tight uppercase">CONSTRUCTION LABOR AGREEMENT</h1>
-                  <span className="font-sans text-[7.5px] font-bold text-amber-600 tracking-wider block">WORKS CONTRACT — REINFORCED STRUCTURES</span>
-                </div>
-
-                {/* Key Parameters Box */}
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 grid grid-cols-2 gap-x-4 gap-y-1">
-                  <div>
-                    <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">PROJECT:</span>
-                    <p className="text-slate-900 font-bold text-[8px]">{contractProject || 'G+1 Residential Building'}</p>
-                  </div>
-                  <div>
-                    <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">PROJECT LOCATION:</span>
-                    <p className="text-slate-800 text-[8px] truncate">{contractProjectLocation}</p>
-                  </div>
-                  <div className="col-span-2 mt-1 pt-1 border-t border-slate-100 flex justify-between">
-                    <div>
-                      <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">CLIENT:</span>
-                      <p className="text-slate-900 font-bold text-[8px]">{clientName || '[ Client Legal Profile ]'}</p>
-                      <p className="text-slate-500 text-[7.5px] truncate font-sans">ID: {clientNiu || 'Not Specified'} | {clientAddress || 'Not Specified'}, {clientCity}</p>
+              contractSubMode === 'works' ? (
+                /* =========================================================================
+                   PREVIEW SUB-MODE A: CIVIL WORKS LABOUR AGREEMENT
+                   ========================================================================= */
+                <div className="space-y-4 text-[9px] leading-relaxed">
+                  
+                  {/* Office Header */}
+                  <div className="flex justify-between items-start pb-2 border-b border-slate-200">
+                    <div className="space-y-0.5">
+                      <h3 className="font-sans font-extrabold text-[10px] text-slate-800 uppercase tracking-tight">MADECC GROUP SARL</h3>
+                      <p className="font-sans text-[7.5px] text-slate-500">Head Office: {contractHeadOffice}</p>
+                      <p className="font-sans text-[7px] text-slate-400">Tel: {contractTel} | Email: {contractEmail}</p>
                     </div>
                     <div className="text-right">
-                      <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">CONTRACT DATE:</span>
-                      <p className="text-slate-800 text-[8px] font-bold">{contractDate}</p>
+                      <span className="font-mono text-[8px] font-bold text-slate-500 block">Contract No:</span>
+                      <span className="font-mono text-[8.5px] font-bold text-slate-800">{contractNo}</span>
                     </div>
                   </div>
-                </div>
 
-                {/* 1. SCOPE OF WORKS */}
-                <div className="space-y-1">
-                  <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">1. SCOPE OF WORKS</h4>
-                  <p className="text-slate-600 text-[8px] font-sans">
-                    MADECC Construction agrees to execute labor from Foundation to Tie Beam (Ring Beam) and finishing works, excluding roofing, ceiling, painting and tiling:
-                  </p>
-                  <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 list-disc pl-3 text-slate-500 text-[7.5px] font-sans">
-                    <li>Foundation works</li>
-                    <li>Blockwork / Partitions</li>
-                    <li>Reinforcements / Adjustments</li>
-                    <li>Staircase construction</li>
-                    <li>Structural masonry</li>
-                    <li>Plastering & Septic Tank</li>
-                  </ul>
-                </div>
-
-                {/* 2. PRICE & MILESTONES */}
-                <div className="space-y-1 pt-1 border-t border-slate-100">
-                  <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">2. CONTRACT PRICE & PAYMENT TERMS</h4>
-                  <div className="flex justify-between items-center">
-                    <p className="text-slate-700 font-bold text-[8px]">Total Labor Cost: {parseFloat(contractValue || '0').toLocaleString()} FCFA</p>
-                    <span className="text-[7.5px] bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded font-bold font-sans">
-                      Advance: {parseFloat(contractAdvancePayment || '372000').toLocaleString()} FCFA
-                    </span>
+                  {/* Main Legal Title */}
+                  <div className="text-center py-1">
+                    <h1 className="font-sans font-black text-[10.5px] text-slate-900 tracking-tight uppercase">CONSTRUCTION LABOR AGREEMENT</h1>
+                    <span className="font-sans text-[7.5px] font-bold text-amber-600 tracking-wider block">WORKS CONTRACT — REINFORCED STRUCTURES</span>
                   </div>
-                  <p className="text-slate-500 text-[7.5px] font-sans leading-relaxed">
-                    Paying an advance of {parseFloat(contractAdvancePayment || '0').toLocaleString()} FCFA before commencement. Remaining balance of {(parseFloat(contractAgreedBalance || '872000') - parseFloat(contractAdvancePayment || '372000')).toLocaleString()} FCFA becomes due immediately upon Tie Beam completion.
-                  </p>
-                </div>
 
-                {/* 3. PROJECT DURATION */}
-                <div className="space-y-0.5 pt-1 border-t border-slate-100">
-                  <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">3. PROJECT DURATION</h4>
-                  <p className="text-slate-500 text-[7.5px] italic font-sans leading-snug">
-                    Unspecified duration ({contractDuration}). Construction progress depends entirely on the availability of client funding milestones.
-                  </p>
-                </div>
+                  {/* Key Parameters Box */}
+                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div>
+                      <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">PROJECT:</span>
+                      <p className="text-slate-900 font-bold text-[8px]">{contractProject || 'G+1 Residential Building'}</p>
+                    </div>
+                    <div>
+                      <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">PROJECT LOCATION:</span>
+                      <p className="text-slate-800 text-[8px] truncate">{contractProjectLocation}</p>
+                    </div>
+                    <div className="col-span-2 mt-1 pt-1 border-t border-slate-100 flex justify-between">
+                      <div>
+                        <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">CLIENT:</span>
+                        <p className="text-slate-900 font-bold text-[8px]">{clientName || '[ Client Legal Profile ]'}</p>
+                        <p className="text-slate-500 text-[7.5px] truncate font-sans">ID: {clientNiu || 'Not Specified'} | {clientAddress || 'Not Specified'}, {clientCity}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold block font-sans text-slate-400 text-[7px] uppercase">CONTRACT DATE:</span>
+                        <p className="text-slate-800 text-[8px] font-bold">{contractDate}</p>
+                      </div>
+                    </div>
+                  </div>
 
-                {/* 4. PROTECTION CLAUSES */}
-                <div className="space-y-0.5 pt-1 border-t border-slate-100">
-                  <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">4. CONTRACTOR PROTECTION CLAUSES</h4>
-                  <p className="text-slate-500 text-[7.5px] font-sans truncate">
-                    1. Commence only after advance. 2. Suspend work if payment delayed. 3. Disputes to Yaoundé courts.
-                  </p>
-                </div>
+                  {/* 1. SCOPE OF WORKS */}
+                  <div className="space-y-1">
+                    <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">1. SCOPE OF WORKS</h4>
+                    <p className="text-slate-600 text-[8px] font-sans">
+                      MADECC Construction agrees to execute labor from Foundation to Tie Beam (Ring Beam) and finishing works, excluding roofing, ceiling, painting and tiling:
+                    </p>
+                    <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 list-disc pl-3 text-slate-500 text-[7.5px] font-sans">
+                      <li>Foundation works</li>
+                      <li>Blockwork / Partitions</li>
+                      <li>Reinforcements / Adjustments</li>
+                      <li>Staircase construction</li>
+                      <li>Structural masonry</li>
+                      <li>Plastering & Septic Tank</li>
+                    </ul>
+                  </div>
 
-              </div>
+                  {/* 2. PRICE & MILESTONES */}
+                  <div className="space-y-1 pt-1 border-t border-slate-100">
+                    <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">2. CONTRACT PRICE & PAYMENT TERMS</h4>
+                    <div className="flex justify-between items-center">
+                      <p className="text-slate-700 font-bold text-[8px]">Total Labor Cost: {parseFloat(contractValue || '0').toLocaleString()} FCFA</p>
+                      <span className="text-[7.5px] bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded font-bold font-sans">
+                        Advance: {parseFloat(contractAdvancePayment || '372000').toLocaleString()} FCFA
+                      </span>
+                    </div>
+                    <p className="text-slate-500 text-[7.5px] font-sans leading-relaxed">
+                      Paying an advance of {parseFloat(contractAdvancePayment || '0').toLocaleString()} FCFA before commencement. Remaining balance of {(parseFloat(contractAgreedBalance || '872000') - parseFloat(contractAdvancePayment || '372000')).toLocaleString()} FCFA becomes due immediately upon Tie Beam completion.
+                    </p>
+                  </div>
+
+                  {/* 3. PROJECT DURATION */}
+                  <div className="space-y-0.5 pt-1 border-t border-slate-100">
+                    <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">3. PROJECT DURATION</h4>
+                    <p className="text-slate-500 text-[7.5px] italic font-sans leading-snug">
+                      Unspecified duration ({contractDuration}). Construction progress depends entirely on the availability of client funding milestones.
+                    </p>
+                  </div>
+
+                  {/* 4. PROTECTION CLAUSES */}
+                  <div className="space-y-0.5 pt-1 border-t border-slate-100">
+                    <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">4. CONTRACTOR PROTECTION CLAUSES</h4>
+                    <p className="text-slate-500 text-[7.5px] font-sans truncate">
+                      1. Commence only after advance. 2. Suspend work if payment delayed. 3. Disputes to Yaoundé courts.
+                    </p>
+                  </div>
+
+                </div>
+              ) : (
+                /* =========================================================================
+                   PREVIEW SUB-MODE B: CORPORATE ARTICLES OF ASSOCIATION (STATUTS CONSTITUTIFS)
+                   ========================================================================= */
+                <div className="space-y-4 text-[9px] leading-relaxed">
+                  
+                  {/* Cameroon Government / Republic Seal header */}
+                  <div className="text-center border-b border-slate-300 pb-2 space-y-1">
+                    <div className="flex justify-between text-[6px] uppercase text-slate-400 font-bold px-4">
+                      <span>REPUBLIC OF CAMEROON<br />Peace - Work - Fatherland</span>
+                      <span>REPUBLIQUE DU CAMEROUN<br />Paix - Travail - Patrie</span>
+                    </div>
+                    <div className="pt-1">
+                      <h3 className="font-sans font-black text-[9px] text-slate-800 uppercase tracking-tight">OHADA LEGAL COMPLIANCE REGISTRY</h3>
+                      <p className="text-[6.5px] text-slate-500 font-mono">REGISTRATION DESK • COMMERCE AND PERSONAL PROPERTY CREDIT REGISTER (RCCM)</p>
+                    </div>
+                  </div>
+
+                  {/* Document Major Title */}
+                  <div className="text-center py-2">
+                    <h1 className="font-sans font-black text-[12px] text-slate-900 tracking-tight uppercase">ARTICLES OF ASSOCIATION</h1>
+                    <span className="font-mono text-[7px] text-amber-600 font-bold tracking-widest block">STATUTS CONSTITUTIFS D'ENTREPRISE</span>
+                    <p className="text-slate-500 text-[7.5px] italic max-w-sm mx-auto">
+                      Governed in accordance with the OHADA Uniform Act relating to Commercial Companies and Economic Interest Groups
+                    </p>
+                  </div>
+
+                  {/* Corporate Parameters Box */}
+                  <div className="bg-amber-50/40 p-3 rounded-xl border border-amber-500/10 grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">COMPANY NAME:</span>
+                      <p className="text-slate-950 font-black text-[9px] uppercase tracking-wide">{aoaCompanyName || '[ ENTERPRISE NAME AWAITING ]'}</p>
+                    </div>
+                    <div>
+                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">LEGAL STRUCTURE:</span>
+                      <p className="text-slate-900 font-bold text-[8.5px]">{aoaLegalForm}</p>
+                    </div>
+                    <div>
+                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">SHARE CAPITAL:</span>
+                      <p className="text-slate-900 font-mono font-bold text-[8.5px]">{aoaShareCapital || '1,000,000 FCFA'}</p>
+                      <span className="text-slate-400 text-[6.5px] block">Divided into {aoaSharesCount} shares of {aoaShareValue} each</span>
+                    </div>
+                    <div>
+                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">REGISTERED OFFICE (SIÈGE):</span>
+                      <p className="text-slate-800 text-[8px] font-medium">{aoaHeadOffice || 'Douala, Cameroon'}</p>
+                    </div>
+                    <div className="col-span-2 pt-1.5 border-t border-slate-200/50 flex justify-between text-[7px]">
+                      <div>
+                        <span className="font-bold block font-sans text-slate-500 uppercase">STATUTORY MANAGER (GERANT):</span>
+                        <p className="text-slate-900 font-bold text-[8px]">{aoaInitialManager || 'Dr. Marcel Mbida'}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold block font-sans text-slate-500 uppercase">JURISDICTION:</span>
+                        <p className="text-slate-900 font-bold text-[8px]">{aoaJurisdiction}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Core Articles Content Area */}
+                  <div className="space-y-3">
+                    {aoaGeneratedData && aoaGeneratedData.articles && aoaGeneratedData.articles.length > 0 ? (
+                      /* Render Structured AI Articles */
+                      aoaGeneratedData.articles.map((article: any, index: number) => (
+                        <div key={index} className="space-y-1 border-t border-slate-100 pt-2">
+                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">{article.title}</h4>
+                          <p className="text-slate-600 text-[7.5px] leading-relaxed whitespace-pre-wrap font-sans text-justify">{article.content}</p>
+                        </div>
+                      ))
+                    ) : (
+                      /* Render High-Quality Fallback Articles instantly */
+                      <div className="space-y-2.5">
+                        <div className="space-y-1">
+                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 1: LEGAL CONSTITUTION & NAME</h4>
+                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
+                            By these presents, there is formed between the owners of the shares hereinafter created and those which may subsequently be created, a commercial corporate entity governed by the laws in force in the Republic of Cameroon, specifically the OHADA Uniform Act. The corporate name is <strong className="text-slate-900 uppercase">{aoaCompanyName || '[Enterprise Name]'}</strong>.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
+                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 2: REGISTERED OFFICE & ADDRESS</h4>
+                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
+                            The registered head office (Siège Social) of the company is established at <strong className="text-slate-900">{aoaHeadOffice || 'Douala, Republic of Cameroon'}</strong>. It may be transferred to any other location within the same jurisdiction by simple decision of the General Manager.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
+                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 3: CORPORATE PURPOSE & TECHNICAL SPECIALIZATIONS</h4>
+                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
+                            The company's primary corporate purpose in Cameroon and internationally is the execution of civil engineering and construction enterprise projects, specifically:
+                          </p>
+                          <p className="text-slate-700 text-[7.5px] bg-slate-50 p-1.5 rounded border border-slate-200/50 leading-relaxed italic">
+                            {aoaScopeOfActivity || 'Structural civil engineering works, concrete reinforcements, modern residential constructions, structural masonry, urban planning, and infrastructure development.'}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
+                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 4: CORPORATE DURATION</h4>
+                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
+                            The duration of the company is fixed at <strong className="text-slate-900">{aoaDurationYears} years</strong> from the date of its registration in the Commerce and Personal Property Credit Register (RCCM), except in the case of early dissolution or extension.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
+                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 5: SHARE CAPITAL AND SHARES DISTRIBUTION</h4>
+                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
+                            The share capital is set at <strong className="text-slate-900">{aoaShareCapital || '1,000,000 FCFA'}</strong>, divided into <strong className="text-slate-900">{aoaSharesCount} shares</strong> with a nominal value of <strong className="text-slate-900">{aoaShareValue}</strong> each, fully subscribed and paid up by the founders.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
+                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 6: STATUTORY MANAGEMENT & POWERS</h4>
+                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
+                            The company is managed by <strong className="text-slate-900">{aoaInitialManager || 'the appointed Statutory Director'}</strong>. The Manager has the broadest powers to act in all circumstances on behalf of the company, within the limit of the corporate purpose.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              )
             ) : (
               /* =========================================================================
                  PREVIEW: RECEIPT
@@ -2735,6 +3534,205 @@ export default function DocumentStudio({
           )}
         </div>
       )}
+
+      <PrintPreviewModal
+        isOpen={isPrintPreviewOpen}
+        onClose={() => setIsPrintPreviewOpen(false)}
+        title={mode === 'contracts' ? (contractSubMode === 'works' ? 'Civil Works Agreement Statutes' : 'Corporate Articles of Association Statutes') : 'Official Certified Receipt Voucher'}
+      >
+        <div className="space-y-6 relative font-serif text-slate-900 bg-white leading-relaxed text-xs">
+          {/* Watermark Stamps inside Preview */}
+          {mode === 'contracts' && isContractDigitallySigned && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
+              <div className="border-8 border-emerald-600 text-emerald-600 font-extrabold text-5xl uppercase tracking-widest p-4 transform -rotate-12 rounded-2xl">
+                Cameroon Law Confirmed
+              </div>
+            </div>
+          )}
+          {mode === 'receipts' && isReceiptDigitallySigned && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
+              <div className="border-8 border-amber-500 text-amber-500 font-extrabold text-5xl uppercase tracking-widest p-4 transform -rotate-12 rounded-2xl">
+                LEGAL CLEARANCE
+              </div>
+            </div>
+          )}
+
+          {mode === 'contracts' ? (
+            contractSubMode === 'works' ? (
+              <div className="space-y-4">
+                {/* Office Header */}
+                <div className="flex justify-between items-start pb-2 border-b border-slate-200">
+                  <div>
+                    <h3 className="font-sans font-extrabold text-[10px] text-slate-800 uppercase tracking-tight">MADECC GROUP SARL</h3>
+                    <p className="font-sans text-[7.5px] text-slate-500">Head Office: {contractHeadOffice}</p>
+                    <p className="font-sans text-[7px] text-slate-400">Tel: {contractTel} | Email: {contractEmail}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono text-[8px] font-bold text-slate-500 block">Contract No:</span>
+                    <span className="font-mono text-[8.5px] font-bold text-slate-800">{contractNo}</span>
+                  </div>
+                </div>
+
+                <div className="text-center py-1">
+                  <h1 className="font-sans font-black text-[12px] text-slate-900 tracking-tight uppercase">CIVIL LABOR CONTRACT agreement</h1>
+                  <span className="font-mono text-[7px] text-emerald-600 font-bold tracking-widest block">LAW COMPLIANCE PROTOCOL</span>
+                </div>
+
+                {/* Particulars */}
+                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 grid grid-cols-2 gap-y-1 text-[8px]">
+                  <div><strong className="text-slate-500 font-bold">CLIENT NAME:</strong> <span className="text-slate-900 font-bold">{clientName || '[ CLIENT NAME AWAITING ]'}</span></div>
+                  <div><strong className="text-slate-500 font-bold">REGISTRATION (NIU):</strong> <span className="font-mono text-slate-800 font-bold">{clientNiu || '[ NIU REGISTRY ID ]'}</span></div>
+                  <div><strong className="text-slate-500 font-bold">LOCATION:</strong> <span className="text-slate-800">{clientAddress || '[ ADDRESS ]'}, {clientCity}</span></div>
+                  <div><strong className="text-slate-500 font-bold">DATE OF EFFECT:</strong> <span className="text-slate-800">{contractDate}</span></div>
+                  <div><strong className="text-slate-500 font-bold">REPRESENTED BY:</strong> <span className="text-slate-800 font-medium">{representativeName} ({representativeTitle})</span></div>
+                  <div><strong className="text-slate-500 font-bold">PROJECT SITE:</strong> <span className="text-slate-800">{contractProjectLocation}</span></div>
+                </div>
+
+                <div className="space-y-2 text-[9px] text-slate-700 leading-normal">
+                  <p><strong>ARTICLE 1: PURPOSE.</strong> Under Cameroon Decree No. 2004/275 regulating civil engineering practices, the Client retains Contractor to perform civil labor services for: <strong>{contractProject}</strong>.</p>
+                  <p><strong>ARTICLE 2: WORK SCOPE.</strong> The works cover technical layout instructions, including: <em>{contractScope}</em>.</p>
+                  <p><strong>ARTICLE 3: REMUNERATION.</strong> The agreed payable balance is <strong>{parseFloat(contractValue || '0').toLocaleString()} {contractCurrency}</strong>. Advance payment is <strong>{parseFloat(contractAdvancePayment || '0').toLocaleString()} {contractCurrency}</strong>.</p>
+                  <p><strong>ARTICLE 4: RESOLUTION.</strong> Disagreements will seek arbitration in accordance with OHADA business rules under the jurisdiction of Cameroon courts.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Cameroon Government / Republic Seal header */}
+                <div className="text-center border-b border-slate-300 pb-2 space-y-1">
+                  <div className="flex justify-between text-[6px] uppercase text-slate-400 font-bold px-4">
+                    <span>REPUBLIC OF CAMEROON<br />Peace - Work - Fatherland</span>
+                    <span>REPUBLIQUE DU CAMEROUN<br />Paix - Travail - Patrie</span>
+                  </div>
+                  <div className="pt-1">
+                    <h3 className="font-sans font-black text-[9px] text-slate-800 uppercase tracking-tight">OHADA LEGAL COMPLIANCE REGISTRY</h3>
+                  </div>
+                </div>
+
+                <div className="text-center py-2">
+                  <h1 className="font-sans font-black text-[12px] text-slate-900 tracking-tight uppercase">ARTICLES OF ASSOCIATION</h1>
+                  <span className="font-mono text-[7px] text-amber-600 font-bold tracking-widest block">STATUTS CONSTITUTIFS D'ENTREPRISE</span>
+                </div>
+
+                {/* Corporate Parameters Box */}
+                <div className="bg-amber-50/40 p-3 rounded-xl border border-amber-500/10 grid grid-cols-2 gap-x-4 gap-y-2 text-[8px]">
+                  <div><strong className="text-slate-500 font-bold block uppercase">COMPANY NAME:</strong> <p className="text-slate-950 font-black text-[9px] uppercase tracking-wide">{aoaCompanyName || '[ ENTERPRISE NAME AWAITING ]'}</p></div>
+                  <div><strong className="text-slate-500 font-bold block uppercase">LEGAL STRUCTURE:</strong> <p className="text-slate-900 font-bold text-[8.5px]">{aoaLegalForm}</p></div>
+                  <div><strong className="text-slate-500 font-bold block uppercase">SHARE CAPITAL:</strong> <p className="text-slate-900 font-mono font-bold text-[8.5px]">{aoaShareCapital || '10,000,000 FCFA'}</p></div>
+                  <div><strong className="text-slate-500 font-bold block uppercase">REGISTERED OFFICE (SIÈGE):</strong> <p className="text-slate-800 text-[8px] font-medium">{aoaHeadOffice || 'Douala, Cameroon'}</p></div>
+                </div>
+
+                <div className="space-y-2 text-[9px] text-slate-700 leading-normal">
+                  <p><strong>ARTICLE 1: INCORPORATION.</strong> There is hereby incorporated a commercial company governed by the OHADA Uniform Act and these Statutes under the name <strong>{aoaCompanyName || 'MADECC GLOBAL'}</strong>.</p>
+                  <p><strong>ARTICLE 2: PURPOSE.</strong> The company's principal activity is construction and real-estate operations, specifically: <em>{aoaScopeOfActivity || 'Civil engineering works, infrastructure development, and corporate general contracting.'}</em></p>
+                  <p><strong>ARTICLE 3: CAPITAL & SHARES.</strong> The share capital is fixed at <strong>{aoaShareCapital || '10,000,000 FCFA'}</strong>, divided into <strong>{aoaSharesCount || '1,000'}</strong> shares of nominal value <strong>{aoaShareValue || '10,000 FCFA'}</strong> each.</p>
+                  <p><strong>ARTICLE 4: MANAGEMENT.</strong> The company is managed by the appointed Manager <strong>{aoaInitialManager || 'Dr. Marcel Mbida'}</strong> for a duration of <strong>{aoaDurationYears || '99'}</strong> years.</p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="space-y-4">
+              {/* Receipts Header */}
+              <div className="flex justify-between items-start pb-2 border-b border-slate-200">
+                <div>
+                  <h3 className="font-sans font-extrabold text-[10px] text-slate-800 uppercase tracking-tight">MADECC GROUP ENTERPRISE</h3>
+                  <p className="font-sans text-[7.5px] text-slate-500">Official Cashier & Voucher Bureau</p>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-[8px] font-bold text-slate-500 block">Receipt No:</span>
+                  <span className="font-mono text-[8.5px] font-bold text-slate-800">{receiptNumber}</span>
+                </div>
+              </div>
+
+              <div className="text-center py-2">
+                <h1 className="font-sans font-black text-[12px] text-slate-900 tracking-tight uppercase">OFFICIAL PAYMENT RECEIPT</h1>
+                <span className="font-mono text-[7px] text-amber-600 font-bold tracking-widest block">STAMPED COMPLIANCE SLIP</span>
+              </div>
+
+              {/* Receipt Info */}
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 grid grid-cols-2 gap-y-1 text-[8px]">
+                <div><strong className="text-slate-500 font-bold">CLIENT NAME:</strong> <span className="text-slate-900 font-bold">{receiptClient || '[ CLIENT NAME AWAITING ]'}</span></div>
+                <div><strong className="text-slate-500 font-bold">CLIENT NIU:</strong> <span className="font-mono text-slate-800 font-bold">{receiptNiu || '[ NIU REGISTRY ID ]'}</span></div>
+                <div><strong className="text-slate-500 font-bold">PROJECT SITE:</strong> <span className="text-slate-800">{receiptProject || '[ ASSOCIATED PROJECT ]'}</span></div>
+                <div><strong className="text-slate-500 font-bold">AMOUNT PAID:</strong> <span className="font-mono text-slate-900 font-bold">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span></div>
+                <div><strong className="text-slate-500 font-bold">PAYMENT MODE:</strong> <span className="text-slate-800">{receiptMethod}</span></div>
+                <div><strong className="text-slate-500 font-bold">DATE ISSUED:</strong> <span className="text-slate-800">{new Date().toLocaleDateString('en-GB')}</span></div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 text-[10px] space-y-3">
+                <div className="flex justify-between font-sans font-bold bg-slate-900 text-white p-1.5 rounded text-[8px] uppercase">
+                  <span>Particular Description / Milestone</span>
+                  <span>Subtotal</span>
+                </div>
+                <div className="flex justify-between text-[9.5px]">
+                  <span className="text-slate-800">{receiptProject || '[ Associated Project ]'} - {receiptMemo || 'General Payment'}</span>
+                  <span className="font-bold text-slate-800 font-sans">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex flex-col items-end text-[10px] space-y-1 font-sans">
+                <div className="flex gap-4 text-slate-500 text-[9px]">
+                  <span>Subtotal:</span>
+                  <span className="font-bold w-24 text-right">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
+                </div>
+                <div className="flex gap-4 text-slate-500 text-[9px]">
+                  <span>TVA ({receiptTaxRate}%):</span>
+                  <span className="font-bold w-24 text-right">
+                    {((parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
+                  </span>
+                </div>
+                <div className="flex gap-4 text-slate-900 font-bold bg-amber-100 p-1.5 rounded-lg border border-amber-200 mt-1">
+                  <span>Total Paid:</span>
+                  <span className="w-24 text-right">
+                    {(parseFloat(receiptAmount || '0') + (parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Signature Area */}
+          <div className="pt-4 border-t border-slate-200 flex justify-between items-end text-[9px] font-sans">
+            <div className="space-y-1">
+              <span className="text-[7.5px] block text-slate-400 font-bold uppercase">Government Verification Desk</span>
+              <div className="border border-slate-200 p-1.5 rounded bg-slate-50 flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="font-mono text-[7px] text-slate-500">CERT-ID: VALID_LOCAL_LEDGER</span>
+              </div>
+            </div>
+
+            <div className="text-right space-y-1">
+              <span className="text-[7.5px] block text-slate-400 font-bold uppercase">Authorized Stamp</span>
+              {mode === 'contracts' ? (
+                isContractDigitallySigned ? (
+                  <div className="border-2 border-dashed border-emerald-500 bg-emerald-50/60 p-1 rounded font-mono text-[8px] text-emerald-600 font-extrabold rotate-[-2deg]">
+                    SIGNED BY CLIENT<br />
+                    <span className="text-[6.5px] font-sans font-normal block">{typedClientSignature}</span>
+                  </div>
+                ) : (
+                  <span className="text-slate-300 italic">Waiting Signee</span>
+                )
+              ) : (
+                isReceiptDigitallySigned ? (
+                  <div className="border-2 border-dashed border-amber-500 bg-amber-50/60 p-1.5 rounded font-mono text-[8px] text-amber-600 font-extrabold rotate-[-2deg] flex flex-col items-center justify-center min-w-[120px]">
+                    <span>CFO STAMP VALID</span>
+                    {receiptDrawnSignature && (
+                      <img
+                        src={receiptDrawnSignature}
+                        alt="CFO Handdrawn Signature"
+                        className="h-6 object-contain invert brightness-0 my-1 max-w-[100px]"
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
+                    <span className="text-[6.5px] font-sans font-normal block mt-0.5">{receiptTypedSign}</span>
+                  </div>
+                ) : (
+                  <span className="text-slate-300 italic">Waiting CFO</span>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </PrintPreviewModal>
 
     </div>
   );

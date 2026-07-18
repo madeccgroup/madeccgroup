@@ -8,6 +8,7 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   role: text('role').notNull().default('client'), // admin, staff, client
+  theme: text('theme').notNull().default('dark'), // dark, light
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -237,4 +238,13 @@ export const signedReceipts = pgTable('signed_receipts', {
   drawnCfoSignature: text('drawn_cfo_signature'),
   verificationToken: text('verification_token').notNull().unique(),
   signedAt: timestamp('signed_at').defaultNow().notNull(),
+});
+
+// 18. User sync data (replaces localStorage persistence for themes, proposals, cvs, Cover letters, compliance ledger overrides, kyc etc.)
+export const userSyncData = pgTable('user_sync_data', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(), // Firebase Auth UID
+  key: text('key').notNull(), // 'theme', 'madecc_career_cvs', 'madecc_career_letters', 'madecc_aoa_statuses', 'madecc_shareholders_directors', 'madecc_proposals_db'
+  value: text('value').notNull(), // JSON payload string
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

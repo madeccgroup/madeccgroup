@@ -6,6 +6,8 @@ import {
   googleAuthProvider 
 } from '../lib/firebase.ts';
 import { signInWithPopup, signOut } from 'firebase/auth';
+import { useTheme } from '../lib/ThemeContext.tsx';
+import { useLanguage } from '../lib/LanguageContext.tsx';
 import { 
   HardHat, 
   Menu, 
@@ -15,7 +17,9 @@ import {
   Key, 
   ChevronDown, 
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { User } from '../types.ts';
 
@@ -34,6 +38,8 @@ export default function Navbar({
   setDbUser, 
   loadingAuth 
 }: NavbarProps) {
+  const { theme, toggleTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -92,16 +98,20 @@ export default function Navbar({
   };
 
   const menuItems = [
-    { id: 'home', label: 'Home' },
-    { id: 'about', label: 'About' },
-    { id: 'projects', label: 'Projects' },
-    { id: 'blog', label: 'Blog' },
-    { id: 'contact', label: 'Contact' },
-    { id: 'booking', label: 'Book Consult' },
+    { id: 'home', label: t('nav_home') },
+    { id: 'about', label: t('nav_about') },
+    { id: 'projects', label: t('nav_projects') },
+    { id: 'blog', label: t('nav_blog') },
+    { id: 'contact', label: t('nav_contact') },
+    { id: 'booking', label: t('nav_booking') },
   ];
 
   return (
-    <nav className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-50">
+    <nav className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
+      theme === 'light'
+        ? 'bg-white border-slate-200 text-slate-800 shadow-sm'
+        : 'bg-slate-900 border-slate-800 text-white'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           
@@ -111,7 +121,9 @@ export default function Navbar({
             onClick={() => setCurrentTab('home')}
             id="nav-logo"
           >
-            <div className="h-12 w-12 bg-slate-950 rounded-xl flex items-center justify-center overflow-hidden border border-slate-800/80 shadow-inner">
+            <div className={`h-12 w-12 rounded-xl flex items-center justify-center overflow-hidden border shadow-inner ${
+              theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800/80'
+            }`}>
               <img 
                 src={logoImg} 
                 onError={(e) => {
@@ -126,10 +138,14 @@ export default function Navbar({
               />
             </div>
             <div>
-              <span className="font-sans font-extrabold text-xl tracking-tight text-white block">
+              <span className={`font-sans font-extrabold text-xl tracking-tight block ${
+                theme === 'light' ? 'text-slate-900' : 'text-white'
+              }`}>
                 MADECC<span className="text-amber-500">GROUP</span>
               </span>
-              <span className="text-[10px] font-mono tracking-widest text-slate-400 block -mt-1">
+              <span className={`text-[10px] font-mono tracking-widest block -mt-1 ${
+                theme === 'light' ? 'text-slate-500' : 'text-slate-400'
+              }`}>
                 CONSTRUCTION & ENG
               </span>
             </div>
@@ -168,13 +184,47 @@ export default function Navbar({
                   id="nav-link-admin"
                 >
                   <ShieldCheck className="w-4 h-4 text-amber-500" />
-                  Admin
+                  {t('nav_admin')}
                 </button>
               )}
             </div>
 
             {/* Auth section */}
-            <div className="border-l border-slate-800 pl-6 flex items-center gap-3">
+            <div className={`border-l pl-6 flex items-center gap-3 ${theme === 'light' ? 'border-slate-200' : 'border-slate-800'}`}>
+              
+              {/* Theme Toggle Button */}
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-lg transition-colors ${
+                  theme === 'light' 
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500' 
+                    : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400'
+                }`}
+                aria-label="Toggle visual theme"
+                id="theme-toggle-btn"
+              >
+                {theme === 'light' ? (
+                  <Moon className="w-5 h-5 text-indigo-600" />
+                ) : (
+                  <Sun className="w-5 h-5 text-amber-400 animate-pulse" />
+                )}
+              </button>
+
+              {/* Language Switcher Button */}
+              <button
+                onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
+                className={`p-2 rounded-lg transition-colors text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer select-none ${
+                  theme === 'light' 
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500 border border-slate-200' 
+                    : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400 border border-slate-800'
+                }`}
+                aria-label="Toggle Language"
+                id="language-toggle-btn"
+              >
+                <span className="text-[14px]">🌐</span>
+                <span>{language === 'en' ? 'FR' : 'EN'}</span>
+              </button>
+
               {loadingAuth ? (
                 <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-amber-500 animate-spin" />
               ) : dbUser ? (
@@ -208,7 +258,7 @@ export default function Navbar({
                           className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-white text-left transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
-                          Sign Out
+                          {t('nav_logout')}
                         </button>
                       </div>
                     </div>
@@ -224,7 +274,7 @@ export default function Navbar({
                   id="login-btn"
                 >
                   <Key className="w-4 h-4" />
-                  Admin Sign In
+                  {t('nav_login')}
                 </button>
               )}
             </div>
