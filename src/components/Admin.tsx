@@ -266,15 +266,41 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     try {
       const token = await getAuthToken();
 
-      const formData = new FormData();
-      formData.append('file', file);
-
-      setUploadProgress('Uploading to secure server (0%)...');
+      // Step A: Try to get a signed direct upload ticket for Cloudinary
+      let signedTicket: any = null;
+      try {
+        const sigRes = await fetch('/api/cloudinary-signature', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (sigRes.ok) {
+          signedTicket = await sigRes.json();
+        }
+      } catch (err) {
+        console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+      }
 
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload', true);
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      const formData = new FormData();
+
+      if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+        // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+        formData.append('file', file);
+        formData.append('api_key', signedTicket.apiKey);
+        formData.append('timestamp', signedTicket.timestamp.toString());
+        formData.append('signature', signedTicket.signature);
+        formData.append('folder', signedTicket.folder || 'madecc');
+
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+        xhr.open('POST', uploadUrl, true);
+        setUploadProgress('Uploading directly to Cloudinary (0%)...');
+      } else {
+        // Fallback: Proxy Upload via backend server
+        formData.append('file', file);
+        xhr.open('POST', '/api/upload', true);
+        if (token) {
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        }
+        setUploadProgress('Uploading to secure server (0%)...');
       }
 
       xhr.upload.onprogress = (event) => {
@@ -290,26 +316,28 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const data = JSON.parse(xhr.responseText);
-            if (data.url) {
-              if (targetField === 'projImage') setProjImage(data.url);
-              if (targetField === 'projVideo') setProjVideoUrl(data.url);
-              if (targetField === 'blogImage') setBlogImage(data.url);
-              if (targetField === 'blogVideo') setBlogVideoUrl(data.url);
-              if (targetField === 'docUrl') setDocUrl(data.url);
-              if (targetField === 'galImage') setGalImage(data.url);
-              if (targetField === 'galVideo') setGalVideoUrl(data.url);
-              if (targetField === 'bannerImage') setBannerImage(data.url);
-              if (targetField === 'bannerVideo') setBannerVideoUrl(data.url);
-              if (targetField === 'teamImage') setTeamImage(data.url);
-              showToast('File uploaded successfully! The field has been updated with the server path.', 'success');
+            // Cloudinary returns secure_url, our proxy returns url
+            const finalUrl = data.secure_url || data.url;
+            if (finalUrl) {
+              if (targetField === 'projImage') setProjImage(finalUrl);
+              if (targetField === 'projVideo') setProjVideoUrl(finalUrl);
+              if (targetField === 'blogImage') setBlogImage(finalUrl);
+              if (targetField === 'blogVideo') setBlogVideoUrl(finalUrl);
+              if (targetField === 'docUrl') setDocUrl(finalUrl);
+              if (targetField === 'galImage') setGalImage(finalUrl);
+              if (targetField === 'galVideo') setGalVideoUrl(finalUrl);
+              if (targetField === 'bannerImage') setBannerImage(finalUrl);
+              if (targetField === 'bannerVideo') setBannerVideoUrl(finalUrl);
+              if (targetField === 'teamImage') setTeamImage(finalUrl);
+              showToast('File uploaded successfully!', 'success');
             } else {
-              showToast('Upload succeeded but no URL was returned.', 'error');
+              showToast('Upload succeeded but no asset URL was found.', 'error');
             }
           } catch (err) {
-            showToast('Upload succeeded, but response could not be parsed.', 'error');
+            showToast('Upload succeeded, but server response could not be parsed.', 'error');
           }
         } else {
-          showToast(`Upload failed: ${xhr.statusText || 'Server Error'}`, 'error');
+          showToast(`Upload failed: ${xhr.statusText || xhr.status || 'Server Error'}`, 'error');
         }
       };
 

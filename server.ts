@@ -50,6 +50,35 @@ function getGeminiClient(): GoogleGenAI | null {
   return aiInstance;
 }
 
+// Helper function to extract Cloudinary credentials from either CLOUDINARY_URL or individual variables
+function getCloudinaryCredentials() {
+  let cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  let apiKey = process.env.CLOUDINARY_API_KEY;
+  let apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (process.env.CLOUDINARY_URL) {
+    try {
+      const urlStr = process.env.CLOUDINARY_URL;
+      if (urlStr.startsWith('cloudinary://')) {
+        const credentialsAndHost = urlStr.replace('cloudinary://', '');
+        const atIndex = credentialsAndHost.lastIndexOf('@');
+        if (atIndex !== -1) {
+          const creds = credentialsAndHost.substring(0, atIndex).split(':');
+          cloudName = credentialsAndHost.substring(atIndex + 1);
+          if (creds.length === 2) {
+            apiKey = creds[0];
+            apiSecret = creds[1];
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[CLOUDINARY_PARSE_ERROR] Failed to parse CLOUDINARY_URL:', e);
+    }
+  }
+
+  return { cloudName, apiKey, apiSecret };
+}
+
 // Helper function to securely delete files from cloud storage (Supabase / Cloudinary) or local fallback
 async function deleteFileFromCloud(fileUrl: string | null | undefined) {
   if (!fileUrl) return;
@@ -84,33 +113,38 @@ async function deleteFileFromCloud(fileUrl: string | null | undefined) {
   // 2. Cloudinary asset clean-up
   else if (fileUrl.includes('cloudinary.com')) {
     try {
-      const cloudinary = await import('cloudinary');
-      cloudinary.v2.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET
-      });
-
-      const urlObj = new URL(fileUrl);
-      const pathname = urlObj.pathname;
-      const parts = pathname.split('/');
-      
-      const resourceType = parts[2] || 'image';
-      const uploadIndex = parts.indexOf('upload');
-      if (uploadIndex !== -1 && uploadIndex + 1 < parts.length) {
-        let remainingParts = parts.slice(uploadIndex + 1);
-        if (remainingParts[0] && remainingParts[0].startsWith('v') && /^\d+$/.test(remainingParts[0].substring(1))) {
-          remainingParts = remainingParts.slice(1);
-        }
-        
-        const fileWithExt = remainingParts.join('/');
-        const lastDotIndex = fileWithExt.lastIndexOf('.');
-        const publicId = lastDotIndex !== -1 ? fileWithExt.substring(0, lastDotIndex) : fileWithExt;
-        
-        const result = await cloudinary.v2.uploader.destroy(publicId, {
-          resource_type: resourceType === 'raw' ? 'raw' : (resourceType === 'video' ? 'video' : 'image')
+      const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
+      if (cloudName && apiKey && apiSecret) {
+        const cloudinary = await import('cloudinary');
+        cloudinary.v2.config({
+          cloud_name: cloudName,
+          api_key: apiKey,
+          api_secret: apiSecret
         });
-        console.log(`[STORAGE_DELETE] Deleted from Cloudinary: publicId=${publicId}, result=`, result);
+
+        const urlObj = new URL(fileUrl);
+        const pathname = urlObj.pathname;
+        const parts = pathname.split('/');
+        
+        const resourceType = parts[2] || 'image';
+        const uploadIndex = parts.indexOf('upload');
+        if (uploadIndex !== -1 && uploadIndex + 1 < parts.length) {
+          let remainingParts = parts.slice(uploadIndex + 1);
+          if (remainingParts[0] && remainingParts[0].startsWith('v') && /^\d+$/.test(remainingParts[0].substring(1))) {
+            remainingParts = remainingParts.slice(1);
+          }
+          
+          const fileWithExt = remainingParts.join('/');
+          const lastDotIndex = fileWithExt.lastIndexOf('.');
+          const publicId = lastDotIndex !== -1 ? fileWithExt.substring(0, lastDotIndex) : fileWithExt;
+          
+          const result = await cloudinary.v2.uploader.destroy(publicId, {
+            resource_type: resourceType === 'raw' ? 'raw' : (resourceType === 'video' ? 'video' : 'image')
+          });
+          console.log(`[STORAGE_DELETE] Deleted from Cloudinary: publicId=${publicId}, result=`, result);
+        }
+      } else {
+        console.warn('[STORAGE_DELETE_WARN] Could not delete Cloudinary asset because configuration is missing.');
       }
     } catch (err) {
       console.error('[STORAGE_DELETE_ERROR] Error deleting from Cloudinary:', err);
@@ -142,7 +176,8 @@ function validateEnvironmentVariables() {
   }
 
   const hasSupabase = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-  const hasCloudinary = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET));
+  const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
+  const hasCloudinary = !!(cloudName && apiKey && apiSecret);
 
   if (!hasSupabase && !hasCloudinary) {
     console.warn('⚠️  [CONFIG WARNING] Neither Supabase nor Cloudinary cloud storage is fully configured.');
@@ -429,6 +464,36 @@ export async function getApp() {
     limits: { fileSize: 150 * 1024 * 1024 } // 150MB limit
   });
 
+  // Endpoint to sign client-side direct Cloudinary uploads (prevents serverless 6MB body size limits and timeouts)
+  app.get('/api/cloudinary-signature', requireAuth, async (req: any, res) => {
+    try {
+      const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
+      if (!cloudName || !apiKey || !apiSecret) {
+        return res.status(400).json({ error: 'Cloudinary is not configured on the server.' });
+      }
+
+      const timestamp = Math.round(Date.now() / 1000);
+      const folder = 'madecc';
+
+      const cloudinary = await import('cloudinary');
+      const signature = cloudinary.v2.utils.api_sign_request(
+        { timestamp, folder },
+        apiSecret
+      );
+
+      res.json({
+        signature,
+        timestamp,
+        apiKey,
+        cloudName,
+        folder
+      });
+    } catch (err: any) {
+      console.error('[CLOUDINARY_SIGN_ERROR] Error generating upload signature:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Upload endpoint (accepts any file, including up to 150MB videos, with cloud storage support)
   app.post('/api/upload', requireAuth, upload.single('file'), async (req: any, res) => {
     if (!req.file) {
@@ -471,27 +536,30 @@ export async function getApp() {
         }
       }
       // 2. Detect and upload to Cloudinary if configured
-      else if (process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY)) {
-        try {
-          const cloudinary = await import('cloudinary');
-          cloudinary.v2.config({
-            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-            api_key: process.env.CLOUDINARY_API_KEY,
-            api_secret: process.env.CLOUDINARY_API_SECRET
-          });
+      else {
+        const { cloudName, apiKey, apiSecret } = getCloudinaryCredentials();
+        if (cloudName && apiKey && apiSecret) {
+          try {
+            const cloudinary = await import('cloudinary');
+            cloudinary.v2.config({
+              cloud_name: cloudName,
+              api_key: apiKey,
+              api_secret: apiSecret
+            });
 
-          const result = await cloudinary.v2.uploader.upload(req.file.path, {
-            resource_type: 'auto',
-            folder: 'madecc'
-          });
+            const result = await cloudinary.v2.uploader.upload(req.file.path, {
+              resource_type: 'auto',
+              folder: 'madecc'
+            });
 
-          fileUrl = result.secure_url;
-          console.log(`[STORAGE] Successfully uploaded ${req.file.originalname} to Cloudinary: ${fileUrl}`);
-          
-          // Remove local file after successful cloud upload
-          fs.unlinkSync(req.file.path);
-        } catch (cloudinaryErr) {
-          console.error('[STORAGE-FALLBACK] Failed to upload to Cloudinary, falling back to disk:', cloudinaryErr);
+            fileUrl = result.secure_url;
+            console.log(`[STORAGE] Successfully uploaded ${req.file.originalname} to Cloudinary: ${fileUrl}`);
+            
+            // Remove local file after successful cloud upload
+            fs.unlinkSync(req.file.path);
+          } catch (cloudinaryErr) {
+            console.error('[STORAGE-FALLBACK] Failed to upload to Cloudinary, falling back to disk:', cloudinaryErr);
+          }
         }
       }
 
