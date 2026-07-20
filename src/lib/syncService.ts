@@ -19,6 +19,8 @@ async function getAuthHeaders() {
   return headers;
 }
 
+const memoryCache: Record<string, any> = {};
+
 /**
  * Fetches all persistent states synced in the Neon PostgreSQL database for the current logged-in user.
  */
@@ -26,7 +28,7 @@ export async function fetchUserSyncData(): Promise<Record<string, any>> {
   try {
     const headers = await getAuthHeaders();
     if (!headers['Authorization']) {
-      return {};
+      return memoryCache;
     }
 
     const res = await fetch('/api/user-sync', { headers });
@@ -43,9 +45,9 @@ export async function fetchUserSyncData(): Promise<Record<string, any>> {
       return parsed;
     }
   } catch (err) {
-    console.error('Error fetching user sync data from Neon:', err);
+    console.warn('Non-fatal: Error fetching user sync data from database (using offline/local state):', err);
   }
-  return {};
+  return memoryCache;
 }
 
 /**
@@ -53,15 +55,11 @@ export async function fetchUserSyncData(): Promise<Record<string, any>> {
  */
 export async function saveUserSyncData(key: string, value: any): Promise<boolean> {
   try {
+    memoryCache[key] = value;
     const headers = await getAuthHeaders();
     if (!headers['Authorization']) {
-      // Local caching for unauthenticated or preview mode
-      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
       return false;
     }
-
-    // Clear local storage copy to ensure absolute single-source-of-truth in Neon database
-    localStorage.removeItem(key);
 
     const res = await fetch('/api/user-sync', {
       method: 'POST',
@@ -70,7 +68,7 @@ export async function saveUserSyncData(key: string, value: any): Promise<boolean
     });
     return res.ok;
   } catch (err) {
-    console.error(`Error saving user sync data for key ${key}:`, err);
+    console.warn(`Non-fatal: Error saving user sync data for key ${key}:`, err);
     return false;
   }
 }

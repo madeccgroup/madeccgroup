@@ -129,23 +129,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
-    const saved = localStorage.getItem('madecc_language');
-    if (saved === 'en' || saved === 'fr') {
-      setLanguageState(saved);
+    // Default to English or browser language
+    const browserLang = navigator.language.substring(0, 2);
+    if (browserLang === 'fr') {
+      setLanguageState('fr');
     } else {
-      // Default to English or browser language
-      const browserLang = navigator.language.substring(0, 2);
-      if (browserLang === 'fr') {
-        setLanguageState('fr');
-      } else {
-        setLanguageState('en');
-      }
+      setLanguageState('en');
     }
   }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('madecc_language', lang);
     document.documentElement.lang = lang;
   };
 

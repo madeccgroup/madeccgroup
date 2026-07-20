@@ -284,32 +284,14 @@ export default function CareerStudio({ mode, showToast }: CareerStudioProps) {
       if (dbCvs) {
         setCvs(dbCvs);
       } else {
-        const storedCvs = localStorage.getItem('madecc_career_cvs');
-        if (storedCvs) {
-          try {
-            setCvs(JSON.parse(storedCvs));
-          } catch (e) {
-            setCvs(CV_PRESETS);
-          }
-        } else {
-          setCvs(CV_PRESETS);
-        }
+        setCvs(CV_PRESETS);
       }
 
       const dbLetters = syncData['madecc_career_letters'];
       if (dbLetters) {
         setLetters(dbLetters);
       } else {
-        const storedLetters = localStorage.getItem('madecc_career_letters');
-        if (storedLetters) {
-          try {
-            setLetters(JSON.parse(storedLetters));
-          } catch (e) {
-            setLetters(LETTER_PRESETS);
-          }
-        } else {
-          setLetters(LETTER_PRESETS);
-        }
+        setLetters(LETTER_PRESETS);
       }
     };
     

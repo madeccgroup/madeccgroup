@@ -28,6 +28,7 @@ import {
   History,
   TrendingUp,
   Sliders,
+  GraduationCap,
   AlertCircle,
   Video,
   Copy,
@@ -35,7 +36,8 @@ import {
   Receipt,
   Download,
   Database,
-  Code
+  Code,
+  Sparkles
 } from 'lucide-react';
 import { 
   User, 
@@ -59,6 +61,9 @@ import DashboardCharts from './DashboardCharts.tsx';
 import DocumentStudio, { generateAnalyticsPDF } from './DocumentStudio.tsx';
 import CareerStudio from './CareerStudio.tsx';
 import ProposalStudio from './ProposalStudio.tsx';
+import LessonStudio from './LessonStudio.tsx';
+import SyllabusUpload from './SyllabusUpload.tsx';
+import ExtendedLessonArchitect from './ExtendedLessonArchitect.tsx';
 
 const safeConfirm = (message: string): boolean => {
   if (typeof window === 'undefined') return true;
@@ -114,7 +119,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   };
 
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio'>('analytics');
+  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect'>('analytics');
+  const [activeSyllabus, setActiveSyllabus] = useState<any | null>(null);
 
   // Live analytics state from backend
   const [dbAnalytics, setDbAnalytics] = useState<{
@@ -367,6 +373,16 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
       const headers = { 'Authorization': `Bearer ${token}` };
 
+      const safeFetch = async (url: string, options?: any) => {
+        try {
+          const res = await fetch(url, options);
+          return res;
+        } catch (e) {
+          console.error(`Failed to fetch endpoint ${url}:`, e);
+          return { ok: false, json: async () => null } as any;
+        }
+      };
+
       const [
         projRes, 
         catRes, 
@@ -384,21 +400,21 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         receiptsRes,
         analyticsRes
       ] = await Promise.all([
-        fetch('/api/projects'),
-        fetch('/api/categories'),
-        fetch('/api/reviews/all', { headers }),
-        fetch('/api/blogs'),
-        fetch('/api/appointments', { headers }),
-        fetch('/api/contacts', { headers }),
-        fetch('/api/subscribers', { headers }),
-        fetch('/api/banners/all', { headers }),
-        fetch('/api/documents'),
-        fetch('/api/audit-logs', { headers }),
-        fetch('/api/gallery'),
-        fetch('/api/team'),
-        fetch('/api/contracts/all', { headers }),
-        fetch('/api/receipts/all', { headers }),
-        fetch('/api/analytics', { headers })
+        safeFetch('/api/projects'),
+        safeFetch('/api/categories'),
+        safeFetch('/api/reviews/all', { headers }),
+        safeFetch('/api/blogs'),
+        safeFetch('/api/appointments', { headers }),
+        safeFetch('/api/contacts', { headers }),
+        safeFetch('/api/subscribers', { headers }),
+        safeFetch('/api/banners/all', { headers }),
+        safeFetch('/api/documents'),
+        safeFetch('/api/audit-logs', { headers }),
+        safeFetch('/api/gallery'),
+        safeFetch('/api/team'),
+        safeFetch('/api/contracts/all', { headers }),
+        safeFetch('/api/receipts/all', { headers }),
+        safeFetch('/api/analytics', { headers })
       ]);
 
       if (projRes.ok) setProjects(await projRes.json());
@@ -1506,6 +1522,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               { id: 'documents', label: 'Company Documents', icon: FileText },
               { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
               { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
+              { id: 'lesson-studio', label: 'MINESEC Lesson Prep', icon: GraduationCap },
+              { id: 'syllabus-upload', label: 'Syllabus Manager', icon: BookOpen },
+              { id: 'extended-lesson-architect', label: 'Extended Lesson Architect', icon: Sparkles },
               { id: 'receipts', label: 'Receipt Generator', icon: Receipt },
               { id: 'cv-generator', label: 'CV Builder', icon: Award },
               { id: 'letter-generator', label: 'Application Letters', icon: FileText },
@@ -4239,6 +4258,28 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           <ProposalStudio
             showToast={showToast}
             setActiveAdminTab={setActiveAdminTab}
+          />
+        )}
+
+        {activeAdminTab === 'lesson-studio' && (
+          <LessonStudio
+            showToast={showToast}
+            activeSyllabus={activeSyllabus}
+            setActiveSyllabus={setActiveSyllabus}
+          />
+        )}
+
+        {activeAdminTab === 'syllabus-upload' && (
+          <SyllabusUpload
+            showToast={showToast}
+            setActiveAdminTab={setActiveAdminTab}
+            setActiveSyllabus={setActiveSyllabus}
+          />
+        )}
+
+        {activeAdminTab === 'extended-lesson-architect' && (
+          <ExtendedLessonArchitect
+            showToast={showToast}
           />
         )}
 

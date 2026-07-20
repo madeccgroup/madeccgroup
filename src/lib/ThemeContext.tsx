@@ -19,13 +19,7 @@ export function ThemeProvider({ children, dbUser }: { children: React.ReactNode;
     if (dbUser && dbUser.theme) {
       setThemeState(dbUser.theme as Theme);
     } else {
-      // Check system default or local storage fallback for unauthenticated users
-      const saved = localStorage.getItem('madecc_theme');
-      if (saved === 'light' || saved === 'dark') {
-        setThemeState(saved);
-      } else {
-        setThemeState('dark'); // Default appearance for new users is dark
-      }
+      setThemeState('dark'); // Default appearance for new users is dark
     }
   }, [dbUser]);
 
@@ -37,9 +31,6 @@ export function ThemeProvider({ children, dbUser }: { children: React.ReactNode;
     
     // Smooth transitions for background and text
     root.style.colorScheme = theme;
-    
-    // Save locally for guest sessions or instant loader backup
-    localStorage.setItem('madecc_theme', theme);
   }, [theme]);
 
   const setTheme = async (newTheme: Theme) => {
@@ -67,7 +58,7 @@ export function ThemeProvider({ children, dbUser }: { children: React.ReactNode;
           });
         }
       } catch (err) {
-        console.error('Error saving theme preference to Neon DB:', err);
+        console.warn('Non-fatal: Error saving theme preference to Neon DB:', err);
       }
     }
   };

@@ -78,17 +78,13 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    // Fetch home data from backend APIs
+    // Fetch home data from backend APIs with robust individual handling
     const fetchHomeData = async () => {
       setLoading(true);
+      
+      // 1. Fetch Banners
       try {
-        const [bannersRes, servicesRes, projectsRes, reviewsRes] = await Promise.all([
-          fetch('/api/banners'),
-          fetch('/api/services'),
-          fetch('/api/projects'),
-          fetch('/api/reviews')
-        ]);
-
+        const bannersRes = await fetch('/api/banners');
         if (bannersRes.ok) {
           const bannersData = await bannersRes.json();
           // If the backend has active banners, use them; otherwise stick with DEFAULT_BANNERS
@@ -96,17 +92,42 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
             setBanners(bannersData);
           }
         }
-        if (servicesRes.ok) setServices(await servicesRes.json());
+      } catch (err) {
+        console.warn('Non-fatal: Error fetching banners, using default local assets.', err);
+      }
+
+      // 2. Fetch Services
+      try {
+        const servicesRes = await fetch('/api/services');
+        if (servicesRes.ok) {
+          setServices(await servicesRes.json());
+        }
+      } catch (err) {
+        console.warn('Non-fatal: Error fetching services.', err);
+      }
+
+      // 3. Fetch Projects
+      try {
+        const projectsRes = await fetch('/api/projects');
         if (projectsRes.ok) {
           const allProjs = await projectsRes.json();
           setFeaturedProjects(allProjs.slice(0, 3)); // Grab first 3 as featured
         }
-        if (reviewsRes.ok) setApprovedReviews(await reviewsRes.json());
       } catch (err) {
-        console.error('Error fetching home data:', err);
-      } finally {
-        setLoading(false);
+        console.warn('Non-fatal: Error fetching projects.', err);
       }
+
+      // 4. Fetch Reviews
+      try {
+        const reviewsRes = await fetch('/api/reviews');
+        if (reviewsRes.ok) {
+          setApprovedReviews(await reviewsRes.json());
+        }
+      } catch (err) {
+        console.warn('Non-fatal: Error fetching reviews.', err);
+      }
+
+      setLoading(false);
     };
 
     fetchHomeData();

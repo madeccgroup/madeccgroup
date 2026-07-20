@@ -109,27 +109,13 @@ export default function ProposalDashboard({
       const dbStatuses = syncData['madecc_aoa_statuses'];
       if (dbStatuses) {
         setAoaStatusMap(dbStatuses);
-      } else {
-        try {
-          const saved = localStorage.getItem('madecc_aoa_statuses');
-          if (saved) setAoaStatusMap(JSON.parse(saved));
-        } catch (e) {}
       }
 
       const dbShareholders = syncData['madecc_shareholders_directors'];
       if (dbShareholders) {
         setShareholdersList(dbShareholders);
       } else {
-        try {
-          const saved = localStorage.getItem('madecc_shareholders_directors');
-          if (saved) {
-            setShareholdersList(JSON.parse(saved));
-          } else {
-            setShareholdersList(DEFAULT_SHAREHOLDERS);
-          }
-        } catch (e) {
-          setShareholdersList(DEFAULT_SHAREHOLDERS);
-        }
+        setShareholdersList(DEFAULT_SHAREHOLDERS);
       }
     };
 

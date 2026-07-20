@@ -105,31 +105,15 @@ export default function FloatingVoiceAssistant() {
 
       const dbVol = syncData['voice_volume'];
       if (dbVol !== undefined) setVolume(parseFloat(dbVol));
-      else {
-        const localVal = localStorage.getItem('voice_volume');
-        if (localVal !== null) setVolume(parseFloat(localVal));
-      }
 
       const dbRate = syncData['voice_rate'];
       if (dbRate !== undefined) setRate(parseFloat(dbRate));
-      else {
-        const localVal = localStorage.getItem('voice_rate');
-        if (localVal !== null) setRate(parseFloat(localVal));
-      }
 
       const dbAutoplay = syncData['voice_autoplay'];
       if (dbAutoplay !== undefined) setAutoplayEnabled(dbAutoplay === 'true');
-      else {
-        const localVal = localStorage.getItem('voice_autoplay');
-        if (localVal !== null) setAutoplayEnabled(localVal === 'true');
-      }
 
       const dbMuted = syncData['voice_muted'];
       if (dbMuted !== undefined) setIsMuted(dbMuted === 'true');
-      else {
-        const localVal = localStorage.getItem('voice_muted');
-        if (localVal !== null) setIsMuted(localVal === 'true');
-      }
     };
 
     loadDbPreferences();

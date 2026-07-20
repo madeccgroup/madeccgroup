@@ -316,7 +316,7 @@ export default function DocumentStudio({
   // ==========================================
   // --- ARTICLES OF ASSOCIATION STATE & HELPERS ---
   // ==========================================
-  const [contractSubMode, setContractSubMode] = useState<'works' | 'articles'>('works');
+  const [contractSubMode, setContractSubMode] = useState<'works' | 'articles' | 'blueprints' | 'safety' | 'pedagogical'>('works');
   const [aoaCompanyName, setAoaCompanyName] = useState('MADECC CIVIL WORKS SARL');
   const [aoaLegalForm, setAoaLegalForm] = useState('SARL (Société à Responsabilité Limitée)');
   const [aoaJurisdiction, setAoaJurisdiction] = useState('Cameroon (OHADA Uniform Act) & Worldwide');
@@ -332,6 +332,39 @@ export default function DocumentStudio({
   const [aoaCustomPrompt, setAoaCustomPrompt] = useState('');
   const [aoaGeneratedData, setAoaGeneratedData] = useState<any>(null);
   const [isAoaGenerating, setIsAoaGenerating] = useState(false);
+
+  // ==========================================
+  // --- BLUEPRINT TEMPLATE STATE & HELPERS ---
+  // ==========================================
+  const [blueprintCode, setBlueprintCode] = useState('BLU-2026-F4BA-012');
+  const [blueprintTitle, setBlueprintTitle] = useState('Standard Reinforced Concrete Strip Footing Detail');
+  const [blueprintScale, setBlueprintScale] = useState('1:20');
+  const [blueprintDesignedBy, setBlueprintDesignedBy] = useState('Dr. Marcel Mbida, Senior Civil Engineer');
+  const [blueprintSiteLocation, setBlueprintSiteLocation] = useState('Yaoundé Site Zone B');
+  const [blueprintMaterialsSpecs, setBlueprintMaterialsSpecs] = useState('C30/37 Concrete, CPA-45 Portland Cement, FeE500 Steel rebars');
+  const [blueprintNotes, setBlueprintNotes] = useState('Minimum clear cover to reinforcement: 50mm. Lap length: 50 * bar diameter. Soil bearing capacity must exceed 150 kPa. Ensure complete compaction using mechanical poker vibrators.');
+
+  // ==========================================
+  // --- SITE SAFETY REPORT STATE & HELPERS ---
+  // ==========================================
+  const [safetyReportCode, setSafetyReportCode] = useState('HSE-2026-089');
+  const [safetyInspector, setSafetyInspector] = useState('Jean-Pierre Bikoula, HSE Officer');
+  const [safetySiteLocation, setSafetySiteLocation] = useState('Douala Port Logistics Expansion Site');
+  const [safetyDate, setSafetyDate] = useState('July 20, 2026');
+  const [safetyPpeCompliance, setSafetyPpeCompliance] = useState('92');
+  const [safetyHazardsIdentified, setSafetyHazardsIdentified] = useState('1. Unshoring of trench excavation at Zone 2.\n2. Unprotected rebar starters in foundation block.\n3. Inadequate safety signs at deep pit border.');
+  const [safetyCorrectiveActions, setSafetyCorrectiveActions] = useState('1. Install timber shoring immediately prior to deep trench access.\n2. Cap all exposed rebar starters with high-visibility safety caps.\n3. Install robust boundary rails around excavation pits.');
+  const [safetyStatus, setSafetyStatus] = useState('Conditional Pass');
+
+  // ==========================================
+  // --- PEDAGOGICAL LESSON STATE & HELPERS ---
+  // ==========================================
+  const [pedagogicalTopic, setPedagogicalTopic] = useState('Concrete Slab Reinforcement and Formwork Principles');
+  const [pedagogicalLevel, setPedagogicalLevel] = useState('Lower Sixth Civil Engineering (L6CE)');
+  const [pedagogicalDuration, setPedagogicalDuration] = useState('120 Minutes');
+  const [pedagogicalCbaGoal, setPedagogicalCbaGoal] = useState('Ability to detail rebar placement and specify formwork supports according to MINESEC guidelines');
+  const [pedagogicalSyllabusUnit, setPedagogicalSyllabusUnit] = useState('Unit 4.3 - Reinforced Concrete Structures');
+  const [pedagogicalTeacherCoaching, setPedagogicalTeacherCoaching] = useState('Prioritize physical modeling of rebar overlap (lap length). Explain the chemical curing of concrete (hydration reaction) and potential shrinkage cracking when water-cement ratios are exceeded. Use sandbox layout for psychomotor scaffolding.');
 
   const getOfflineFallbackArticles = () => {
     return {
@@ -1965,28 +1998,61 @@ export default function DocumentStudio({
                 </h2>
                 
                 {/* Sub-mode Tab Toggles */}
-                <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px] w-full sm:w-auto shrink-0">
+                <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[9px] w-full shrink-0 flex-wrap gap-1">
                   <button
                     type="button"
                     onClick={() => setContractSubMode('works')}
-                    className={`flex-1 sm:flex-none text-center px-3 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                    className={`flex-1 text-center px-2 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
                       contractSubMode === 'works' 
                         ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Civil Works Contract
+                    Civil Works
                   </button>
                   <button
                     type="button"
                     onClick={() => setContractSubMode('articles')}
-                    className={`flex-1 sm:flex-none text-center px-3 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                    className={`flex-1 text-center px-2 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
                       contractSubMode === 'articles' 
                         ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Articles of Association
+                    Articles of Assoc.
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContractSubMode('blueprints')}
+                    className={`flex-1 text-center px-2 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                      contractSubMode === 'blueprints' 
+                        ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Blueprints
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContractSubMode('safety')}
+                    className={`flex-1 text-center px-2 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                      contractSubMode === 'safety' 
+                        ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Safety Inspections
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContractSubMode('pedagogical')}
+                    className={`flex-1 text-center px-2 py-1.5 rounded-md font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                      contractSubMode === 'pedagogical' 
+                        ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Pedagogical Lesson
                   </button>
                 </div>
               </div>
@@ -2270,7 +2336,7 @@ export default function DocumentStudio({
                     />
                   </div>
                 </div>
-              ) : (
+              ) : contractSubMode === 'articles' ? (
                 /* =========================================================================
                    SUB-MODE B: CORPORATE ARTICLES OF ASSOCIATION FORM
                    ========================================================================= */
@@ -2433,6 +2499,277 @@ export default function DocumentStudio({
                       className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold py-3 px-4 rounded-xl uppercase tracking-wider transition-all cursor-pointer"
                     >
                       Sync Local Form
+                    </button>
+                  </div>
+                </div>
+              ) : contractSubMode === 'blueprints' ? (
+                /* =========================================================================
+                   SUB-MODE C: TECHNICAL BLUEPRINT DETAILS FORM
+                   ========================================================================= */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Drawing / Blueprint Code</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={blueprintCode}
+                        onChange={(e) => setBlueprintCode(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Drawing Scale Factor</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={blueprintScale}
+                        onChange={(e) => setBlueprintScale(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Blueprint Major Title</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                      value={blueprintTitle}
+                      onChange={(e) => setBlueprintTitle(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Lead Engineer / Designer</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                        value={blueprintDesignedBy}
+                        onChange={(e) => setBlueprintDesignedBy(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Proposed Site Location</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={blueprintSiteLocation}
+                        onChange={(e) => setBlueprintSiteLocation(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Materials Specifications</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono text-[11px]"
+                      value={blueprintMaterialsSpecs}
+                      onChange={(e) => setBlueprintMaterialsSpecs(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Structural Notes & Concrete Directives</label>
+                    <textarea
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans leading-relaxed text-slate-200"
+                      value={blueprintNotes}
+                      onChange={(e) => setBlueprintNotes(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showToast('High-fidelity blueprint technical metrics updated.', 'success');
+                      }}
+                      className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold py-3 px-4 rounded-xl uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Sync Blueprint Local Form
+                    </button>
+                  </div>
+                </div>
+              ) : contractSubMode === 'safety' ? (
+                /* =========================================================================
+                   SUB-MODE D: SITE SAFETY INSPECTION FORM
+                   ========================================================================= */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">HSE Audit Reference No</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={safetyReportCode}
+                        onChange={(e) => setSafetyReportCode(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Audited Inspection Date</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={safetyDate}
+                        onChange={(e) => setSafetyDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Lead Safety Officer / Inspector</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                        value={safetyInspector}
+                        onChange={(e) => setSafetyInspector(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Safety Inspection Site</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={safetySiteLocation}
+                        onChange={(e) => setSafetySiteLocation(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">PPE Compliance Ratio (%)</label>
+                      <input
+                        type="number"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={safetyPpeCompliance}
+                        onChange={(e) => setSafetyPpeCompliance(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Audit Verification Status</label>
+                      <select
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer font-medium"
+                        value={safetyStatus}
+                        onChange={(e) => setSafetyStatus(e.target.value)}
+                      >
+                        <option value="Passed Compliance">Passed Compliance</option>
+                        <option value="Conditional Pass">Conditional Pass - Remediation Needed</option>
+                        <option value="Failed Audit">Failed Audit - STOP SITE ACTIVITY</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Hazards Identified & Structural Risks</label>
+                    <textarea
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans leading-relaxed text-slate-200"
+                      value={safetyHazardsIdentified}
+                      onChange={(e) => setSafetyHazardsIdentified(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Mandated Corrective Actions</label>
+                    <textarea
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans leading-relaxed text-slate-200"
+                      value={safetyCorrectiveActions}
+                      onChange={(e) => setSafetyCorrectiveActions(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showToast('Site safety inspection parameters recorded.', 'success');
+                      }}
+                      className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold py-3 px-4 rounded-xl uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Sync Safety Audit Local Form
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* =========================================================================
+                   SUB-MODE E: FORMAL PEDAGOGICAL LESSON FORM
+                   ========================================================================= */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Target Class Level</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={pedagogicalLevel}
+                        onChange={(e) => setPedagogicalLevel(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Lesson Duration</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
+                        value={pedagogicalDuration}
+                        onChange={(e) => setPedagogicalDuration(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Lesson Core Topic</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
+                        value={pedagogicalTopic}
+                        onChange={(e) => setPedagogicalTopic(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Curriculum Syllabus Unit</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                        value={pedagogicalSyllabusUnit}
+                        onChange={(e) => setPedagogicalSyllabusUnit(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Competency-Based Goal (CBA)</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
+                      value={pedagogicalCbaGoal}
+                      onChange={(e) => setPedagogicalCbaGoal(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Veteran Teacher Scaffolding & Coaching Advice</label>
+                    <textarea
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-sans leading-relaxed text-slate-200"
+                      value={pedagogicalTeacherCoaching}
+                      onChange={(e) => setPedagogicalTeacherCoaching(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showToast('Pedagogical lesson template parameters updated.', 'success');
+                      }}
+                      className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold py-3 px-4 rounded-xl uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Sync Lesson Plan Local Form
                     </button>
                   </div>
                 </div>
@@ -2969,140 +3306,237 @@ export default function DocumentStudio({
                     </p>
                   </div>
 
-                  {/* 4. PROTECTION CLAUSES */}
-                  <div className="space-y-0.5 pt-1 border-t border-slate-100">
-                    <h4 className="font-sans font-extrabold text-[8.5px] text-slate-900 uppercase tracking-wide">4. CONTRACTOR PROTECTION CLAUSES</h4>
-                    <p className="text-slate-500 text-[7.5px] font-sans truncate">
-                      1. Commence only after advance. 2. Suspend work if payment delayed. 3. Disputes to Yaoundé courts.
+                </div>
+              ) : contractSubMode === 'blueprints' ? (
+                /* =========================================================================
+                   PREVIEW SUB-MODE C: TECHNICAL BLUEPRINT DETAILS
+                   ========================================================================= */
+                <div className="space-y-4 text-[9px] leading-relaxed font-mono text-slate-800">
+                  {/* Drawing Blueprint Header */}
+                  <div className="flex justify-between items-center border-b-2 border-slate-900 pb-2">
+                    <div className="space-y-0.5">
+                      <h2 className="font-sans font-black text-[10px] uppercase text-slate-950 tracking-tight">CIVIL ENGINEERING DESIGN SHEET</h2>
+                      <p className="font-sans text-[7.5px] text-slate-500">REINFORCED CONCRETE & STRUCTURAL MECHANICS DETAILS</p>
+                    </div>
+                    <div className="bg-slate-900 text-amber-500 px-2 py-1 rounded font-bold text-[8.5px] tracking-wider">
+                      {blueprintCode}
+                    </div>
+                  </div>
+
+                  {/* Title Block */}
+                  <div className="py-2 text-center bg-slate-950 text-white rounded-xl">
+                    <h3 className="font-sans font-black text-[10.5px] uppercase tracking-wide text-amber-400">{blueprintTitle}</h3>
+                    <p className="font-sans text-[7.5px] text-slate-300">Proposed Site: {blueprintSiteLocation} | Scale: {blueprintScale}</p>
+                  </div>
+
+                  {/* ASCII Diagram Area */}
+                  <div className="bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono text-[7px] leading-3 overflow-x-auto border-2 border-slate-950 shadow-inner">
+                    <pre className="text-center">{`
+           +---------------------------------------------+
+           |             GROUND LEVEL / SOL              |
+           +-------------------+     +-------------------+
+                               |     |
+                               |     |  TRENCH EXCAVATION
+                               |     |
+                     +---------+     +---------+
+                     |  CONCRETE PLINTH COPE   |
+                     +---------+     +---------+
+                               |     |
+                               |     |  COLUMN PIER
+                               |     |
+           +-------------------+     +-------------------+
+           |               BLINDING LAYER                |
+           +---------------------------------------------+
+           |======= REBAR REINFORCEMENT MESH FeE500 =====|
+           +---------------------------------------------+
+           |             CONCRETE FOOTING C30/37         |
+           +---------------------------------------------+
+           |           BEARING SOIL LEVEL (150 kPa)      |
+           +---------------------------------------------+`}</pre>
+                  </div>
+
+                  {/* Specifications Section */}
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <div className="space-y-1">
+                      <span className="font-sans font-bold text-slate-500 text-[7px] uppercase block">MATERIAL SPECIFICATIONS</span>
+                      <p className="text-slate-900 font-bold text-[8px]">{blueprintMaterialsSpecs}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="font-sans font-bold text-slate-500 text-[7px] uppercase block">DESIGNED & CERTIFIED BY</span>
+                      <p className="text-slate-900 font-bold text-[8px]">{blueprintDesignedBy}</p>
+                    </div>
+                  </div>
+
+                  {/* Engineer Notes */}
+                  <div className="space-y-1 bg-amber-50/40 p-2.5 rounded-xl border border-amber-500/10">
+                    <span className="font-sans font-extrabold text-[8px] text-slate-950 uppercase tracking-wide block">CRITICAL ENGINEERING DIRECTIVES</span>
+                    <p className="text-slate-700 text-[8px] font-sans text-justify leading-relaxed whitespace-pre-wrap italic">
+                      {blueprintNotes}
                     </p>
                   </div>
 
+                  {/* Title Block Border Stamp Box */}
+                  <div className="border border-slate-300 p-2 flex justify-between items-center rounded-xl text-[7px] font-sans">
+                    <div>
+                      <p className="font-bold text-slate-800">MADECC ENGINEERING DESK</p>
+                      <p className="text-slate-500">Registry: GIMAC-CM-2026</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono font-bold text-emerald-600">STATUS: APPROVED FOR SITE EXECUTION</p>
+                      <p className="text-slate-400 font-mono">Date: July 20, 2026</p>
+                    </div>
+                  </div>
+                </div>
+              ) : contractSubMode === 'safety' ? (
+                /* =========================================================================
+                   PREVIEW SUB-MODE D: SITE SAFETY INSPECTION
+                   ========================================================================= */
+                <div className="space-y-4 text-[9px] leading-relaxed text-slate-800">
+                  {/* HSE Portal Header */}
+                  <div className="flex justify-between items-center border-b border-slate-300 pb-2">
+                    <div className="space-y-0.5">
+                      <h2 className="font-sans font-black text-[10px] uppercase text-slate-900 tracking-tight">REPUBLIC OF CAMEROON</h2>
+                      <p className="font-sans text-[7.5px] text-slate-500 font-bold">HSE COMPLIANCE & ACCIDENT PREVENTION REGISTRY</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono text-[7.5px] text-slate-400 block">AUDIT REFERENCE:</span>
+                      <span className="font-mono text-[8.5px] font-bold text-slate-800">{safetyReportCode}</span>
+                    </div>
+                  </div>
+
+                  {/* Safety Card Header banner */}
+                  <div className="bg-slate-950 text-white p-3 rounded-xl flex justify-between items-center">
+                    <div>
+                      <h3 className="font-sans font-extrabold text-[10px] text-amber-400 uppercase">HEALTH & SAFETY AUDIT REPORT</h3>
+                      <p className="text-[7.5px] text-slate-400">Site location: {safetySiteLocation} | Inspector: {safetyInspector}</p>
+                    </div>
+                    <div className="text-center bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+                      <span className="text-[7px] block text-slate-400 font-bold uppercase font-sans">COMPLIANCE SCORE</span>
+                      <span className="font-mono text-xs font-black text-emerald-400">{safetyPpeCompliance}%</span>
+                    </div>
+                  </div>
+
+                  {/* HSE Details Matrix */}
+                  <div className="grid grid-cols-2 gap-4 text-[7.5px] border-b border-slate-100 pb-3 font-sans">
+                    <div className="space-y-1">
+                      <span className="text-slate-500 font-bold uppercase">AUDITED HAZARDS IDENTIFIED & CIVIL RISK METRICS</span>
+                      <div className="bg-red-50 text-red-800 p-2.5 rounded-xl border border-red-100 font-medium whitespace-pre-wrap leading-relaxed text-justify">
+                        {safetyHazardsIdentified}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-slate-500 font-bold uppercase">MANDATED REMEDIATION & CORRECTIVE ACTIONS</span>
+                      <div className="bg-emerald-50 text-emerald-800 p-2.5 rounded-xl border border-emerald-100 font-medium whitespace-pre-wrap leading-relaxed text-justify">
+                        {safetyCorrectiveActions}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Audit Pass Stamp Status */}
+                  <div className="bg-amber-50/40 p-3 rounded-xl border border-amber-500/10 flex justify-between items-center font-sans">
+                    <div className="space-y-1">
+                      <span className="text-slate-500 text-[7px] font-bold uppercase">SAFETY STANDARDS COMPLIANCE RATING</span>
+                      <p className="text-slate-900 text-[8.5px] font-black uppercase tracking-wide">{safetyStatus}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-400 text-[7px] block">AUDIT DATE:</span>
+                      <p className="font-mono text-slate-800 text-[8px] font-bold">{safetyDate}</p>
+                    </div>
+                  </div>
+
+                  {/* Sign-off footer */}
+                  <div className="pt-2 flex justify-between items-end border-t border-slate-100">
+                    <div className="text-[7px] text-slate-400">
+                      <p>Certified in compliance with Cameroon Law No. 92/007 (Labour Code)</p>
+                      <p>and Ministry of Public Works HSE protocols.</p>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="text-[7.5px] font-bold text-slate-700">{safetyInspector}</p>
+                      <p className="text-[6.5px] text-slate-400 font-mono">Lead Auditor Signature Stamp Seal</p>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 /* =========================================================================
-                   PREVIEW SUB-MODE B: CORPORATE ARTICLES OF ASSOCIATION (STATUTS CONSTITUTIFS)
+                   PREVIEW SUB-MODE E: FORMAL PEDAGOGICAL LESSON PLANS
                    ========================================================================= */
-                <div className="space-y-4 text-[9px] leading-relaxed">
-                  
-                  {/* Cameroon Government / Republic Seal header */}
-                  <div className="text-center border-b border-slate-300 pb-2 space-y-1">
-                    <div className="flex justify-between text-[6px] uppercase text-slate-400 font-bold px-4">
-                      <span>REPUBLIC OF CAMEROON<br />Peace - Work - Fatherland</span>
-                      <span>REPUBLIQUE DU CAMEROUN<br />Paix - Travail - Patrie</span>
+                <div className="space-y-4 text-[9px] leading-relaxed text-slate-800 font-sans">
+                  {/* Academic Banner Header */}
+                  <div className="text-center border-b border-slate-300 pb-2">
+                    <div className="flex justify-between text-[6px] uppercase text-slate-400 font-bold">
+                      <span>MINISTRY OF SECONDARY EDUCATION<br />MINESEC CBA Academic Co-Pilot</span>
+                      <span>REPUBLIQUE DU CAMEROUN<br />PEACE - WORK - FATHERLAND</span>
                     </div>
-                    <div className="pt-1">
-                      <h3 className="font-sans font-black text-[9px] text-slate-800 uppercase tracking-tight">OHADA LEGAL COMPLIANCE REGISTRY</h3>
-                      <p className="text-[6.5px] text-slate-500 font-mono">REGISTRATION DESK • COMMERCE AND PERSONAL PROPERTY CREDIT REGISTER (RCCM)</p>
+                    <h2 className="font-sans font-black text-[10px] text-slate-900 uppercase tracking-tight pt-1">
+                      CBA LESSON PLAN: VOCATIONAL EDUCATION IN BUILDING
+                    </h2>
+                  </div>
+
+                  {/* Lesson Specs Table Grid */}
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                      <span className="font-bold text-slate-400 text-[7px] uppercase block">CORE TOPIC:</span>
+                      <p className="text-slate-900 font-extrabold text-[8.5px] uppercase">{pedagogicalTopic}</p>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-400 text-[7px] uppercase block">ACADEMIC LEVEL:</span>
+                      <p className="text-slate-900 font-bold text-[8px]">{pedagogicalLevel}</p>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-400 text-[7px] uppercase block">SYLLABUS CORRELATION UNIT:</span>
+                      <p className="text-slate-800 font-mono text-[8px]">{pedagogicalSyllabusUnit}</p>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-400 text-[7px] uppercase block">CLASS TIME DURATION:</span>
+                      <p className="text-slate-800 font-mono text-[8px] font-bold">{pedagogicalDuration}</p>
                     </div>
                   </div>
 
-                  {/* Document Major Title */}
-                  <div className="text-center py-2">
-                    <h1 className="font-sans font-black text-[12px] text-slate-900 tracking-tight uppercase">ARTICLES OF ASSOCIATION</h1>
-                    <span className="font-mono text-[7px] text-amber-600 font-bold tracking-widest block">STATUTS CONSTITUTIFS D'ENTREPRISE</span>
-                    <p className="text-slate-500 text-[7.5px] italic max-w-sm mx-auto">
-                      Governed in accordance with the OHADA Uniform Act relating to Commercial Companies and Economic Interest Groups
+                  {/* CBA Objectives block */}
+                  <div className="space-y-1">
+                    <span className="font-extrabold text-slate-900 text-[8px] uppercase tracking-wide block">COMPETENCY-BASED OBJECTIVE (CBA)</span>
+                    <p className="text-slate-600 text-[7.5px] text-justify leading-relaxed whitespace-pre-wrap">
+                      {pedagogicalCbaGoal}
                     </p>
                   </div>
 
-                  {/* Corporate Parameters Box */}
-                  <div className="bg-amber-50/40 p-3 rounded-xl border border-amber-500/10 grid grid-cols-2 gap-x-4 gap-y-2">
-                    <div>
-                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">COMPANY NAME:</span>
-                      <p className="text-slate-950 font-black text-[9px] uppercase tracking-wide">{aoaCompanyName || '[ ENTERPRISE NAME AWAITING ]'}</p>
-                    </div>
-                    <div>
-                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">LEGAL STRUCTURE:</span>
-                      <p className="text-slate-900 font-bold text-[8.5px]">{aoaLegalForm}</p>
-                    </div>
-                    <div>
-                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">SHARE CAPITAL:</span>
-                      <p className="text-slate-900 font-mono font-bold text-[8.5px]">{aoaShareCapital || '1,000,000 FCFA'}</p>
-                      <span className="text-slate-400 text-[6.5px] block">Divided into {aoaSharesCount} shares of {aoaShareValue} each</span>
-                    </div>
-                    <div>
-                      <span className="font-bold block font-sans text-slate-500 text-[7px] uppercase">REGISTERED OFFICE (SIÈGE):</span>
-                      <p className="text-slate-800 text-[8px] font-medium">{aoaHeadOffice || 'Douala, Cameroon'}</p>
-                    </div>
-                    <div className="col-span-2 pt-1.5 border-t border-slate-200/50 flex justify-between text-[7px]">
-                      <div>
-                        <span className="font-bold block font-sans text-slate-500 uppercase">STATUTORY MANAGER (GERANT):</span>
-                        <p className="text-slate-900 font-bold text-[8px]">{aoaInitialManager || 'Dr. Marcel Mbida'}</p>
+                  {/* Veteran Coach Block */}
+                  <div className="p-3 bg-amber-50/40 border border-amber-500/10 rounded-xl space-y-1">
+                    <span className="font-extrabold text-amber-800 text-[8px] uppercase tracking-wider block flex items-center gap-1">
+                      ⚡ VETERAN PEDAGOGICAL SCAFFOLDING & COACHING ADVICE
+                    </span>
+                    <p className="text-slate-700 text-[7.5px] leading-relaxed text-justify italic whitespace-pre-wrap font-sans">
+                      {pedagogicalTeacherCoaching}
+                    </p>
+                  </div>
+
+                  {/* Timeline structure */}
+                  <div className="space-y-1 pt-1.5 border-t border-slate-100">
+                    <span className="font-extrabold text-slate-900 text-[8px] uppercase tracking-wide block">SUGGESTED CLASSROOM TIMELINE</span>
+                    <div className="grid grid-cols-3 gap-2 text-[7.5px] font-mono">
+                      <div className="bg-slate-100 p-1.5 rounded text-center">
+                        <span className="block font-bold text-slate-800">HOOK & RECALL</span>
+                        <p className="text-slate-500">15 Minutes</p>
                       </div>
-                      <div className="text-right">
-                        <span className="font-bold block font-sans text-slate-500 uppercase">JURISDICTION:</span>
-                        <p className="text-slate-900 font-bold text-[8px]">{aoaJurisdiction}</p>
+                      <div className="bg-slate-100 p-1.5 rounded text-center">
+                        <span className="block font-bold text-slate-800">DIRECT INSTRUCTION</span>
+                        <p className="text-slate-500">65 Minutes</p>
+                      </div>
+                      <div className="bg-slate-100 p-1.5 rounded text-center">
+                        <span className="block font-bold text-slate-800">LAB WORKSHOP</span>
+                        <p className="text-slate-500">40 Minutes</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Core Articles Content Area */}
-                  <div className="space-y-3">
-                    {aoaGeneratedData && aoaGeneratedData.articles && aoaGeneratedData.articles.length > 0 ? (
-                      /* Render Structured AI Articles */
-                      aoaGeneratedData.articles.map((article: any, index: number) => (
-                        <div key={index} className="space-y-1 border-t border-slate-100 pt-2">
-                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">{article.title}</h4>
-                          <p className="text-slate-600 text-[7.5px] leading-relaxed whitespace-pre-wrap font-sans text-justify">{article.content}</p>
-                        </div>
-                      ))
-                    ) : (
-                      /* Render High-Quality Fallback Articles instantly */
-                      <div className="space-y-2.5">
-                        <div className="space-y-1">
-                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 1: LEGAL CONSTITUTION & NAME</h4>
-                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
-                            By these presents, there is formed between the owners of the shares hereinafter created and those which may subsequently be created, a commercial corporate entity governed by the laws in force in the Republic of Cameroon, specifically the OHADA Uniform Act. The corporate name is <strong className="text-slate-900 uppercase">{aoaCompanyName || '[Enterprise Name]'}</strong>.
-                          </p>
-                        </div>
-
-                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
-                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 2: REGISTERED OFFICE & ADDRESS</h4>
-                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
-                            The registered head office (Siège Social) of the company is established at <strong className="text-slate-900">{aoaHeadOffice || 'Douala, Republic of Cameroon'}</strong>. It may be transferred to any other location within the same jurisdiction by simple decision of the General Manager.
-                          </p>
-                        </div>
-
-                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
-                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 3: CORPORATE PURPOSE & TECHNICAL SPECIALIZATIONS</h4>
-                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
-                            The company's primary corporate purpose in Cameroon and internationally is the execution of civil engineering and construction enterprise projects, specifically:
-                          </p>
-                          <p className="text-slate-700 text-[7.5px] bg-slate-50 p-1.5 rounded border border-slate-200/50 leading-relaxed italic">
-                            {aoaScopeOfActivity || 'Structural civil engineering works, concrete reinforcements, modern residential constructions, structural masonry, urban planning, and infrastructure development.'}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
-                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 4: CORPORATE DURATION</h4>
-                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
-                            The duration of the company is fixed at <strong className="text-slate-900">{aoaDurationYears} years</strong> from the date of its registration in the Commerce and Personal Property Credit Register (RCCM), except in the case of early dissolution or extension.
-                          </p>
-                        </div>
-
-                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
-                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 5: SHARE CAPITAL AND SHARES DISTRIBUTION</h4>
-                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
-                            The share capital is set at <strong className="text-slate-900">{aoaShareCapital || '1,000,000 FCFA'}</strong>, divided into <strong className="text-slate-900">{aoaSharesCount} shares</strong> with a nominal value of <strong className="text-slate-900">{aoaShareValue}</strong> each, fully subscribed and paid up by the founders.
-                          </p>
-                        </div>
-
-                        <div className="space-y-1 border-t border-slate-100 pt-1.5">
-                          <h4 className="font-sans font-extrabold text-[8px] text-slate-900 uppercase tracking-wide">ARTICLE 6: STATUTORY MANAGEMENT & POWERS</h4>
-                          <p className="text-slate-600 text-[7.5px] leading-relaxed text-justify">
-                            The company is managed by <strong className="text-slate-900">{aoaInitialManager || 'the appointed Statutory Director'}</strong>. The Manager has the broadest powers to act in all circumstances on behalf of the company, within the limit of the corporate purpose.
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                  {/* Certified Footing */}
+                  <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[7px] text-slate-400">
+                    <p>Aligned with MINESEC CBA Directives (Cameroon Technical Lycée Framework)</p>
+                    <p className="font-mono">Drafted July 2026</p>
                   </div>
-
                 </div>
               )
             ) : (
-              /* =========================================================================
-                 PREVIEW: RECEIPT
-                 ========================================================================= */
               <div className="space-y-6">
                 
                 {/* Receipt Header */}

@@ -349,25 +349,8 @@ export default function ProposalStudio({
         setProposals(dbProposals);
         calculateStats(dbProposals);
       } else {
-        const saved = localStorage.getItem('madecc_proposals_db');
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (parsed && parsed.length > 0) {
-              setProposals(parsed);
-              calculateStats(parsed);
-            } else {
-              setProposals(DEFAULT_PROPOSALS);
-              calculateStats(DEFAULT_PROPOSALS);
-            }
-          } catch (e) {
-            setProposals(DEFAULT_PROPOSALS);
-            calculateStats(DEFAULT_PROPOSALS);
-          }
-        } else {
-          setProposals(DEFAULT_PROPOSALS);
-          calculateStats(DEFAULT_PROPOSALS);
-        }
+        setProposals(DEFAULT_PROPOSALS);
+        calculateStats(DEFAULT_PROPOSALS);
       }
     };
 
@@ -520,8 +503,7 @@ export default function ProposalStudio({
       };
 
       const updatedList = proposals.map(p => p.id === updatedProp.id ? updatedProp : p);
-      setProposals(updatedList);
-      localStorage.setItem('madecc_proposals_db', JSON.stringify(updatedList));
+      saveProposalsToStorage(updatedList);
       setSelectedProposal(updatedProp);
     }, 10000); // Autosave every 10 seconds of inactivity
 

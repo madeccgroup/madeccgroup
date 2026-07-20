@@ -248,3 +248,48 @@ export const userSyncData = pgTable('user_sync_data', {
   value: text('value').notNull(), // JSON payload string
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// 19. Cameroon Technical School Lesson Plans table
+export const lessonPlans = pgTable('lesson_plans', {
+  id: serial('id').primaryKey(),
+  lessonId: text('lesson_id').notNull().unique(),
+  subjectId: text('subject_id'),
+  teacherId: text('teacher_id'),
+  departmentId: text('department_id'),
+  academicYear: text('academic_year'),
+  term: text('term'),
+  sequence: text('sequence'),
+  week: text('week'),
+  lessonDuration: text('lesson_duration'),
+  gradeLevel: text('grade_level'),
+  topic: text('topic').notNull(),
+  keywords: text('keywords'),
+  competency: text('competency'),
+  learningOutcomes: text('learning_outcomes'),
+  versionNumber: text('version_number').default('1.0.0').notNull(),
+  status: text('status').default('Draft').notNull(), // 'Draft' | 'Review' | 'Published'
+  content: text('content').notNull(), // Full Markdown or rich JSON content representing Parts 1-13
+  presentation: text('presentation'), // JSON string representing Part 14 PPT
+  worksheet: text('worksheet'), // JSON or Markdown representing Part 15 Student Worksheet
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 20. Syllabus Documents table for metadata storage and automatic alignment
+export const syllabusDocuments = pgTable('syllabus_documents', {
+  id: serial('id').primaryKey(),
+  filename: text('filename').notNull(),
+  fileType: text('file_type').notNull(), // 'pdf', 'docx', 'doc', 'txt'
+  extractedText: text('extracted_text').notNull(),
+  learningObjectives: text('learning_objectives'),
+  curriculumStandards: text('curriculum_standards'),
+  keyTopics: text('key_topics'),
+  subject: text('subject'),
+  gradeLevel: text('grade_level'),
+  academicYear: text('academic_year'),
+  category: text('category'),
+  versionNumber: text('version_number').default('1.0.0'),
+  status: text('status').default('processed').notNull(), // 'processing' | 'processed' | 'error' | 'archived' | 'published'
+  uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+});
+
