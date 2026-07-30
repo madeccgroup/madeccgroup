@@ -64,6 +64,8 @@ import ProposalStudio from './ProposalStudio.tsx';
 import LessonStudio from './LessonStudio.tsx';
 import SyllabusUpload from './SyllabusUpload.tsx';
 import ExtendedLessonArchitect from './ExtendedLessonArchitect.tsx';
+import BoqStudio from './BoqStudio.tsx';
+import { getOptimizedImageUrl, getYouTubeEmbedUrl, ensureAbsoluteUrl } from '../lib/utils.ts';
 
 const safeConfirm = (message: string): boolean => {
   if (typeof window === 'undefined') return true;
@@ -119,7 +121,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   };
 
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect'>('analytics');
+  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio'>('analytics');
   const [activeSyllabus, setActiveSyllabus] = useState<any | null>(null);
 
   // Live analytics state from backend
@@ -745,8 +747,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         endDate: projEnd || null,
         status: projStatus,
         categoryId: projCategory ? parseInt(projCategory) : null,
-        image: projImage,
-        videoUrl: projVideoUrl || null,
+        image: ensureAbsoluteUrl(projImage),
+        videoUrl: ensureAbsoluteUrl(projVideoUrl) || null,
       };
 
       let response;
@@ -984,8 +986,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       const payload = {
         title: blogTitle,
         content: blogContent,
-        image: blogImage,
-        videoUrl: blogVideoUrl || null,
+        image: ensureAbsoluteUrl(blogImage),
+        videoUrl: ensureAbsoluteUrl(blogVideoUrl) || null,
         summary: blogSummary,
         category: blogCategory
       };
@@ -1370,8 +1372,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       const headers = await getAuthHeaders();
       const body = {
         title: galTitle,
-        imageUrl: galImage,
-        videoUrl: galVideoUrl || null,
+        imageUrl: ensureAbsoluteUrl(galImage),
+        videoUrl: ensureAbsoluteUrl(galVideoUrl) || null,
         category: galCategory
       };
       
@@ -1389,7 +1391,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         resetGalForm();
         fetchAdminData();
       } else {
-        showToast('Failed to save gallery item.', 'error');
+        const errData = await response.json().catch(() => ({}));
+        showToast(errData.error || 'Failed to save gallery item.', 'error');
       }
     } catch (err: any) {
       console.error(err);
@@ -1522,6 +1525,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               { id: 'documents', label: 'Company Documents', icon: FileText },
               { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
               { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
+              { id: 'boq-studio', label: 'BOQ Rate Estimator', icon: FileText },
               { id: 'lesson-studio', label: 'MINESEC Lesson Prep', icon: GraduationCap },
               { id: 'syllabus-upload', label: 'Syllabus Manager', icon: BookOpen },
               { id: 'extended-lesson-architect', label: 'Extended Lesson Architect', icon: Sparkles },
@@ -2101,12 +2105,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                           {projImageMode === 'url' ? (
                             <input
-                              type="url"
+                              type="text"
                               className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded py-2 px-3 text-white text-xs outline-none"
                               value={projImage}
                               onChange={(e) => setProjImage(e.target.value)}
-                              placeholder="https://images.unsplash.com/..."
-                              required
+                              placeholder="https://images.unsplash.com/... or web image link"
                             />
                           ) : (
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
@@ -2188,6 +2191,26 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                           )}
                         </div>
                       </div>
+
+                      {/* Live Visual Media Preview Card */}
+                      {(projImage || projVideoUrl) && (
+                        <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+                          <span className="block text-[10px] text-amber-500 font-mono font-bold uppercase">Live Contract Media Preview</span>
+                          <div className="h-44 relative rounded-lg overflow-hidden bg-black flex items-center justify-center border border-slate-850">
+                            {projVideoUrl && getYouTubeEmbedUrl(projVideoUrl) ? (
+                              <iframe
+                                src={getYouTubeEmbedUrl(projVideoUrl)!}
+                                title="YouTube Preview"
+                                className="w-full h-full border-0"
+                              />
+                            ) : projVideoUrl ? (
+                              <video src={ensureAbsoluteUrl(projVideoUrl)} poster={getOptimizedImageUrl(projImage)} controls className="w-full h-full object-contain" />
+                            ) : (
+                              <img src={getOptimizedImageUrl(projImage)} alt="Preview" className="w-full h-full object-cover" />
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {uploadingFile && (
                         <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg flex items-center gap-3 animate-pulse">
@@ -2428,12 +2451,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                           {blogImageMode === 'url' ? (
                             <input
-                              type="url"
+                              type="text"
                               className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded py-2 px-3 text-white text-xs outline-none"
                               value={blogImage}
                               onChange={(e) => setBlogImage(e.target.value)}
-                              placeholder="https://images.unsplash.com/..."
-                              required
+                              placeholder="https://images.unsplash.com/... or web image link"
                             />
                           ) : (
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
@@ -2515,6 +2537,26 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                           )}
                         </div>
                       </div>
+
+                      {/* Live Visual Media Preview Card */}
+                      {(blogImage || blogVideoUrl) && (
+                        <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+                          <span className="block text-[10px] text-amber-500 font-mono font-bold uppercase">Live Insight Media Asset Preview</span>
+                          <div className="h-44 relative rounded-lg overflow-hidden bg-black flex items-center justify-center border border-slate-850">
+                            {blogVideoUrl && getYouTubeEmbedUrl(blogVideoUrl) ? (
+                              <iframe
+                                src={getYouTubeEmbedUrl(blogVideoUrl)!}
+                                title="YouTube Preview"
+                                className="w-full h-full border-0"
+                              />
+                            ) : blogVideoUrl ? (
+                              <video src={ensureAbsoluteUrl(blogVideoUrl)} poster={getOptimizedImageUrl(blogImage)} controls className="w-full h-full object-contain" />
+                            ) : (
+                              <img src={getOptimizedImageUrl(blogImage)} alt="Preview" className="w-full h-full object-cover" />
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {uploadingFile && (
                         <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg flex items-center gap-3 animate-pulse">
@@ -3515,12 +3557,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                        {galImageMode === 'url' ? (
                          <input
-                           type="url"
+                           type="text"
                            className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded py-2 px-3 text-white text-xs outline-none"
                            value={galImage}
                            onChange={(e) => setGalImage(e.target.value)}
-                           placeholder="https://images.unsplash.com/..."
-                           required
+                           placeholder="https://images.unsplash.com/... or web image link"
                          />
                        ) : (
                          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
@@ -3577,7 +3618,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                            className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded py-2 px-3 text-white text-xs outline-none"
                            value={galVideoUrl}
                            onChange={(e) => setGalVideoUrl(e.target.value)}
-                           placeholder="e.g. YouTube URL or direct MP4 URL"
+                           placeholder="e.g. https://youtu.be/NmFQa4X0BTg or direct MP4 URL"
                          />
                        ) : (
                          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
@@ -3602,6 +3643,26 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                        )}
                        <p className="text-[10px] text-slate-500">Supports direct upload of raw MP4/MOV recordings from construction sites up to 150MB or YouTube streams.</p>
                      </div>
+
+                     {/* Live Visual Media Preview Card */}
+                     {(galImage || galVideoUrl) && (
+                       <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+                         <span className="block text-[10px] text-amber-500 font-mono font-bold uppercase">Live Media Asset Preview</span>
+                         <div className="h-44 relative rounded-lg overflow-hidden bg-black flex items-center justify-center border border-slate-850">
+                           {galVideoUrl && getYouTubeEmbedUrl(galVideoUrl) ? (
+                             <iframe
+                               src={getYouTubeEmbedUrl(galVideoUrl)!}
+                               title="YouTube Preview"
+                               className="w-full h-full border-0"
+                             />
+                           ) : galVideoUrl ? (
+                             <video src={ensureAbsoluteUrl(galVideoUrl)} poster={getOptimizedImageUrl(galImage)} controls className="w-full h-full object-contain" />
+                           ) : (
+                             <img src={getOptimizedImageUrl(galImage)} alt="Preview" className="w-full h-full object-cover" />
+                           )}
+                         </div>
+                       </div>
+                     )}
 
                      {uploadingFile && (
                        <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 flex items-center gap-2 animate-pulse">
@@ -4280,6 +4341,13 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         {activeAdminTab === 'extended-lesson-architect' && (
           <ExtendedLessonArchitect
             showToast={showToast}
+          />
+        )}
+
+        {activeAdminTab === 'boq-studio' && (
+          <BoqStudio
+            showToast={showToast}
+            currentUser={dbUser}
           />
         )}
 

@@ -24,7 +24,12 @@ import {
   signedReceipts,
   userSyncData,
   lessonPlans,
-  syllabusDocuments
+  syllabusDocuments,
+  boqs,
+  boqSections,
+  boqItems,
+  boqRevisions,
+  boqAuditLogs
 } from './src/db/schema.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { requireAuth, requireAdmin, requireStaffOrAdmin } from './src/middleware/auth.ts';
@@ -389,7 +394,18 @@ function validateCsrfToken(token: string): boolean {
   }
 }
 
+let isDatabaseSeeded = false;
+
 export async function getApp() {
+  if (!isDatabaseSeeded) {
+    try {
+      await seedDatabase();
+      isDatabaseSeeded = true;
+    } catch (seedErr) {
+      console.error('[SEED_INITIALIZATION_ERROR] Failed to run database seeding:', seedErr);
+    }
+  }
+
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -481,6 +497,17 @@ export async function getApp() {
     limits: { fileSize: 150 * 1024 * 1024 } // 150MB limit
   });
 
+  // Image resolver endpoint to safely proxy/redirect web sharing links or custom image URLs
+  app.get('/api/resolve-image', (req, res) => {
+    const rawUrl = req.query.url as string;
+    if (!rawUrl) return res.status(400).send('Missing url query parameter');
+    let targetUrl = rawUrl.trim();
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      targetUrl = 'https://' + targetUrl;
+    }
+    return res.redirect(targetUrl);
+  });
+
   // Endpoint to sign client-side direct Cloudinary uploads (prevents serverless 6MB body size limits and timeouts)
   app.get('/api/cloudinary-signature', requireAuth, async (req: any, res) => {
     try {
@@ -493,6 +520,11 @@ export async function getApp() {
       const folder = 'madecc';
 
       const cloudinary = await import('cloudinary');
+      cloudinary.v2.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret
+      });
       const signature = cloudinary.v2.utils.api_sign_request(
         { timestamp, folder },
         apiSecret
@@ -738,6 +770,24 @@ export async function getApp() {
       res.json({ success: true, theme, user: updatedUser[0] });
     } catch (error: any) {
       console.error('Error saving user theme preference:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get users list (for BOQ Studio client selection & admin management)
+  app.get('/api/users', requireAuth, async (req: any, res) => {
+    try {
+      const userList = await db.select({
+        id: users.id,
+        uid: users.uid,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt
+      }).from(users).orderBy(desc(users.createdAt));
+      res.json(userList);
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1657,10 +1707,11 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
   });
 
   app.post('/api/projects', requireAdmin, async (req: any, res) => {
-    const { title, description, budget, location, startDate, endDate, status, categoryId, image, videoUrl } = req.body;
-    if (!title || !description || !location || !image) {
-      return res.status(400).json({ error: 'Missing required project fields' });
+    let { title, description, budget, location, startDate, endDate, status, categoryId, image, videoUrl } = req.body;
+    if (!title || !description || !location) {
+      return res.status(400).json({ error: 'Missing required project fields (title, description, location)' });
     }
+    const finalImage = (image && image.trim()) ? image.trim() : (videoUrl || 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1200');
     try {
       const result = await db.insert(projects).values({
         title,
@@ -1671,7 +1722,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         endDate: endDate ? new Date(endDate) : null,
         status: status || 'planning',
         categoryId: categoryId ? parseInt(categoryId) : null,
-        image,
+        image: finalImage,
         videoUrl: videoUrl || null,
       }).returning();
 
@@ -1690,12 +1741,13 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
 
   app.put('/api/projects/:id', requireAdmin, async (req: any, res) => {
     const projId = parseInt(req.params.id);
-    const { title, description, budget, location, startDate, endDate, status, categoryId, image, videoUrl } = req.body;
+    let { title, description, budget, location, startDate, endDate, status, categoryId, image, videoUrl } = req.body;
+    const finalImage = (image && image.trim()) ? image.trim() : (videoUrl || 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1200');
     try {
       // Fetch existing record to perform asset replacement check
       const existing = await db.select().from(projects).where(eq(projects.id, projId)).limit(1);
       if (existing.length > 0) {
-        if (image && image !== existing[0].image) {
+        if (finalImage && finalImage !== existing[0].image) {
           await deleteFileFromCloud(existing[0].image);
         }
         if (videoUrl !== undefined && videoUrl !== existing[0].videoUrl) {
@@ -1713,7 +1765,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
           endDate: endDate ? new Date(endDate) : null,
           status,
           categoryId: categoryId ? parseInt(categoryId) : null,
-          image,
+          image: finalImage,
           videoUrl: videoUrl || null,
         })
         .where(eq(projects.id, projId))
@@ -1820,15 +1872,16 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
   });
 
   app.post('/api/blogs', requireAdmin, async (req: any, res) => {
-    const { title, content, image, videoUrl, summary, category } = req.body;
-    if (!title || !content || !image || !summary || !category) {
-      return res.status(400).json({ error: 'Missing blog fields' });
+    let { title, content, image, videoUrl, summary, category } = req.body;
+    if (!title || !content || !summary || !category) {
+      return res.status(400).json({ error: 'Missing blog fields (title, content, summary, or category)' });
     }
+    const finalImage = (image && image.trim()) ? image.trim() : (videoUrl || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200');
     try {
       const result = await db.insert(blogPosts).values({
         title,
         content,
-        image,
+        image: finalImage,
         videoUrl: videoUrl || null,
         summary,
         category,
@@ -1844,12 +1897,13 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
 
   app.put('/api/blogs/:id', requireAdmin, async (req: any, res) => {
     const blogId = parseInt(req.params.id);
-    const { title, content, image, videoUrl, summary, category } = req.body;
+    let { title, content, image, videoUrl, summary, category } = req.body;
+    const finalImage = (image && image.trim()) ? image.trim() : (videoUrl || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200');
     try {
       // Fetch existing record to perform asset replacement check
       const existing = await db.select().from(blogPosts).where(eq(blogPosts.id, blogId)).limit(1);
       if (existing.length > 0) {
-        if (image && image !== existing[0].image) {
+        if (finalImage && finalImage !== existing[0].image) {
           await deleteFileFromCloud(existing[0].image);
         }
         if (videoUrl !== undefined && videoUrl !== existing[0].videoUrl) {
@@ -1858,7 +1912,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
       }
 
       const result = await db.update(blogPosts)
-        .set({ title, content, image, videoUrl: videoUrl || null, summary, category })
+        .set({ title, content, image: finalImage, videoUrl: videoUrl || null, summary, category })
         .where(eq(blogPosts.id, blogId))
         .returning();
 
@@ -2406,12 +2460,13 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
   });
 
   app.post('/api/gallery', requireAdmin, async (req: any, res) => {
-    const { title, imageUrl, videoUrl, category } = req.body;
-    if (!title || !imageUrl || !category) return res.status(400).json({ error: 'Missing gallery fields' });
+    let { title, imageUrl, videoUrl, category } = req.body;
+    if (!title || !category) return res.status(400).json({ error: 'Missing title or category field' });
+    const finalImageUrl = (imageUrl && imageUrl.trim()) ? imageUrl.trim() : (videoUrl || 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1200');
     try {
       const result = await db.insert(galleryItems).values({ 
         title, 
-        imageUrl, 
+        imageUrl: finalImageUrl, 
         videoUrl: videoUrl || null,
         category 
       }).returning();
@@ -2439,13 +2494,14 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
 
   app.put('/api/gallery/:id', requireAdmin, async (req: any, res) => {
     const itemId = parseInt(req.params.id);
-    const { title, imageUrl, videoUrl, category } = req.body;
-    if (!title || !imageUrl || !category) return res.status(400).json({ error: 'Missing gallery fields' });
+    let { title, imageUrl, videoUrl, category } = req.body;
+    if (!title || !category) return res.status(400).json({ error: 'Missing title or category field' });
+    const finalImageUrl = (imageUrl && imageUrl.trim()) ? imageUrl.trim() : (videoUrl || 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1200');
     try {
       // Fetch existing record to perform asset replacement check
       const existing = await db.select().from(galleryItems).where(eq(galleryItems.id, itemId)).limit(1);
       if (existing.length > 0) {
-        if (imageUrl && imageUrl !== existing[0].imageUrl) {
+        if (finalImageUrl && finalImageUrl !== existing[0].imageUrl) {
           await deleteFileFromCloud(existing[0].imageUrl);
         }
         if (videoUrl !== undefined && videoUrl !== existing[0].videoUrl) {
@@ -2455,7 +2511,7 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
 
       const updated = await db.update(galleryItems).set({
         title,
-        imageUrl,
+        imageUrl: finalImageUrl,
         videoUrl: videoUrl || null,
         category
       }).where(eq(galleryItems.id, itemId)).returning();
@@ -3682,6 +3738,681 @@ Return the extracted values as a JSON object matching this schema. Be highly des
       res.json(deleted[0] || { success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==========================================
+  // --- BOQ / ESTIMATE MODULE API ENDPOINTS ---
+  // ==========================================
+
+  // Helper function to calculate full BOQ totals server-side
+  const calculateBoqTotals = (
+    sectionsData: any[],
+    overheadPercent: number = 0,
+    contingencyPercent: number = 0,
+    profitPercent: number = 0,
+    taxPercent: number = 0
+  ) => {
+    let subtotal = 0;
+    const processedSections = (sectionsData || []).map((sec, secIdx) => {
+      let secSubtotal = 0;
+      const processedItems = (sec.items || []).map((item: any, itemIdx: number) => {
+        const qty = parseFloat(item.quantity) || 0;
+        const rate = parseFloat(item.unitRate) || 0;
+        const amount = Math.round(qty * rate * 100) / 100;
+        secSubtotal += amount;
+
+        const intMat = parseFloat(item.internalMaterialCost) || 0;
+        const intLab = parseFloat(item.internalLabourCost) || 0;
+        const intPlant = parseFloat(item.internalPlantCost) || 0;
+        const intOth = parseFloat(item.internalOtherCost) || 0;
+
+        return {
+          ...item,
+          quantity: qty.toString(),
+          unitRate: rate.toString(),
+          amount: amount.toString(),
+          internalMaterialCost: intMat.toString(),
+          internalLabourCost: intLab.toString(),
+          internalPlantCost: intPlant.toString(),
+          internalOtherCost: intOth.toString(),
+          displayOrder: item.displayOrder ?? itemIdx
+        };
+      });
+
+      secSubtotal = Math.round(secSubtotal * 100) / 100;
+      subtotal += secSubtotal;
+
+      return {
+        ...sec,
+        displayOrder: sec.displayOrder ?? secIdx,
+        subtotal: secSubtotal.toString(),
+        items: processedItems
+      };
+    });
+
+    subtotal = Math.round(subtotal * 100) / 100;
+    const ovhAmt = Math.round((subtotal * (overheadPercent / 100)) * 100) / 100;
+    const cntAmt = Math.round((subtotal * (contingencyPercent / 100)) * 100) / 100;
+    const prfAmt = Math.round((subtotal * (profitPercent / 100)) * 100) / 100;
+    const beforeTax = subtotal + ovhAmt + cntAmt + prfAmt;
+    const taxAmt = Math.round((beforeTax * (taxPercent / 100)) * 100) / 100;
+    const grandTotal = Math.round((beforeTax + taxAmt) * 100) / 100;
+
+    return {
+      subtotal: subtotal.toString(),
+      overheadAmount: ovhAmt.toString(),
+      contingencyAmount: cntAmt.toString(),
+      profitAmount: prfAmt.toString(),
+      taxAmount: taxAmt.toString(),
+      grandTotal: grandTotal.toString(),
+      sections: processedSections
+    };
+  };
+
+  // Helper function to generate unique BOQ Reference number safely
+  const generateBoqReference = async () => {
+    const year = new Date().getFullYear();
+    const existing = await db.select({ count: sql<number>`count(*)` }).from(boqs);
+    const count = Number(existing[0]?.count || 0) + 1;
+    const seq = count.toString().padStart(4, '0');
+    return `MADECC-BOQ-${year}-${seq}`;
+  };
+
+  // 1. Get all BOQs with search & status filters
+  app.get('/api/boqs', async (req, res) => {
+    try {
+      const { status, search, projectId, clientId } = req.query;
+
+      let conditions: any[] = [];
+      if (status && status !== 'ALL') {
+        conditions.push(eq(boqs.status, String(status)));
+      }
+      if (projectId) {
+        conditions.push(eq(boqs.projectId, parseInt(String(projectId))));
+      }
+      if (clientId) {
+        conditions.push(eq(boqs.clientId, parseInt(String(clientId))));
+      }
+
+      let result;
+      if (conditions.length > 0) {
+        result = await db.select().from(boqs).where(and(...conditions)).orderBy(desc(boqs.createdAt));
+      } else {
+        result = await db.select().from(boqs).orderBy(desc(boqs.createdAt));
+      }
+
+      if (search) {
+        const s = String(search).toLowerCase();
+        result = result.filter(b => 
+          (b.boqReference && b.boqReference.toLowerCase().includes(s)) ||
+          (b.projectName && b.projectName.toLowerCase().includes(s)) ||
+          (b.clientName && b.clientName.toLowerCase().includes(s)) ||
+          (b.location && b.location.toLowerCase().includes(s))
+        );
+      }
+
+      res.json(result);
+    } catch (err: any) {
+      console.error('Error fetching BOQs:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 2. Get single BOQ with complete nested sections, items, revisions, and audit logs
+  app.get('/api/boqs/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid BOQ ID' });
+
+      const boqRecords = await db.select().from(boqs).where(eq(boqs.id, id)).limit(1);
+      if (boqRecords.length === 0) {
+        return res.status(404).json({ error: 'BOQ not found' });
+      }
+
+      const boq = boqRecords[0];
+
+      // Fetch sections sorted by display_order
+      const sections = await db.select().from(boqSections).where(eq(boqSections.boqId, id)).orderBy(boqSections.displayOrder);
+
+      // Fetch line items sorted by display_order
+      const items = await db.select().from(boqItems).where(eq(boqItems.boqId, id)).orderBy(boqItems.displayOrder);
+
+      // Nest items under respective sections
+      const sectionsWithItems = sections.map(sec => ({
+        ...sec,
+        items: items.filter(it => it.sectionId === sec.id)
+      }));
+
+      // Fetch revisions & audit logs
+      const revisions = await db.select().from(boqRevisions).where(eq(boqRevisions.boqId, id)).orderBy(desc(boqRevisions.approvedAt));
+      const logs = await db.select().from(boqAuditLogs).where(eq(boqAuditLogs.boqId, id)).orderBy(desc(boqAuditLogs.timestamp));
+
+      res.json({
+        ...boq,
+        sections: sectionsWithItems,
+        revisions,
+        auditLogs: logs
+      });
+    } catch (err: any) {
+      console.error('Error fetching BOQ detail:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 3. Create BOQ
+  app.post('/api/boqs', requireAuth, async (req: any, res) => {
+    try {
+      const {
+        projectId,
+        projectName,
+        clientId,
+        clientName,
+        clientEmail,
+        clientNiu,
+        clientAddress,
+        location,
+        description,
+        preparedBy,
+        currency,
+        overheadPercent,
+        contingencyPercent,
+        profitPercent,
+        taxPercent,
+        sections
+      } = req.body;
+
+      if (!projectName || !clientName || !location) {
+        return res.status(400).json({ error: 'Project Name, Client Name, and Location are required.' });
+      }
+
+      const boqReference = await generateBoqReference();
+      const ovhP = parseFloat(overheadPercent) || 0;
+      const cntP = parseFloat(contingencyPercent) || 0;
+      const prfP = parseFloat(profitPercent) || 0;
+      const taxP = parseFloat(taxPercent) || 0;
+
+      const totals = calculateBoqTotals(sections || [], ovhP, cntP, prfP, taxP);
+
+      const insertedBoqs = await db.insert(boqs).values({
+        boqReference,
+        projectId: projectId ? parseInt(projectId) : null,
+        projectName,
+        clientId: clientId ? parseInt(clientId) : null,
+        clientName,
+        clientEmail: clientEmail || '',
+        clientNiu: clientNiu || '',
+        clientAddress: clientAddress || '',
+        location,
+        description: description || '',
+        preparedBy: preparedBy || req.dbUser.name || 'Admin',
+        revisionNumber: 'REV-00',
+        currency: currency || 'XAF',
+        status: 'DRAFT',
+        overheadPercent: ovhP.toString(),
+        contingencyPercent: cntP.toString(),
+        profitPercent: prfP.toString(),
+        taxPercent: taxP.toString(),
+        subtotal: totals.subtotal,
+        overheadAmount: totals.overheadAmount,
+        contingencyAmount: totals.contingencyAmount,
+        profitAmount: totals.profitAmount,
+        taxAmount: totals.taxAmount,
+        grandTotal: totals.grandTotal,
+      }).returning();
+
+      const newBoq = insertedBoqs[0];
+
+      // Insert Sections & Line Items
+      for (let secIdx = 0; secIdx < totals.sections.length; secIdx++) {
+        const sec = totals.sections[secIdx];
+        const insertedSecs = await db.insert(boqSections).values({
+          boqId: newBoq.id,
+          sectionCode: sec.sectionCode || String.fromCharCode(65 + secIdx),
+          title: sec.title || `Section ${secIdx + 1}`,
+          displayOrder: secIdx,
+          subtotal: sec.subtotal
+        }).returning();
+
+        const newSec = insertedSecs[0];
+
+        for (let itIdx = 0; itIdx < (sec.items || []).length; itIdx++) {
+          const item = sec.items[itIdx];
+          await db.insert(boqItems).values({
+            sectionId: newSec.id,
+            boqId: newBoq.id,
+            itemNumber: item.itemNumber || `${newSec.sectionCode}${itIdx + 1}`,
+            description: item.description || '',
+            unit: item.unit || 'm²',
+            quantity: item.quantity,
+            unitRate: item.unitRate,
+            amount: item.amount,
+            notes: item.notes || '',
+            measurementBasis: item.measurementBasis || '',
+            internalMaterialCost: item.internalMaterialCost || '0',
+            internalLabourCost: item.internalLabourCost || '0',
+            internalPlantCost: item.internalPlantCost || '0',
+            internalOtherCost: item.internalOtherCost || '0',
+            displayOrder: itIdx
+          });
+        }
+      }
+
+      // Record Audit Log
+      await db.insert(boqAuditLogs).values({
+        boqId: newBoq.id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action: 'CREATED',
+        details: `Created BOQ ${boqReference} for ${clientName} (${projectName})`
+      });
+
+      res.status(201).json(newBoq);
+    } catch (err: any) {
+      console.error('Error creating BOQ:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 4. Update BOQ
+  app.put('/api/boqs/:id', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+      const existingBoqs = await db.select().from(boqs).where(eq(boqs.id, id)).limit(1);
+      if (existingBoqs.length === 0) return res.status(404).json({ error: 'BOQ not found' });
+
+      const currentBoq = existingBoqs[0];
+      if (currentBoq.status === 'APPROVED') {
+        return res.status(400).json({ 
+          error: 'Approved BOQs are locked against direct modifications. Please create a new revision instead.' 
+        });
+      }
+
+      const {
+        projectName,
+        clientName,
+        clientEmail,
+        clientNiu,
+        clientAddress,
+        location,
+        description,
+        preparedBy,
+        currency,
+        overheadPercent,
+        contingencyPercent,
+        profitPercent,
+        taxPercent,
+        sections
+      } = req.body;
+
+      const ovhP = parseFloat(overheadPercent ?? currentBoq.overheadPercent) || 0;
+      const cntP = parseFloat(contingencyPercent ?? currentBoq.contingencyPercent) || 0;
+      const prfP = parseFloat(profitPercent ?? currentBoq.profitPercent) || 0;
+      const taxP = parseFloat(taxPercent ?? currentBoq.taxPercent) || 0;
+
+      const totals = calculateBoqTotals(sections || [], ovhP, cntP, prfP, taxP);
+
+      const updatedBoqs = await db.update(boqs).set({
+        projectName: projectName || currentBoq.projectName,
+        clientName: clientName || currentBoq.clientName,
+        clientEmail: clientEmail ?? currentBoq.clientEmail,
+        clientNiu: clientNiu ?? currentBoq.clientNiu,
+        clientAddress: clientAddress ?? currentBoq.clientAddress,
+        location: location || currentBoq.location,
+        description: description ?? currentBoq.description,
+        preparedBy: preparedBy || currentBoq.preparedBy,
+        currency: currency || currentBoq.currency,
+        overheadPercent: ovhP.toString(),
+        contingencyPercent: cntP.toString(),
+        profitPercent: prfP.toString(),
+        taxPercent: taxP.toString(),
+        subtotal: totals.subtotal,
+        overheadAmount: totals.overheadAmount,
+        contingencyAmount: totals.contingencyAmount,
+        profitAmount: totals.profitAmount,
+        taxAmount: totals.taxAmount,
+        grandTotal: totals.grandTotal,
+        updatedAt: new Date()
+      }).where(eq(boqs.id, id)).returning();
+
+      // Replace sections and items
+      await db.delete(boqItems).where(eq(boqItems.boqId, id));
+      await db.delete(boqSections).where(eq(boqSections.boqId, id));
+
+      for (let secIdx = 0; secIdx < totals.sections.length; secIdx++) {
+        const sec = totals.sections[secIdx];
+        const insertedSecs = await db.insert(boqSections).values({
+          boqId: id,
+          sectionCode: sec.sectionCode || String.fromCharCode(65 + secIdx),
+          title: sec.title || `Section ${secIdx + 1}`,
+          displayOrder: secIdx,
+          subtotal: sec.subtotal
+        }).returning();
+
+        const newSec = insertedSecs[0];
+
+        for (let itIdx = 0; itIdx < (sec.items || []).length; itIdx++) {
+          const item = sec.items[itIdx];
+          await db.insert(boqItems).values({
+            sectionId: newSec.id,
+            boqId: id,
+            itemNumber: item.itemNumber || `${newSec.sectionCode}${itIdx + 1}`,
+            description: item.description || '',
+            unit: item.unit || 'm²',
+            quantity: item.quantity,
+            unitRate: item.unitRate,
+            amount: item.amount,
+            notes: item.notes || '',
+            measurementBasis: item.measurementBasis || '',
+            internalMaterialCost: item.internalMaterialCost || '0',
+            internalLabourCost: item.internalLabourCost || '0',
+            internalPlantCost: item.internalPlantCost || '0',
+            internalOtherCost: item.internalOtherCost || '0',
+            displayOrder: itIdx
+          });
+        }
+      }
+
+      await db.insert(boqAuditLogs).values({
+        boqId: id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action: 'UPDATED',
+        details: `Updated BOQ ${currentBoq.boqReference} details and items`
+      });
+
+      res.json(updatedBoqs[0]);
+    } catch (err: any) {
+      console.error('Error updating BOQ:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 5. Submit BOQ for review
+  app.post('/api/boqs/:id/submit-review', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+      const updated = await db.update(boqs)
+        .set({ status: 'PENDING_REVIEW', updatedAt: new Date() })
+        .where(eq(boqs.id, id))
+        .returning();
+
+      if (updated.length === 0) return res.status(404).json({ error: 'BOQ not found' });
+
+      await db.insert(boqAuditLogs).values({
+        boqId: id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action: 'SUBMITTED_FOR_REVIEW',
+        details: `Submitted BOQ ${updated[0].boqReference} for managerial review`
+      });
+
+      res.json(updated[0]);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 6. Approve BOQ & Lock Revision
+  app.post('/api/boqs/:id/approve', requireAdmin, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+      const boqRecords = await db.select().from(boqs).where(eq(boqs.id, id)).limit(1);
+      if (boqRecords.length === 0) return res.status(404).json({ error: 'BOQ not found' });
+
+      const boq = boqRecords[0];
+      const sections = await db.select().from(boqSections).where(eq(boqSections.boqId, id)).orderBy(boqSections.displayOrder);
+      const items = await db.select().from(boqItems).where(eq(boqItems.boqId, id)).orderBy(boqItems.displayOrder);
+
+      const fullSnapshot = {
+        boq,
+        sections: sections.map(s => ({
+          ...s,
+          items: items.filter(i => i.sectionId === s.id)
+        }))
+      };
+
+      const now = new Date();
+      const updated = await db.update(boqs)
+        .set({
+          status: 'APPROVED',
+          approvedBy: req.dbUser.name || req.dbUser.email,
+          approvedAt: now,
+          updatedAt: now
+        })
+        .where(eq(boqs.id, id))
+        .returning();
+
+      // Store revision snapshot record
+      await db.insert(boqRevisions).values({
+        boqId: id,
+        revisionNumber: boq.revisionNumber || 'REV-00',
+        snapshotData: JSON.stringify(fullSnapshot),
+        approvedBy: req.dbUser.name || req.dbUser.email,
+        approvedAt: now,
+        pdfUrl: boq.pdfUrl || ''
+      });
+
+      await db.insert(boqAuditLogs).values({
+        boqId: id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action: 'APPROVED',
+        details: `Approved BOQ ${boq.boqReference} (Revision: ${boq.revisionNumber}) and locked against direct edits.`
+      });
+
+      res.json(updated[0]);
+    } catch (err: any) {
+      console.error('Error approving BOQ:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 7. Create New Revision from Approved BOQ
+  app.post('/api/boqs/:id/revision', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+      const boqRecords = await db.select().from(boqs).where(eq(boqs.id, id)).limit(1);
+      if (boqRecords.length === 0) return res.status(404).json({ error: 'BOQ not found' });
+
+      const origBoq = boqRecords[0];
+
+      // Parse current revision number (e.g. REV-00 -> REV-01)
+      let currentRevNum = 0;
+      const revMatch = (origBoq.revisionNumber || 'REV-00').match(/\d+/);
+      if (revMatch) currentRevNum = parseInt(revMatch[0]);
+      const nextRevNumber = `REV-${String(currentRevNum + 1).padStart(2, '0')}`;
+
+      // Unlock for editing under new revision number
+      const updated = await db.update(boqs)
+        .set({
+          revisionNumber: nextRevNumber,
+          status: 'DRAFT',
+          approvedBy: null,
+          approvedAt: null,
+          pdfUrl: null,
+          updatedAt: new Date()
+        })
+        .where(eq(boqs.id, id))
+        .returning();
+
+      await db.insert(boqAuditLogs).values({
+        boqId: id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action: 'REVISION_CREATED',
+        details: `Created new revision ${nextRevNumber} for BOQ ${origBoq.boqReference}`
+      });
+
+      res.json(updated[0]);
+    } catch (err: any) {
+      console.error('Error creating revision:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 8. Attach PDF URL to BOQ
+  app.post('/api/boqs/:id/pdf', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { pdfUrl } = req.body;
+      if (isNaN(id) || !pdfUrl) return res.status(400).json({ error: 'Valid ID and pdfUrl required' });
+
+      const updated = await db.update(boqs)
+        .set({ pdfUrl, updatedAt: new Date() })
+        .where(eq(boqs.id, id))
+        .returning();
+
+      await db.insert(boqAuditLogs).values({
+        boqId: id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action: 'PDF_GENERATED',
+        details: `Generated and stored official PDF document for BOQ ${updated[0]?.boqReference}`
+      });
+
+      res.json(updated[0]);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 9. Send BOQ PDF to Client via Email
+  app.post('/api/boqs/:id/send-email', requireAdmin, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { recipientEmail, subject, customMessage, pdfUrl } = req.body;
+
+      if (isNaN(id) || !recipientEmail) {
+        return res.status(400).json({ error: 'Recipient email is required.' });
+      }
+
+      const boqRecords = await db.select().from(boqs).where(eq(boqs.id, id)).limit(1);
+      if (boqRecords.length === 0) return res.status(404).json({ error: 'BOQ not found' });
+
+      const boq = boqRecords[0];
+      if (boq.status !== 'APPROVED') {
+        return res.status(400).json({ error: 'Only APPROVED BOQs can be sent to clients.' });
+      }
+
+      const emailSubject = subject || `MADECC Group — Bill of Quantities / Estimate — [${boq.projectName}]`;
+      const documentLink = pdfUrl || boq.pdfUrl || '#';
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; background-color: #0f172a; padding: 24px; color: #e2e8f0;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 32px;">
+            <div style="border-b: 2px solid #f59e0b; padding-bottom: 16px; margin-bottom: 24px;">
+              <h2 style="color: #ffffff; margin: 0; text-transform: uppercase; font-size: 20px;">MADECC GROUP S.A.</h2>
+              <p style="color: #f59e0b; font-size: 12px; font-weight: bold; margin: 4px 0 0 0;">CIVIL ENGINEERING & STRUCTURAL CONSTRUCTION</p>
+            </div>
+            
+            <h3 style="color: #ffffff; font-size: 16px; margin-top: 0;">Official Bill of Quantities / Estimate</h3>
+            <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">Dear <strong>${boq.clientName}</strong>,</p>
+            <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">
+              Please find enclosed the official approved Bill of Quantities / Construction Estimate for your project <strong>${boq.projectName}</strong> (${boq.location}).
+            </p>
+            
+            ${customMessage ? `
+              <div style="background-color: #0f172a; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                <p style="color: #e2e8f0; font-size: 13px; font-style: italic; margin: 0;">"${customMessage}"</p>
+              </div>
+            ` : ''}
+
+            <div style="background-color: #0f172a; padding: 16px; border-radius: 8px; margin: 24px 0; border: 1px solid #334155;">
+              <table style="width: 100%; text-align: left; font-size: 13px; color: #cbd5e1;">
+                <tr><td style="padding: 4px 0; color: #94a3b8;">BOQ Reference:</td><td style="font-weight: bold; color: #f59e0b;">${boq.boqReference}</td></tr>
+                <tr><td style="padding: 4px 0; color: #94a3b8;">Revision:</td><td>${boq.revisionNumber}</td></tr>
+                <tr><td style="padding: 4px 0; color: #94a3b8;">Estimated Total:</td><td style="font-weight: bold; color: #10b981;">${Number(boq.grandTotal).toLocaleString()} ${boq.currency}</td></tr>
+                <tr><td style="padding: 4px 0; color: #94a3b8;">Prepared By:</td><td>${boq.preparedBy}</td></tr>
+              </table>
+            </div>
+
+            ${documentLink && documentLink !== '#' ? `
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${documentLink}" target="_blank" style="background-color: #f59e0b; color: #0f172a; font-weight: bold; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; text-transform: uppercase; font-size: 13px;">
+                  Download Official BOQ PDF
+                </a>
+              </div>
+            ` : ''}
+
+            <p style="color: #94a3b8; font-size: 12px; border-t: 1px solid #334155; pt: 16px; margin-top: 32px;">
+              If you have any technical questions regarding this BOQ, please contact your MADECC project coordinator.
+            </p>
+          </div>
+        </div>
+      `;
+
+      await sendEmail(
+        recipientEmail,
+        emailSubject,
+        `Official BOQ ${boq.boqReference} for project ${boq.projectName}. Grand Total: ${boq.grandTotal} ${boq.currency}`,
+        emailHtml
+      );
+
+      const now = new Date();
+      const updated = await db.update(boqs)
+        .set({
+          sentToClientAt: now,
+          sentToClientBy: req.dbUser.name || req.dbUser.email,
+          updatedAt: now
+        })
+        .where(eq(boqs.id, id))
+        .returning();
+
+      await db.insert(boqAuditLogs).values({
+        boqId: id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action: 'SENT_TO_CLIENT',
+        details: `Sent approved BOQ ${boq.boqReference} to client email: ${recipientEmail}`
+      });
+
+      res.json({ success: true, boq: updated[0] });
+    } catch (err: any) {
+      console.error('Error sending BOQ email:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 10. Delete BOQ
+  app.delete('/api/boqs/:id', requireAdmin, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+
+      const deleted = await db.delete(boqs).where(eq(boqs.id, id)).returning();
+      res.json(deleted[0] || { success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 11. Log BOQ Audit Event (e.g. WORD_EXPORTED, CSV_EXPORTED, PDF_EXPORTED)
+  app.post('/api/boqs/:id/audit-event', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { action, details } = req.body;
+      if (isNaN(id) || !action) return res.status(400).json({ error: 'ID and action are required' });
+
+      const log = await db.insert(boqAuditLogs).values({
+        boqId: id,
+        userId: req.dbUser.uid,
+        userEmail: req.dbUser.email,
+        action,
+        details: details || `Performed ${action} on BOQ #${id}`
+      }).returning();
+
+      res.json(log[0]);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

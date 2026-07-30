@@ -31,6 +31,100 @@ export async function seedDatabase() {
       return; // Exit gracefully instead of crashing
     }
 
+    // Ensure BOQ tables exist in Neon DB
+    try {
+      console.log('Verifying BOQ tables infrastructure in Neon DB...');
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS boqs (
+          id SERIAL PRIMARY KEY,
+          boq_reference TEXT NOT NULL UNIQUE,
+          project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+          project_name TEXT NOT NULL,
+          client_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          client_name TEXT NOT NULL,
+          client_email TEXT,
+          client_niu TEXT,
+          client_address TEXT,
+          location TEXT NOT NULL,
+          description TEXT,
+          date_prepared TIMESTAMP DEFAULT NOW() NOT NULL,
+          prepared_by TEXT NOT NULL,
+          revision_number TEXT DEFAULT 'REV-00' NOT NULL,
+          currency TEXT DEFAULT 'XAF' NOT NULL,
+          status TEXT DEFAULT 'DRAFT' NOT NULL,
+          overhead_percent NUMERIC DEFAULT '0' NOT NULL,
+          contingency_percent NUMERIC DEFAULT '0' NOT NULL,
+          profit_percent NUMERIC DEFAULT '0' NOT NULL,
+          tax_percent NUMERIC DEFAULT '0' NOT NULL,
+          subtotal NUMERIC DEFAULT '0' NOT NULL,
+          overhead_amount NUMERIC DEFAULT '0' NOT NULL,
+          contingency_amount NUMERIC DEFAULT '0' NOT NULL,
+          profit_amount NUMERIC DEFAULT '0' NOT NULL,
+          tax_amount NUMERIC DEFAULT '0' NOT NULL,
+          grand_total NUMERIC DEFAULT '0' NOT NULL,
+          pdf_url TEXT,
+          approved_by TEXT,
+          approved_at TIMESTAMP,
+          sent_to_client_at TIMESTAMP,
+          sent_to_client_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS boq_sections (
+          id SERIAL PRIMARY KEY,
+          boq_id INTEGER REFERENCES boqs(id) ON DELETE CASCADE NOT NULL,
+          section_code TEXT NOT NULL,
+          title TEXT NOT NULL,
+          display_order INTEGER DEFAULT 0 NOT NULL,
+          subtotal NUMERIC DEFAULT '0' NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS boq_items (
+          id SERIAL PRIMARY KEY,
+          section_id INTEGER REFERENCES boq_sections(id) ON DELETE CASCADE NOT NULL,
+          boq_id INTEGER REFERENCES boqs(id) ON DELETE CASCADE NOT NULL,
+          item_number TEXT NOT NULL,
+          description TEXT NOT NULL,
+          unit TEXT NOT NULL,
+          quantity NUMERIC DEFAULT '0' NOT NULL,
+          unit_rate NUMERIC DEFAULT '0' NOT NULL,
+          amount NUMERIC DEFAULT '0' NOT NULL,
+          notes TEXT,
+          measurement_basis TEXT,
+          internal_material_cost NUMERIC DEFAULT '0' NOT NULL,
+          internal_labour_cost NUMERIC DEFAULT '0' NOT NULL,
+          internal_plant_cost NUMERIC DEFAULT '0' NOT NULL,
+          internal_other_cost NUMERIC DEFAULT '0' NOT NULL,
+          display_order INTEGER DEFAULT 0 NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS boq_revisions (
+          id SERIAL PRIMARY KEY,
+          boq_id INTEGER REFERENCES boqs(id) ON DELETE CASCADE NOT NULL,
+          revision_number TEXT NOT NULL,
+          snapshot_data TEXT NOT NULL,
+          approved_by TEXT,
+          approved_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          pdf_url TEXT,
+          notes TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS boq_audit_logs (
+          id SERIAL PRIMARY KEY,
+          boq_id INTEGER REFERENCES boqs(id) ON DELETE CASCADE NOT NULL,
+          user_id TEXT,
+          user_email TEXT,
+          action TEXT NOT NULL,
+          details TEXT NOT NULL,
+          timestamp TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+      `);
+      console.log('✅ BOQ infrastructure ready in Neon DB.');
+    } catch (boqTableErr) {
+      console.error('Failed creating BOQ tables in DB:', boqTableErr);
+    }
+
     // Seeding specific contract for live verification testing
     console.log('Seeding specific contract CNT-0ZS6BJ8EF5I9QJ4ASHMZ for verification...');
     const existingContract = await db.select().from(signedContracts).where(eq(signedContracts.verificationToken, 'CNT-0ZS6BJ8EF5I9QJ4ASHMZ')).limit(1);

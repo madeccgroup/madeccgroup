@@ -3,36 +3,57 @@
  */
 
 /**
+ * Ensures web URLs have a valid protocol prefix (https://) if entered without one.
+ */
+export function ensureAbsoluteUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (
+    trimmed.startsWith('/') || 
+    trimmed.startsWith('data:') || 
+    trimmed.startsWith('http://') || 
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('blob:')
+  ) {
+    return trimmed;
+  }
+  return 'https://' + trimmed;
+}
+
+/**
+ * Extracts YouTube video ID and returns an embeddable iframe URL (https://www.youtube.com/embed/...)
+ * Returns null if the URL is not a valid YouTube link (e.g., raw MP4/MOV file).
+ */
+export function getYouTubeEmbedUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes('youtube.com/embed/')) return trimmed;
+  
+  const match = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (match && match[1]) {
+    return `https://www.youtube.com/embed/${match[1]}`;
+  }
+  return null;
+}
+
+/**
  * Optimizes image URLs (especially Unsplash) by appending format/quality/width parameters.
  * Replaces direct heavy assets with compressed WebP formats and optimized sizes to reduce LCP.
  */
-export function getOptimizedImageUrl(url: string, width = 800, quality = 80): string {
+export function getOptimizedImageUrl(url: string | null | undefined, width = 800, quality = 80): string {
   if (!url) return '';
   
-  // Trim and safely decode/re-encode the URL to handle raw spaces or special characters safely
-  let formattedUrl = url.trim();
-  if (!formattedUrl.startsWith('/') && !formattedUrl.startsWith('data:image/')) {
-    try {
-      formattedUrl = encodeURI(decodeURI(formattedUrl));
-    } catch (e) {
-      // Fallback to original formatted if encoding/decoding throws
-    }
-  }
+  let formattedUrl = ensureAbsoluteUrl(url);
+  if (!formattedUrl) return '';
 
-  // If the URL is a relative path (like /uploads/...) or data URI, return as-is
-  if (formattedUrl.startsWith('/') || formattedUrl.startsWith('data:image/')) {
+  // Handle relative paths (like /uploads/...) or data URIs directly
+  if (formattedUrl.startsWith('/') || formattedUrl.startsWith('data:')) {
     return formattedUrl;
   }
-  
-  // Check if it's a direct image file extension
-  const isDirectImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(formattedUrl);
-  
-  // Route non-direct image URLs (e.g., sharing links, kommodo.ai) through our backend resolver
-  if (formattedUrl.includes('kommodo.ai') || !isDirectImage) {
-    return `/api/resolve-image?url=${encodeURIComponent(formattedUrl)}`;
-  }
-  
-  // Handing Unsplash URLs for WebP conversion and resizing
+
+  // Handle Unsplash URLs for WebP conversion and resizing
   if (formattedUrl.includes('images.unsplash.com')) {
     try {
       const parsedUrl = new URL(formattedUrl);
@@ -41,28 +62,11 @@ export function getOptimizedImageUrl(url: string, width = 800, quality = 80): st
       if (width) {
         parsedUrl.searchParams.set('w', width.toString());
       }
-      // auto parameter can override fm, so we delete it
       parsedUrl.searchParams.delete('auto');
       return parsedUrl.toString();
     } catch (e) {
-      // Fallback regex replacements if URL parsing fails
-      let optimized = formattedUrl.replace(/auto=[a-zA-Z0-9,]+/g, 'fm=webp');
-      if (!optimized.includes('fm=webp')) {
-        optimized += '&fm=webp';
-      }
-      if (optimized.includes('q=')) {
-        optimized = optimized.replace(/q=\d+/g, `q=${quality}`);
-      } else {
-        optimized += `&q=${quality}`;
-      }
-      if (width) {
-        if (optimized.includes('w=')) {
-          optimized = optimized.replace(/w=\d+/g, `w=${width}`);
-        } else {
-          optimized += `&w=${width}`;
-        }
-      }
-      return optimized;
+      // Return formatted URL if URL parsing fails
+      return formattedUrl;
     }
   }
   

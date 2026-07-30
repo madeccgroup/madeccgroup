@@ -293,3 +293,129 @@ export const syllabusDocuments = pgTable('syllabus_documents', {
   uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
 });
 
+// 21. BOQs table
+export const boqs = pgTable('boqs', {
+  id: serial('id').primaryKey(),
+  boqReference: text('boq_reference').notNull().unique(),
+  projectId: integer('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  projectName: text('project_name').notNull(),
+  clientId: integer('client_id').references(() => users.id, { onDelete: 'set null' }),
+  clientName: text('client_name').notNull(),
+  clientEmail: text('client_email'),
+  clientNiu: text('client_niu'),
+  clientAddress: text('client_address'),
+  location: text('location').notNull(),
+  description: text('description'),
+  datePrepared: timestamp('date_prepared').defaultNow().notNull(),
+  preparedBy: text('prepared_by').notNull(),
+  revisionNumber: text('revision_number').default('REV-00').notNull(),
+  currency: text('currency').default('XAF').notNull(),
+  status: text('status').default('DRAFT').notNull(), // DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED
+  overheadPercent: numeric('overhead_percent').default('0').notNull(),
+  contingencyPercent: numeric('contingency_percent').default('0').notNull(),
+  profitPercent: numeric('profit_percent').default('0').notNull(),
+  taxPercent: numeric('tax_percent').default('0').notNull(),
+  subtotal: numeric('subtotal').default('0').notNull(),
+  overheadAmount: numeric('overhead_amount').default('0').notNull(),
+  contingencyAmount: numeric('contingency_amount').default('0').notNull(),
+  profitAmount: numeric('profit_amount').default('0').notNull(),
+  taxAmount: numeric('tax_amount').default('0').notNull(),
+  grandTotal: numeric('grand_total').default('0').notNull(),
+  pdfUrl: text('pdf_url'),
+  approvedBy: text('approved_by'),
+  approvedAt: timestamp('approved_at'),
+  sentToClientAt: timestamp('sent_to_client_at'),
+  sentToClientBy: text('sent_to_client_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 22. BOQ Sections table
+export const boqSections = pgTable('boq_sections', {
+  id: serial('id').primaryKey(),
+  boqId: integer('boq_id').references(() => boqs.id, { onDelete: 'cascade' }).notNull(),
+  sectionCode: text('section_code').notNull(),
+  title: text('title').notNull(),
+  displayOrder: integer('display_order').default(0).notNull(),
+  subtotal: numeric('subtotal').default('0').notNull(),
+});
+
+// 23. BOQ Line Items table
+export const boqItems = pgTable('boq_items', {
+  id: serial('id').primaryKey(),
+  sectionId: integer('section_id').references(() => boqSections.id, { onDelete: 'cascade' }).notNull(),
+  boqId: integer('boq_id').references(() => boqs.id, { onDelete: 'cascade' }).notNull(),
+  itemNumber: text('item_number').notNull(),
+  description: text('description').notNull(),
+  unit: text('unit').notNull(),
+  quantity: numeric('quantity').default('0').notNull(),
+  unitRate: numeric('unit_rate').default('0').notNull(),
+  amount: numeric('amount').default('0').notNull(),
+  notes: text('notes'),
+  measurementBasis: text('measurement_basis'),
+  internalMaterialCost: numeric('internal_material_cost').default('0').notNull(),
+  internalLabourCost: numeric('internal_labour_cost').default('0').notNull(),
+  internalPlantCost: numeric('internal_plant_cost').default('0').notNull(),
+  internalOtherCost: numeric('internal_other_cost').default('0').notNull(),
+  displayOrder: integer('display_order').default(0).notNull(),
+});
+
+// 24. BOQ Revisions table
+export const boqRevisions = pgTable('boq_revisions', {
+  id: serial('id').primaryKey(),
+  boqId: integer('boq_id').references(() => boqs.id, { onDelete: 'cascade' }).notNull(),
+  revisionNumber: text('revision_number').notNull(),
+  snapshotData: text('snapshot_data').notNull(),
+  approvedBy: text('approved_by'),
+  approvedAt: timestamp('approved_at').defaultNow().notNull(),
+  pdfUrl: text('pdf_url'),
+  notes: text('notes'),
+});
+
+// 25. BOQ Audit Logs table
+export const boqAuditLogs = pgTable('boq_audit_logs', {
+  id: serial('id').primaryKey(),
+  boqId: integer('boq_id').references(() => boqs.id, { onDelete: 'cascade' }).notNull(),
+  userId: text('user_id'),
+  userEmail: text('user_email'),
+  action: text('action').notNull(),
+  details: text('details').notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+// Additional Relations
+export const boqsRelations = relations(boqs, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [boqs.projectId],
+    references: [projects.id],
+  }),
+  client: one(users, {
+    fields: [boqs.clientId],
+    references: [users.id],
+  }),
+  sections: many(boqSections),
+  items: many(boqItems),
+  revisions: many(boqRevisions),
+  auditLogs: many(boqAuditLogs),
+}));
+
+export const boqSectionsRelations = relations(boqSections, ({ one, many }) => ({
+  boq: one(boqs, {
+    fields: [boqSections.boqId],
+    references: [boqs.id],
+  }),
+  items: many(boqItems),
+}));
+
+export const boqItemsRelations = relations(boqItems, ({ one }) => ({
+  section: one(boqSections, {
+    fields: [boqItems.sectionId],
+    references: [boqSections.id],
+  }),
+  boq: one(boqs, {
+    fields: [boqItems.boqId],
+    references: [boqs.id],
+  }),
+}));
+
+
