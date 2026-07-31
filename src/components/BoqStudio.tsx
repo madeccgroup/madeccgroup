@@ -108,7 +108,7 @@ interface BoqStudioProps {
 }
 
 const PREDEFINED_UNITS = [
-  'm', 'm²', 'm³', 'kg', 't', 'No.', 'item', 'LS', 'day', 'hour', 'bag', 'set', 'lot'
+  'm', 'm²', 'm³', 'kg', 't', 'No.', 'item', 'LS', 'day', 'hour', 'bag', 'set', 'lot', 'packet', 'bar', 'ml', 'l', 'mm', 'cm', 'boards'
 ];
 
 const PREDEFINED_SECTIONS_TEMPLATES = [
