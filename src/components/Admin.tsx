@@ -181,6 +181,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   const [galImage, setGalImage] = useState('');
   const [galVideoUrl, setGalVideoUrl] = useState('');
   const [galCategory, setGalCategory] = useState('');
+  const [isSavingGallery, setIsSavingGallery] = useState(false);
 
   // Form states - Projects
   const [showProjModal, setShowProjModal] = useState(false);
@@ -1363,20 +1364,31 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     setGalTitle('');
     setGalImage('');
     setGalVideoUrl('');
-    setGalCategory('');
+    setGalCategory('Structural Handover');
     setGalImageMode('url');
     setGalVideoMode('url');
+    setIsSavingGallery(false);
   };
 
   const handleSaveGallery = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!galTitle.trim()) {
+      showToast('Update title is required.', 'error');
+      return;
+    }
+    if (!galImage.trim() && !galVideoUrl.trim()) {
+      showToast('Please provide an image cover URL/file or a video URL/file.', 'error');
+      return;
+    }
+
+    setIsSavingGallery(true);
     try {
       const headers = await getAuthHeaders();
       const body = {
-        title: galTitle,
-        imageUrl: ensureAbsoluteUrl(galImage),
+        title: galTitle.trim(),
+        imageUrl: ensureAbsoluteUrl(galImage) || 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1200&q=80',
         videoUrl: ensureAbsoluteUrl(galVideoUrl) || null,
-        category: galCategory
+        category: galCategory.trim() || 'General Engineering'
       };
       
       const url = galEditId ? `/api/gallery/${galEditId}` : '/api/gallery';
@@ -1388,17 +1400,19 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         body: JSON.stringify(body)
       });
       if (response.ok) {
-        showToast(galEditId ? 'Gallery item updated successfully!' : 'Gallery item added successfully!', 'success');
+        showToast(galEditId ? 'Portfolio media update saved successfully!' : 'Portfolio update published successfully!', 'success');
         setShowGalModal(false);
         resetGalForm();
         fetchAdminData();
       } else {
         const errData = await response.json().catch(() => ({}));
-        showToast(errData.error || 'Failed to save gallery item.', 'error');
+        showToast(errData.error || 'Failed to save portfolio media update.', 'error');
       }
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || 'An error occurred.', 'error');
+      showToast(err.message || 'An error occurred while saving.', 'error');
+    } finally {
+      setIsSavingGallery(false);
     }
   };
 
@@ -3480,220 +3494,267 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
             {/* CREATE / EDIT GALLERY ITEM MODAL */}
             {showGalModal && (
-              <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full shadow-2xl relative p-8 space-y-6">
-                  <button onClick={() => setShowGalModal(false)} className="absolute right-4 top-4 text-slate-400 hover:text-white">
-                    <XCircle className="w-6 h-6" />
-                  </button>
+              <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl relative my-auto flex flex-col max-h-[92vh] overflow-hidden">
+                  
+                  {/* MODAL HEADER (Sticky Top) */}
+                  <div className="p-5 sm:p-6 border-b border-slate-800 bg-slate-900/95 flex justify-between items-center shrink-0">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-mono font-bold text-amber-500 uppercase tracking-widest block">Portfolio Media Management</span>
+                      <h3 className="font-extrabold text-lg sm:text-xl text-white">
+                        {galEditId ? 'Edit Portfolio Media Update' : 'Publish Portfolio Media Update'}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowGalModal(false); resetGalForm(); }}
+                      className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      <XCircle className="w-6 h-6" />
+                    </button>
+                  </div>
 
-                  <h3 className="font-extrabold text-xl text-white border-b border-slate-800 pb-3">
-                    {galEditId ? 'Edit Portfolio Media Update' : 'Publish Portfolio Media Update'}
-                  </h3>
-
-                  <form onSubmit={handleSaveGallery} className="space-y-4 text-sm">
+                  {/* MODAL BODY (Scrollable Form Area) */}
+                  <form id="portfolio-media-form" onSubmit={handleSaveGallery} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 text-sm">
+                    {/* TITLE */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Update Title</label>
+                      <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide mb-1.5">
+                        Update Title <span className="text-amber-500">*</span>
+                      </label>
                       <input
                         type="text"
-                        className="w-full bg-slate-950 border border-slate-850 rounded-lg py-2.5 px-3 text-white placeholder-slate-600 outline-none focus:border-amber-500 transition-all"
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl py-2.5 px-3.5 text-white placeholder-slate-600 outline-none transition-all font-medium text-sm"
                         value={galTitle}
                         onChange={(e) => setGalTitle(e.target.value)}
-                        placeholder="e.g. Excavation and Soil Analysis completed at Douala Site"
+                        placeholder="e.g. Geometrical stair construction & reinforcement"
                         required
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Category</label>
-                        <select
-                          className="w-full bg-slate-950 border border-slate-850 rounded-lg py-2.5 px-3 text-slate-300 outline-none focus:border-amber-500"
-                          value={galCategory}
-                          onChange={(e) => setGalCategory(e.target.value)}
-                        >
-                          <option value="Structural Handover">Structural Handover</option>
-                          <option value="Excavation Works">Excavation Works</option>
-                          <option value="Concrete Reinforcement">Concrete Reinforcement</option>
-                          <option value="Masonry Handovers">Masonry Handovers</option>
-                          <option value="Finishing Details">Finishing Details</option>
-                          <option value="Interior Engineering">Interior Engineering</option>
-                        </select>
+                    {/* CATEGORY & PRESETS */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide">
+                        Category
+                      </label>
+
+                      {/* Quick Category Chips */}
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {[
+                          'Concrete Reinforcement',
+                          'Structural Handover',
+                          'Excavation Works',
+                          'Masonry Handovers',
+                          'Finishing Details',
+                          'Interior Engineering'
+                        ].map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setGalCategory(cat)}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
+                              galCategory === cat
+                                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm'
+                                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Or Type Custom Category</label>
+                      <input
+                        type="text"
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl py-2.5 px-3.5 text-white placeholder-slate-600 outline-none transition-all text-xs font-mono"
+                        value={galCategory}
+                        onChange={(e) => setGalCategory(e.target.value)}
+                        placeholder="Select preset above or type custom category name..."
+                      />
+                    </div>
+
+                    {/* IMAGE / COVER POSTER */}
+                    <div className="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-850">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide">
+                          Image Poster / Cover
+                        </label>
+                        <div className="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setGalImageMode('url')}
+                            className={`text-[10px] px-2.5 py-0.5 rounded font-bold uppercase transition-all cursor-pointer ${
+                              galImageMode === 'url' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Web URL
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setGalImageMode('upload')}
+                            className={`text-[10px] px-2.5 py-0.5 rounded font-bold uppercase transition-all cursor-pointer ${
+                              galImageMode === 'upload' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Upload File
+                          </button>
+                        </div>
+                      </div>
+
+                      {galImageMode === 'url' ? (
                         <input
                           type="text"
-                          className="w-full bg-slate-950 border border-slate-850 rounded-lg py-2.5 px-3 text-white placeholder-slate-600 outline-none focus:border-amber-500 transition-all"
-                          value={galCategory}
-                          onChange={(e) => setGalCategory(e.target.value)}
-                          placeholder="e.g. Safety Briefing"
+                          className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded-xl py-2.5 px-3.5 text-white text-xs outline-none font-mono"
+                          value={galImage}
+                          onChange={(e) => setGalImage(e.target.value)}
+                          placeholder="https://kommodo.ai/i/... or web image link"
                         />
+                      ) : (
+                        <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-2">
+                          <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3.5 py-2 rounded-lg cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0 transition-all">
+                            Browse Image
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => handleFileUpload(e, 'galImage')} 
+                              disabled={uploadingFile}
+                            />
+                          </label>
+                          <div className="flex-1 min-w-0">
+                            {galImage ? (
+                              <span className="text-[10px] text-emerald-400 font-mono truncate block" title={galImage}>
+                                ✓ Loaded: {galImage.split('/').pop()}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-500 block">No file chosen</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SEO VIDEO / YOUTUBE (OPTIONAL) */}
+                    <div className="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-850">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide">
+                          SEO Video / YouTube <span className="text-slate-500 font-normal">(Optional)</span>
+                        </label>
+                        <div className="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setGalVideoMode('url')}
+                            className={`text-[9px] px-2.5 py-0.5 rounded font-bold uppercase transition-all cursor-pointer ${
+                              galVideoMode === 'url' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Video URL
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setGalVideoMode('upload')}
+                            className={`text-[9px] px-2.5 py-0.5 rounded font-bold uppercase transition-all cursor-pointer ${
+                              galVideoMode === 'upload' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Upload MP4
+                          </button>
+                        </div>
                       </div>
+
+                      {galVideoMode === 'url' ? (
+                        <input
+                          type="text"
+                          className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded-xl py-2.5 px-3.5 text-white text-xs outline-none font-mono"
+                          value={galVideoUrl}
+                          onChange={(e) => setGalVideoUrl(e.target.value)}
+                          placeholder="e.g. https://youtu.be/NmFQa4X0BTg or direct MP4 URL"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-2">
+                          <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3.5 py-2 rounded-lg border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0 transition-all">
+                            Browse Video
+                            <input 
+                              type="file" 
+                              accept="video/*" 
+                              className="hidden" 
+                              onChange={(e) => handleFileUpload(e, 'galVideo')} 
+                              disabled={uploadingFile}
+                            />
+                          </label>
+                          <div className="flex-1 min-w-0">
+                            {galVideoUrl ? (
+                              <span className="text-[10px] text-amber-400 font-mono truncate block" title={galVideoUrl}>
+                                ✓ Loaded: {galVideoUrl.split('/').pop()}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-500 block">No video file chosen (Max 150MB)</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-slate-500">Supports direct upload of raw MP4/MOV recordings from construction sites up to 150MB or YouTube streams.</p>
                     </div>
 
-                                   {/* Image / Poster Upload */}
-                     <div className="space-y-2">
-                       <div className="flex justify-between items-center">
-                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide">Image Poster / Cover</label>
-                         <div className="flex gap-1 bg-slate-950 p-0.5 rounded-md border border-slate-800">
-                           <button
-                             type="button"
-                             onClick={() => setGalImageMode('url')}
-                             className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition-all ${
-                               galImageMode === 'url' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
-                             }`}
-                           >
-                             Web URL
-                           </button>
-                           <button
-                             type="button"
-                             onClick={() => setGalImageMode('upload')}
-                             className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition-all ${
-                               galImageMode === 'upload' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
-                             }`}
-                           >
-                             Upload
-                           </button>
-                         </div>
-                       </div>
+                    {/* LIVE MEDIA PREVIEW CARD */}
+                    {(galImage || galVideoUrl) && (
+                      <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+                        <span className="block text-[10px] text-amber-500 font-mono font-bold uppercase">Live Media Asset Preview</span>
+                        <div className="h-44 relative rounded-lg overflow-hidden bg-black flex items-center justify-center border border-slate-850">
+                          {galVideoUrl && getYouTubeEmbedUrl(galVideoUrl) ? (
+                            <iframe
+                              src={getYouTubeEmbedUrl(galVideoUrl)!}
+                              title="YouTube Preview"
+                              className="w-full h-full border-0"
+                            />
+                          ) : galVideoUrl ? (
+                            <video src={ensureAbsoluteUrl(galVideoUrl)} poster={getOptimizedImageUrl(galImage)} controls className="w-full h-full object-contain" />
+                          ) : (
+                            <img src={getOptimizedImageUrl(galImage)} alt="Preview" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-                       {galImageMode === 'url' ? (
-                         <input
-                           type="text"
-                           className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded py-2 px-3 text-white text-xs outline-none"
-                           value={galImage}
-                           onChange={(e) => setGalImage(e.target.value)}
-                           placeholder="https://images.unsplash.com/... or web image link"
-                         />
-                       ) : (
-                         <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
-                           <label className="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs px-3 py-1.5 rounded cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0">
-                             Browse Image
-                             <input 
-                               type="file" 
-                               accept="image/*" 
-                               className="hidden" 
-                               onChange={(e) => handleFileUpload(e, 'galImage')} 
-                               disabled={uploadingFile}
-                             />
-                           </label>
-                           <div className="flex-1 min-w-0">
-                             {galImage ? (
-                               <span className="text-[10px] text-emerald-400 font-mono truncate block" title={galImage}>✓ Loaded: {galImage.split('/').pop()}</span>
-                             ) : (
-                               <span className="text-[10px] text-slate-500 block">No file chosen</span>
-                             )}
-                           </div>
-                         </div>
-                       )}
-                     </div>
-
-                     {/* Video Upload */}
-                     <div className="space-y-2">
-                       <div className="flex justify-between items-center">
-                         <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide">SEO Video / YouTube (Optional)</label>
-                         <div className="flex gap-1 bg-slate-950 p-0.5 rounded-md border border-slate-800">
-                           <button
-                             type="button"
-                             onClick={() => setGalVideoMode('url')}
-                             className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition-all ${
-                               galVideoMode === 'url' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
-                             }`}
-                           >
-                             YouTube URL
-                           </button>
-                           <button
-                             type="button"
-                             onClick={() => setGalVideoMode('upload')}
-                             className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase transition-all ${
-                               galVideoMode === 'upload' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
-                             }`}
-                           >
-                             Upload
-                           </button>
-                         </div>
-                       </div>
-
-                       {galVideoMode === 'url' ? (
-                         <input
-                           type="text"
-                           className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded py-2 px-3 text-white text-xs outline-none"
-                           value={galVideoUrl}
-                           onChange={(e) => setGalVideoUrl(e.target.value)}
-                           placeholder="e.g. https://youtu.be/NmFQa4X0BTg or direct MP4 URL"
-                         />
-                       ) : (
-                         <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
-                           <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3 py-1.5 rounded border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0">
-                             Browse Video
-                             <input 
-                               type="file" 
-                               accept="video/*" 
-                               className="hidden" 
-                               onChange={(e) => handleFileUpload(e, 'galVideo')} 
-                               disabled={uploadingFile}
-                             />
-                           </label>
-                           <div className="flex-1 min-w-0">
-                             {galVideoUrl ? (
-                               <span className="text-[10px] text-amber-400 font-mono truncate block" title={galVideoUrl}>✓ Loaded: {galVideoUrl.split('/').pop()}</span>
-                             ) : (
-                               <span className="text-[10px] text-slate-500 block">No file chosen (Max 150MB)</span>
-                             )}
-                           </div>
-                         </div>
-                       )}
-                       <p className="text-[10px] text-slate-500">Supports direct upload of raw MP4/MOV recordings from construction sites up to 150MB or YouTube streams.</p>
-                     </div>
-
-                     {/* Live Visual Media Preview Card */}
-                     {(galImage || galVideoUrl) && (
-                       <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
-                         <span className="block text-[10px] text-amber-500 font-mono font-bold uppercase">Live Media Asset Preview</span>
-                         <div className="h-44 relative rounded-lg overflow-hidden bg-black flex items-center justify-center border border-slate-850">
-                           {galVideoUrl && getYouTubeEmbedUrl(galVideoUrl) ? (
-                             <iframe
-                               src={getYouTubeEmbedUrl(galVideoUrl)!}
-                               title="YouTube Preview"
-                               className="w-full h-full border-0"
-                             />
-                           ) : galVideoUrl ? (
-                             <video src={ensureAbsoluteUrl(galVideoUrl)} poster={getOptimizedImageUrl(galImage)} controls className="w-full h-full object-contain" />
-                           ) : (
-                             <img src={getOptimizedImageUrl(galImage)} alt="Preview" className="w-full h-full object-cover" />
-                           )}
-                         </div>
-                       </div>
-                     )}
-
-                     {uploadingFile && (
-                       <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 flex items-center gap-2 animate-pulse">
-                         <span className="w-3.5 h-3.5 border-2 border-t-amber-500 rounded-full animate-spin shrink-0" />
-                         <span className="text-xs font-mono text-amber-500">{uploadProgress}</span>
-                       </div>
-                     )}
-
-                     <div className="pt-4 flex justify-end gap-3 border-t border-slate-800">
-                       <button
-                         type="button"
-                         onClick={() => {
-                           setShowGalModal(false);
-                           resetGalForm();
-                         }}
-                         className="bg-slate-800 text-white font-bold py-2 px-4 rounded text-xs uppercase"
-                       >
-                         Cancel
-                       </button>
-                      <button
-                        type="submit"
-                        disabled={uploadingFile}
-                        className="bg-amber-500 hover:bg-amber-400 disabled:opacity-55 text-slate-950 font-bold py-2 px-5 rounded text-xs uppercase shadow"
-                      >
-                        {galEditId ? 'Save Changes' : 'Publish Update'}
-                      </button>
-                    </div>
+                    {uploadingFile && (
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-2 animate-pulse">
+                        <span className="w-4 h-4 border-2 border-t-amber-500 rounded-full animate-spin shrink-0" />
+                        <span className="text-xs font-mono text-amber-400">{uploadProgress}</span>
+                      </div>
+                    )}
                   </form>
+
+                  {/* MODAL FOOTER (Sticky Bottom - Always Visible & Reachable) */}
+                  <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-900/95 flex items-center justify-between shrink-0 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowGalModal(false);
+                        resetGalForm();
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-5 rounded-xl text-xs uppercase transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      form="portfolio-media-form"
+                      disabled={uploadingFile || isSavingGallery}
+                      className="bg-amber-500 hover:bg-amber-400 disabled:opacity-55 text-slate-950 font-black py-2.5 px-6 rounded-xl text-xs uppercase shadow-lg shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer"
+                    >
+                      {isSavingGallery ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                          <span>Saving Edits...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          <span>{galEditId ? 'Save Changes' : 'Publish Update'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
                 </div>
               </div>
             )}
