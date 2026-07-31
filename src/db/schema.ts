@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, boolean, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, integer, boolean, numeric, json } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // 1. Users table (Admin, Staff, Clients)
@@ -229,7 +229,9 @@ export const signedReceipts = pgTable('signed_receipts', {
   clientName: text('client_name').notNull(),
   clientNiu: text('client_niu'),
   receiptProject: text('receipt_project').notNull(),
+  invoiceTotalAmount: text('invoice_total_amount'),
   receiptAmount: text('receipt_amount').notNull(),
+  remainingBalance: text('remaining_balance'),
   receiptTaxRate: text('receipt_tax_rate'),
   receiptMethod: text('receipt_method').notNull(),
   receiptMemo: text('receipt_memo'),
@@ -384,6 +386,25 @@ export const boqAuditLogs = pgTable('boq_audit_logs', {
 });
 
 // Additional Relations
+export const structuralProjects = pgTable('structural_projects', {
+  id: serial('id').primaryKey(),
+  projectCode: text('project_code').notNull(),
+  projectName: text('project_name').notNull(),
+  clientName: text('client_name').notNull(),
+  clientEmail: text('client_email'),
+  location: text('location').notNull(),
+  preparedBy: text('prepared_by').notNull(),
+  status: text('status').default('DRAFT').notNull(),
+  designInputs: json('design_inputs'),
+  drawings: json('drawings'),
+  detectedElements: json('detected_elements'),
+  calculationsResult: json('calculations_result'),
+  revisionNumber: text('revision_number').default('REV-01').notNull(),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export const boqsRelations = relations(boqs, ({ one, many }) => ({
   project: one(projects, {
     fields: [boqs.projectId],

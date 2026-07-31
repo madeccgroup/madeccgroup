@@ -119,8 +119,30 @@ export async function seedDatabase() {
           details TEXT NOT NULL,
           timestamp TIMESTAMP DEFAULT NOW() NOT NULL
         );
+
+        ALTER TABLE signed_receipts ADD COLUMN IF NOT EXISTS invoice_total_amount TEXT;
+        ALTER TABLE signed_receipts ADD COLUMN IF NOT EXISTS remaining_balance TEXT;
+
+        CREATE TABLE IF NOT EXISTS structural_projects (
+          id SERIAL PRIMARY KEY,
+          project_code TEXT NOT NULL,
+          project_name TEXT NOT NULL,
+          client_name TEXT NOT NULL,
+          client_email TEXT,
+          location TEXT NOT NULL,
+          prepared_by TEXT NOT NULL,
+          status TEXT DEFAULT 'DRAFT' NOT NULL,
+          design_inputs JSON,
+          drawings JSON,
+          detected_elements JSON,
+          calculations_result JSON,
+          revision_number TEXT DEFAULT 'REV-01' NOT NULL,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
       `);
-      console.log('✅ BOQ infrastructure ready in Neon DB.');
+      console.log('✅ BOQ, Receipts & Structural Calc infrastructure ready in Neon DB.');
     } catch (boqTableErr) {
       console.error('Failed creating BOQ tables in DB:', boqTableErr);
     }

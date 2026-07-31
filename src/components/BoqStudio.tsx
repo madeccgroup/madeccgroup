@@ -35,6 +35,7 @@ import {
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { generateBoqDocx, generateBoqCsv } from '../utils/boqExport';
+import { generateBoqPdf } from '../utils/boqPdfExport';
 
 interface BoqItem {
   id?: number;
@@ -215,6 +216,7 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
   const pdfContentRef = useRef<HTMLDivElement>(null);
   const [generatingPdf, setGeneratingPdf] = useState<boolean>(false);
   const [showExportMenu, setShowExportMenu] = useState<boolean>(false);
+  const [pdfOrientation, setPdfOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
   const logAuditEvent = async (boqId: number, action: string, details: string) => {
     try {
@@ -658,60 +660,39 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
     }
   };
 
-  // PDF Generation & Cloudinary Upload
-  const handleGenerateAndSavePdf = async () => {
-    if (!pdfContentRef.current) return;
+  // High-Precision Vector A4 PDF Generation & Cloud Storage Upload
+  const handleGenerateAndSavePdf = async (customOrientation?: 'portrait' | 'landscape') => {
     setGeneratingPdf(true);
+    const targetOrientation = customOrientation || pdfOrientation;
 
     try {
-      if (showToast) showToast('Generating high-precision A4 BOQ PDF document...', 'info');
+      if (showToast) showToast(`Generating official ${targetOrientation.toUpperCase()} A4 BOQ PDF document...`, 'info');
 
-      const element = pdfContentRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
+      // Generate vector PDF
+      const { pdf, filename: pdfFileName } = await generateBoqPdf(currentBoq, {
+        orientation: targetOrientation
       });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
 
       // Convert PDF to blob for cloud upload
       const pdfBlob = pdf.output('blob');
       const formData = new FormData();
-      const pdfFileName = `${currentBoq.boqReference}_${currentBoq.revisionNumber}.pdf`;
       formData.append('file', pdfBlob, pdfFileName);
 
-      // Upload to server /api/upload (which uses Cloudinary/Supabase fallback)
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
+      // Upload to server /api/upload
       let pdfPublicUrl = '';
-      if (uploadRes.ok) {
-        const uploadData = await uploadRes.json();
-        pdfPublicUrl = uploadData.url;
-        console.log('PDF uploaded successfully to Cloud Storage:', pdfPublicUrl);
+      try {
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          pdfPublicUrl = uploadData.url;
+          console.log('PDF uploaded successfully to Cloud Storage:', pdfPublicUrl);
+        }
+      } catch (upErr) {
+        console.warn('Cloud storage upload warning (local save proceeding):', upErr);
       }
 
       // Save PDF URL in database if BOQ exists
@@ -725,17 +706,35 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
         fetchBoqData();
       }
 
-      // Trigger local download for immediate client review
+      // Trigger local browser download
       pdf.save(pdfFileName);
 
       if (currentBoq.id) {
-        await logAuditEvent(currentBoq.id, 'PDF_EXPORTED', `Exported BOQ ${currentBoq.boqReference} (${currentBoq.revisionNumber}) as A4 PDF`);
+        await logAuditEvent(currentBoq.id, 'PDF_EXPORTED', `Exported BOQ ${currentBoq.boqReference} (${currentBoq.revisionNumber}) as ${targetOrientation.toUpperCase()} A4 PDF`);
       }
 
-      if (showToast) showToast(`BOQ PDF generated and stored in cloud storage successfully!`, 'success');
+      if (showToast) showToast(`BOQ PDF exported successfully (${pdfFileName})!`, 'success');
     } catch (err: any) {
       console.error('PDF generation error:', err);
-      if (showToast) showToast('Error generating PDF document', 'error');
+      // Fallback to html2canvas if vector build fails unexpectedly
+      if (pdfContentRef.current) {
+        try {
+          if (showToast) showToast('Attempting DOM canvas fallback PDF export...', 'info');
+          const element = pdfContentRef.current;
+          const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+          const imgData = canvas.toDataURL('image/jpeg', 0.95);
+          const fbPdf = new jsPDF(targetOrientation === 'landscape' ? 'l' : 'p', 'mm', 'a4');
+          const pWidth = fbPdf.internal.pageSize.getWidth();
+          const pHeight = (canvas.height * pWidth) / canvas.width;
+          fbPdf.addImage(imgData, 'JPEG', 0, 0, pWidth, pHeight);
+          fbPdf.save(`MADECC_BOQ_${currentBoq.boqReference || 'EXPORT'}.pdf`);
+          if (showToast) showToast('BOQ PDF exported via canvas fallback', 'success');
+        } catch (fbErr) {
+          if (showToast) showToast('Failed generating PDF document. Please try Print mode.', 'error');
+        }
+      } else {
+        if (showToast) showToast('Error generating PDF document', 'error');
+      }
     } finally {
       setGeneratingPdf(false);
     }

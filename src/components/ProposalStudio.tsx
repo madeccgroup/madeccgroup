@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { jsPDF } from 'jspdf';
+import {
+  generateProposalPdf,
+  generateProposalDocx,
+  generateProposalCsv
+} from '../utils/proposalExport.ts';
 import { 
   FileText, Plus, Save, Copy, Trash2, Archive, RotateCcw, Share2, Download, Printer, 
   Edit3, Check, Search, Filter, Shield, User, Clock, Building2, HardHat, DollarSign, 
@@ -706,323 +711,58 @@ export default function ProposalStudio({
     });
   };
 
-  // --- EXPORT TO WORD (.DOC) ---
-  const handleExportToWord = () => {
+  // --- EXPORT TO WORD (.DOCX) ---
+  const handleExportToWord = async () => {
     if (!selectedProposal) return;
-
-    const brandColors = {
-      steel: '#1e3a8a',
-      gold: '#d97706',
-      emerald: '#059669',
-      crimson: '#b91c1c'
-    };
-    const primaryHex = brandColors[selectedProposal.brandingColor] || '#1e3a8a';
-
-    const headerHtml = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head>
-        <meta charset='utf-8'>
-        <title>${selectedProposal.title}</title>
-        <style>
-          @page { size: A4; margin: 2.5cm; }
-          body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 11.5pt; line-height: 1.5; color: #333333; }
-          h1 { font-family: 'Arial', sans-serif; font-size: 22pt; text-align: center; text-transform: uppercase; color: ${primaryHex}; margin-top: 50pt; margin-bottom: 10pt; }
-          h2 { font-family: 'Arial', sans-serif; font-size: 15pt; text-align: center; text-transform: uppercase; color: #555555; margin-bottom: 30pt; }
-          h3 { font-family: 'Arial', sans-serif; font-size: 13pt; text-transform: uppercase; color: ${primaryHex}; border-bottom: 2px solid ${primaryHex}; padding-bottom: 3pt; margin-top: 25pt; margin-bottom: 10pt; }
-          p { margin-bottom: 10pt; text-align: justify; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15pt; margin-bottom: 15pt; }
-          th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-size: 10pt; }
-          th { background-color: #f1f5f9; color: #1e293b; font-weight: bold; }
-          .cover-meta { text-align: center; margin-top: 100pt; font-size: 12pt; color: #475569; }
-          .total-box { background-color: #f8fafc; font-weight: bold; text-align: right; }
-        </style>
-      </head>
-      <body>
-        <!-- Cover Page -->
-        <h1>${selectedProposal.title.toUpperCase()}</h1>
-        <h2>Client: ${selectedProposal.clientName}</h2>
-        <div class="cover-meta">
-          <p><strong>Prepared By:</strong> MADECC Engineering Group</p>
-          <p><strong>Project Location:</strong> ${selectedProposal.location}</p>
-          <p><strong>Approved Value:</strong> ${selectedProposal.projectValue.toLocaleString()} ${selectedProposal.currency}</p>
-          <p><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p>
-          <p><strong>Governance Grade:</strong> FIDIC / Cameroon Tendering System</p>
-        </div>
-        <br style="page-break-after:always;" />
-    `;
-
-    // Append all section blocks
-    let sectionsHtml = '';
-    selectedProposal.sections.forEach(sec => {
-      if (sec.id !== 'cover' && sec.id !== 'logo') {
-        sectionsHtml += `
-          <h3>${sec.title}</h3>
-          <p>${sec.content.replace(/\n/g, '<br>')}</p>
-        `;
-      }
-    });
-
-    // Append BOQ Table
-    let boqRows = selectedProposal.boq.map(b => `
-      <tr>
-        <td>${b.item}</td>
-        <td>${b.description}</td>
-        <td>${b.unit}</td>
-        <td>${b.qty}</td>
-        <td>${b.rate.toLocaleString()}</td>
-        <td>${b.total.toLocaleString()}</td>
-      </tr>
-    `).join('');
-
-    const boqTableHtml = `
-      <br style="page-break-before:always;" />
-      <h3>BILL OF QUANTITIES (BOQ)</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Description of Works</th>
-            <th>Unit</th>
-            <th>Qty</th>
-            <th>Rate (${selectedProposal.currency})</th>
-            <th>Total (${selectedProposal.currency})</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${boqRows}
-          <tr>
-            <td colspan="5" class="total-box">SUM TOTAL:</td>
-            <td class="total-box">${selectedProposal.projectValue.toLocaleString()} ${selectedProposal.currency}</td>
-          </tr>
-        </tbody>
-      </table>
-    `;
-
-    // Append Timeline
-    let schedRows = selectedProposal.schedule.map(s => `
-      <tr>
-        <td><strong>${s.phase}</strong></td>
-        <td>${s.duration}</td>
-        <td>${s.dates}</td>
-        <td>${s.description}</td>
-      </tr>
-    `).join('');
-
-    const scheduleTableHtml = `
-      <h3>CONSTRUCTION TIMELINE & SCHEDULE</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Phase Milestone</th>
-            <th>Duration</th>
-            <th>Target Window</th>
-            <th>Operational Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${schedRows}
-        </tbody>
-      </table>
-    `;
-
-    const footerHtml = `
-        <div style="margin-top: 50px; text-align: center; font-size: 10pt; color: #64748b;">
-          <p>MADECC Group Compliance Stamp Seal Ledger Code: MADECC-2026-SECURE</p>
-          <p>© ${new Date().getFullYear()} MADECC. All Rights Reserved.</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    const fullDocHtml = headerHtml + sectionsHtml + boqTableHtml + scheduleTableHtml + footerHtml;
-    const blob = new Blob(['\ufeff' + fullDocHtml], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `MADECC_Proposal_${selectedProposal.clientName.replace(/\s+/g, '_')}.doc`;
-    link.click();
-    showToast("Proposal exported to MS Word (.doc) with page breaks!", "success");
-    addAuditLog(`Exported DOCX: ${selectedProposal.title}`, selectedRole);
+    try {
+      showToast("Generating Proposal MS Word (.docx)...", "info");
+      const { blob, filename } = await generateProposalDocx(selectedProposal);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast(`Downloaded ${filename} successfully!`, "success");
+      addAuditLog(`Exported DOCX: ${selectedProposal.title}`, selectedRole);
+    } catch (err) {
+      console.error('Proposal DOCX export error:', err);
+      showToast("Error generating proposal Word document", "error");
+    }
   };
 
   // --- EXPORT TO A4 PDF (jsPDF) ---
-  const handleExportToPDF = () => {
+  const handleExportToPDF = async () => {
     if (!selectedProposal) return;
-
     try {
-      const doc = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4'
-      });
+      showToast("Generating Proposal A4 PDF...", "info");
+      const { pdf, filename } = await generateProposalPdf(selectedProposal);
+      pdf.save(filename);
+      showToast(`Downloaded ${filename} successfully!`, "success");
+      addAuditLog(`Exported PDF: ${selectedProposal.title}`, selectedRole);
+    } catch (err) {
+      console.error('Proposal PDF export error:', err);
+      showToast("Error generating proposal PDF", "error");
+    }
+  };
 
-      const brandColors = {
-        steel: [30, 58, 138],
-        gold: [217, 119, 6],
-        emerald: [5, 150, 105],
-        crimson: [185, 28, 28]
-      };
-      const primaryRgb = brandColors[selectedProposal.brandingColor] || [30, 58, 138];
-
-      // Title Cover Page
-      doc.setFillColor(15, 23, 42); // Charcoal background cover accent
-      doc.rect(0, 0, 210, 85, 'F');
-
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(255, 255, 255);
-      doc.text("MADECC INFRASTRUCTURES", 20, 35);
-      doc.setFontSize(14);
-      doc.setTextColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-      doc.text("TECHNICAL & COMMERCIAL TENDER", 20, 48);
-
-      doc.setFontSize(16);
-      doc.setTextColor(15, 23, 42);
-      doc.text(selectedProposal.title.toUpperCase(), 20, 110);
-
-      // Metas
-      doc.setFont('Helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`Tender ID: MADECC-${selectedProposal.id.slice(-6)}`, 20, 122);
-      doc.text(`Client: ${selectedProposal.clientName}`, 20, 130);
-      doc.text(`Location: ${selectedProposal.location}`, 20, 138);
-      doc.text(`Value Scope: ${selectedProposal.projectValue.toLocaleString()} ${selectedProposal.currency}`, 20, 146);
-      doc.text(`Primary Standard: FIDIC Engineering Red Book`, 20, 154);
-      doc.text(`Issuance Timestamp: ${new Date().toLocaleString()}`, 20, 162);
-
-      // Watermark
-      if (selectedProposal.watermark !== 'NONE') {
-        doc.setFontSize(60);
-        doc.setTextColor(230, 230, 230);
-        doc.setFont('Helvetica', 'bold');
-        doc.text(selectedProposal.watermark, 40, 220, { angle: 45 });
-      }
-
-      // Add a page
-      doc.addPage();
-      let y = 30;
-
-      // Draw standard header on subsequent page
-      const drawHeaderFooter = (pageNo: number) => {
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text("MADECC CONSTRUCTION TENDER - CONFIDENTIAL", 20, 15);
-        doc.setDrawColor(226, 232, 240);
-        doc.line(20, 17, 190, 17);
-
-        doc.text(`Page ${pageNo}`, 180, 285);
-        doc.text("Yaounde/Douala Cameroon - www.madeccgroup.com", 20, 285);
-      };
-
-      drawHeaderFooter(2);
-
-      // Add key content sections
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-      doc.text("EXECUTIVE CONTEXT & PROJECT SCOPE", 20, y);
-      y += 10;
-
-      doc.setFont('Helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(51, 65, 85);
-      
-      const execSec = selectedProposal.sections.find(s => s.id === 'exec-summary')?.content || '';
-      const splitExec = doc.splitTextToSize(execSec.replace(/###|##|#/g, ''), 170);
-      doc.text(splitExec, 20, y);
-      y += splitExec.length * 5 + 10;
-
-      // Methodology
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-      doc.text("TECHNICAL WORKFLOW METHODOLOGY", 20, y);
-      y += 10;
-
-      doc.setFont('Helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(51, 65, 85);
-      
-      const methSec = selectedProposal.sections.find(s => s.id === 'methodology')?.content || '';
-      const splitMeth = doc.splitTextToSize(methSec.replace(/###|##|#/g, ''), 170);
-      doc.text(splitMeth, 20, y);
-
-      // Add new page for BOQ
-      doc.addPage();
-      drawHeaderFooter(3);
-      y = 30;
-
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-      doc.text("ESTIMATED BILL OF QUANTITIES (BOQ)", 20, y);
-      y += 10;
-
-      // Simple Table Render
-      doc.setFontSize(8);
-      doc.setTextColor(15, 23, 42);
-      doc.setFillColor(241, 245, 249);
-      doc.rect(20, y, 170, 8, 'F');
-      
-      doc.setFont('Helvetica', 'bold');
-      doc.text("Item", 22, y + 5);
-      doc.text("Description of Site Works", 35, y + 5);
-      doc.text("Unit", 110, y + 5);
-      doc.text("Qty", 125, y + 5);
-      doc.text("Rate (FCFA)", 140, y + 5);
-      doc.text("Total (FCFA)", 165, y + 5);
-      y += 8;
-
-      doc.setFont('Helvetica', 'normal');
-      selectedProposal.boq.forEach(b => {
-        doc.rect(20, y, 170, 8);
-        doc.text(b.item, 22, y + 5);
-        doc.text(b.description.slice(0, 42), 35, y + 5);
-        doc.text(b.unit, 110, y + 5);
-        doc.text(b.qty.toString(), 125, y + 5);
-        doc.text(b.rate.toLocaleString(), 140, y + 5);
-        doc.text(b.total.toLocaleString(), 165, y + 5);
-        y += 8;
-      });
-
-      // Total Box
-      doc.setFillColor(248, 250, 252);
-      doc.rect(20, y, 170, 8, 'F');
-      doc.setFont('Helvetica', 'bold');
-      doc.text("SUM TOTAL COMPLIANCE VALUE Scope:", 90, y + 5);
-      doc.text(`${selectedProposal.projectValue.toLocaleString()} FCFA`, 155, y + 5);
-
-      y += 20;
-      doc.text("AUTHORIZED DIGITAL HANDSHAKE SIGNATURES", 20, y);
-      y += 10;
-
-      // Show stamp if checked
-      if (selectedProposal.showStamp) {
-        doc.setDrawColor(217, 119, 6);
-        doc.rect(22, y, 40, 20);
-        doc.setFontSize(6);
-        doc.setTextColor(217, 119, 6);
-        doc.text("MADECC COMPLIANCE", 24, y + 5);
-        doc.text("OFFICIAL STAMP", 24, y + 10);
-        doc.text("LEDGER APPROVED", 24, y + 15);
-      }
-
-      // Draw dummy client/contractor lines
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.line(80, y + 15, 120, y + 15);
-      doc.text("MADECC Exec Director", 80, y + 20);
-
-      doc.line(140, y + 15, 180, y + 15);
-      doc.text("Client Authorized Signee", 140, y + 20);
-
-      doc.save(`MADECC_Official_Proposal_${selectedProposal.clientName.replace(/\s+/g, '_')}.pdf`);
-      showToast("High-Resolution A4 PDF generated successfully!", "success");
-      addAuditLog(`Generated PDF: ${selectedProposal.title}`, selectedRole);
-    } catch (err: any) {
-      console.error(err);
-      showToast("Failed to compile PDF.", "error");
+  // --- EXPORT TO CSV (.CSV) ---
+  const handleExportToCSV = () => {
+    if (!selectedProposal) return;
+    try {
+      showToast("Generating Proposal CSV dataset...", "info");
+      const { blob, filename } = generateProposalCsv(selectedProposal);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast(`Downloaded ${filename} successfully!`, "success");
+      addAuditLog(`Exported CSV: ${selectedProposal.title}`, selectedRole);
+    } catch (err) {
+      console.error('Proposal CSV export error:', err);
+      showToast("Error generating proposal CSV", "error");
     }
   };
 
@@ -1735,7 +1475,7 @@ export default function ProposalStudio({
                 <div className="flex items-center gap-1.5">
                   <button 
                     onClick={handleExportToPDF}
-                    className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold py-2 px-3.5 rounded-xl text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
+                    className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold py-2 px-3 rounded-xl text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
                     title="Export as official A4 PDF document"
                   >
                     <Download className="w-3.5 h-3.5 text-sky-400" /> A4 PDF
@@ -1743,10 +1483,18 @@ export default function ProposalStudio({
 
                   <button 
                     onClick={handleExportToWord}
-                    className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold py-2 px-3.5 rounded-xl text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
+                    className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold py-2 px-3 rounded-xl text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
                     title="Export editable Microsoft Word document"
                   >
-                    <Download className="w-3.5 h-3.5 text-blue-400" /> Word (.doc)
+                    <FileText className="w-3.5 h-3.5 text-blue-400" /> Word (.docx)
+                  </button>
+
+                  <button 
+                    onClick={handleExportToCSV}
+                    className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-semibold py-2 px-3 rounded-xl text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
+                    title="Export CSV dataset"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> CSV (.csv)
                   </button>
 
                   {/* Print trigger */}

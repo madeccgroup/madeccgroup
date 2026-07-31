@@ -313,7 +313,9 @@ export async function generateBoqDocx(boq: any): Promise<{ blob: Blob; filename:
   });
 
   const blob = await Packer.toBlob(doc);
-  const filename = `${sanitizeFilename(boq.boqReference)}-${sanitizeFilename(boq.revisionNumber)}.docx`;
+  const cleanName = sanitizeFilename(boq.projectName || boq.boqReference || 'Project');
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `MADECC_Bill_of_Quantities_${cleanName}_${dateStr}.docx`;
 
   return { blob, filename };
 }
@@ -405,7 +407,9 @@ export function generateBoqCsv(boq: any): { blob: Blob; filename: string } {
   }).join(',')).join('\n');
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const filename = `${sanitizeFilename(boq.boqReference)}-${sanitizeFilename(boq.revisionNumber)}.csv`;
+  const cleanName = sanitizeFilename(boq.projectName || boq.boqReference || 'Project');
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `MADECC_Bill_of_Quantities_${cleanName}_${dateStr}.csv`;
 
   return { blob, filename };
 }

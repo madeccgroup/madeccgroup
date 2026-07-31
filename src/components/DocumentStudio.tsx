@@ -297,7 +297,9 @@ export default function DocumentStudio({
   const [receiptClient, setReceiptClient] = useState('');
   const [receiptNiu, setReceiptNiu] = useState('');
   const [receiptProject, setReceiptProject] = useState('');
+  const [receiptInvoiceTotal, setReceiptInvoiceTotal] = useState('10000000');
   const [receiptAmount, setReceiptAmount] = useState('4500000');
+  const [receiptRemainingBalance, setReceiptRemainingBalance] = useState('5500000');
   const [receiptTaxRate, setReceiptTaxRate] = useState('19.25'); // Standard Cameroon VAT
   const [receiptMethod, setReceiptMethod] = useState('MTN Mobile Money');
   const [receiptMemo, setReceiptMemo] = useState('Initial mobilization fee for site geotechnical analysis.');
@@ -907,7 +909,9 @@ export default function DocumentStudio({
     setReceiptClient(receipt.clientName || '');
     setReceiptNiu(receipt.clientNiu || '');
     setReceiptProject(receipt.receiptProject || '');
+    setReceiptInvoiceTotal(receipt.invoiceTotalAmount || receipt.receiptAmount || '0');
     setReceiptAmount(receipt.receiptAmount || '');
+    setReceiptRemainingBalance(receipt.remainingBalance || '0');
     setReceiptTaxRate(receipt.receiptTaxRate || '19.25');
     setReceiptMethod(receipt.receiptMethod || 'MTN Mobile Money');
     setReceiptMemo(receipt.receiptMemo || '');
@@ -1161,7 +1165,9 @@ export default function DocumentStudio({
         clientName: activeClientName,
         clientNiu: receiptNiu,
         receiptProject: receiptProject || 'General Construction Services',
+        invoiceTotalAmount: receiptInvoiceTotal,
         receiptAmount: receiptAmount,
+        remainingBalance: receiptRemainingBalance,
         receiptTaxRate: receiptTaxRate,
         receiptMethod: receiptMethod,
         receiptMemo: receiptMemo,
@@ -1260,7 +1266,9 @@ export default function DocumentStudio({
           clientName: receiptClient || 'Valued Client',
           clientEmail: receiptClientEmail,
           receiptProject: receiptProject || 'General Construction Services',
+          invoiceTotalAmount: receiptInvoiceTotal,
           receiptAmount: receiptAmount,
+          remainingBalance: receiptRemainingBalance,
           receiptTaxRate: receiptTaxRate,
           receiptMethod: receiptMethod,
           receiptMemo: receiptMemo,
@@ -1831,26 +1839,60 @@ export default function DocumentStudio({
       // Totals Box
       currentY += isA4 ? 18 : 12;
       doc.setDrawColor(226, 232, 240);
-      doc.line(w - padding - (isA4 ? 70 : 50), currentY, w - padding, currentY);
+      doc.line(w - padding - (isA4 ? 75 : 55), currentY, w - padding, currentY);
 
-      currentY += isA4 ? 5 : 3.5;
+      const invTotalNum = parseFloat(receiptInvoiceTotal || '0');
+      const remBalNum = parseFloat(receiptRemainingBalance || '0');
+      const isPaidFull = remBalNum <= 0;
+
+      if (invTotalNum > 0) {
+        currentY += isA4 ? 4.5 : 3;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(isA4 ? 8 : 6);
+        doc.setTextColor(15, 23, 42);
+        doc.text('TOTAL INVOICE AMOUNT:', w - padding - (isA4 ? 75 : 55), currentY);
+        doc.text(`${invTotalNum.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY);
+      }
+
+      currentY += isA4 ? 4.5 : 3;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(isA4 ? 8 : 6);
-      doc.text('SUBTOTAL:', w - padding - (isA4 ? 70 : 50), currentY);
+      doc.setTextColor(51, 65, 85);
+      doc.text('SUBTOTAL PAID:', w - padding - (isA4 ? 75 : 55), currentY);
       doc.text(`${amountRaw.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY);
 
       currentY += isA4 ? 4.5 : 3;
-      doc.text(`TVA TAX (${receiptTaxRate}%):`, w - padding - (isA4 ? 70 : 50), currentY);
+      doc.text(`TVA TAX (${receiptTaxRate}%):`, w - padding - (isA4 ? 75 : 55), currentY);
       doc.text(`${calculatedVat.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY);
 
       currentY += isA4 ? 5.5 : 4;
       doc.setFillColor(245, 158, 11);
-      doc.rect(w - padding - (isA4 ? 72 : 52), currentY - (isA4 ? 3.5 : 2.5), (isA4 ? 72 : 52), isA4 ? 6 : 4.5, 'F');
+      doc.rect(w - padding - (isA4 ? 75 : 55), currentY - (isA4 ? 3.5 : 2.5), (isA4 ? 75 : 55), isA4 ? 6 : 4.5, 'F');
       doc.setTextColor(15, 23, 42);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(isA4 ? 8.5 : 6.5);
-      doc.text('TOTAL PAID:', w - padding - (isA4 ? 70 : 50), currentY + 0.5);
+      doc.text('TOTAL PAID THIS RECEIPT:', w - padding - (isA4 ? 73 : 53), currentY + 0.5);
       doc.text(`${finalTotal.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY + 0.5);
+
+      // Remaining Balance Box
+      currentY += isA4 ? 7.5 : 5.5;
+      if (isPaidFull) {
+        doc.setFillColor(34, 197, 94); // Green
+        doc.rect(w - padding - (isA4 ? 75 : 55), currentY - (isA4 ? 3.5 : 2.5), (isA4 ? 75 : 55), isA4 ? 6.5 : 5, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(isA4 ? 9 : 7);
+        doc.text('REMAINING BALANCE: PAID IN FULL', w - padding - (isA4 ? 73 : 53), currentY + 0.8);
+      } else {
+        doc.setFillColor(254, 242, 242); // Red-50
+        doc.setDrawColor(239, 68, 68);
+        doc.rect(w - padding - (isA4 ? 75 : 55), currentY - (isA4 ? 3.5 : 2.5), (isA4 ? 75 : 55), isA4 ? 6.5 : 5, 'FD');
+        doc.setTextColor(185, 28, 28);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(isA4 ? 8 : 6);
+        doc.text('OUTSTANDING BALANCE:', w - padding - (isA4 ? 73 : 53), currentY + 0.8);
+        doc.text(`${remBalNum.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY + 0.8);
+      }
 
       // Authorized Signatory
       currentY += isA4 ? 20 : 14;
@@ -2986,17 +3028,71 @@ export default function DocumentStudio({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Base Paid Amount (FCFA/XAF)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 4500000"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                      value={receiptAmount}
-                      onChange={(e) => setReceiptAmount(e.target.value)}
-                    />
+                <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between border-b border-amber-500/10 pb-2">
+                    <span className="text-xs font-bold text-amber-500 uppercase tracking-wide flex items-center gap-1.5">
+                      💳 Account Balance & Invoice Controls
+                    </span>
+                    {parseFloat(receiptRemainingBalance || '0') <= 0 ? (
+                      <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        ✓ PAID IN FULL
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                        OUTSTANDING: {parseFloat(receiptRemainingBalance || '0').toLocaleString()} XAF
+                      </span>
+                    )}
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] text-slate-400 font-bold uppercase block">Total Invoice Amount (XAF)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 10000000"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono font-bold"
+                        value={receiptInvoiceTotal}
+                        onChange={(e) => {
+                          const newInvTotal = e.target.value;
+                          setReceiptInvoiceTotal(newInvTotal);
+                          const invNum = parseFloat(newInvTotal || '0');
+                          const paidNum = parseFloat(receiptAmount || '0');
+                          setReceiptRemainingBalance(Math.max(0, invNum - paidNum).toString());
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] text-amber-400 font-bold uppercase block">Amount Paid This Receipt (XAF)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 4500000"
+                        className="w-full bg-slate-900 border border-amber-500/40 rounded-xl py-2 px-3 text-xs text-amber-300 outline-none focus:border-amber-500 font-mono font-bold"
+                        value={receiptAmount}
+                        onChange={(e) => {
+                          const newPaid = e.target.value;
+                          setReceiptAmount(newPaid);
+                          const invNum = parseFloat(receiptInvoiceTotal || '0');
+                          const paidNum = parseFloat(newPaid || '0');
+                          setReceiptRemainingBalance(Math.max(0, invNum - paidNum).toString());
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] text-slate-400 font-bold uppercase block">Remaining Balance (XAF)</label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 5500000"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono font-bold"
+                        value={receiptRemainingBalance}
+                        onChange={(e) => setReceiptRemainingBalance(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500 font-bold uppercase block">TVA Tax Rate (%)</label>
                     <input
@@ -3006,9 +3102,6 @@ export default function DocumentStudio({
                       onChange={(e) => setReceiptTaxRate(e.target.value)}
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500 font-bold uppercase block">Payment Channel</label>
                     <select
@@ -3583,21 +3676,47 @@ export default function DocumentStudio({
 
                 {/* Financial Summary */}
                 <div className="pt-3 border-t border-slate-100 flex flex-col items-end text-[10px] space-y-1 font-sans">
+                  <div className="flex gap-4 text-slate-700 text-[9.5px]">
+                    <span className="font-semibold">Total Invoice Amount:</span>
+                    <span className="font-bold w-32 text-right">{parseFloat(receiptInvoiceTotal || '0').toLocaleString()} XAF</span>
+                  </div>
                   <div className="flex gap-4 text-slate-500 text-[9px]">
-                    <span>Subtotal:</span>
-                    <span className="font-bold w-24 text-right">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
+                    <span>Amount Paid This Receipt:</span>
+                    <span className="font-bold w-32 text-right">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
                   </div>
                   <div className="flex gap-4 text-slate-500 text-[9px]">
                     <span>TVA ({receiptTaxRate}%):</span>
-                    <span className="font-bold w-24 text-right">
+                    <span className="font-bold w-32 text-right">
                       {((parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
                     </span>
                   </div>
                   <div className="flex gap-4 text-slate-900 font-bold bg-amber-100 p-1.5 rounded-lg border border-amber-200 mt-1">
-                    <span>Total Paid:</span>
-                    <span className="w-24 text-right">
+                    <span>Total Settled This Session:</span>
+                    <span className="w-32 text-right font-mono">
                       {(parseFloat(receiptAmount || '0') + (parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
                     </span>
+                  </div>
+                  
+                  {/* Outstanding Balance & Payment Status Badge */}
+                  <div className="mt-2 w-full max-w-[280px] space-y-1">
+                    <div className="flex justify-between items-center text-[8.5px] px-1">
+                      <span className="text-slate-500 font-bold uppercase">OUTSTANDING BALANCE:</span>
+                      <span className="font-mono font-black text-slate-900">{parseFloat(receiptRemainingBalance || '0').toLocaleString()} XAF</span>
+                    </div>
+
+                    {parseFloat(receiptRemainingBalance || '0') <= 0 ? (
+                      <div className="bg-emerald-600 text-white font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-emerald-700 flex items-center justify-center gap-1">
+                        <span>✓</span> PAID IN FULL
+                      </div>
+                    ) : parseFloat(receiptAmount || '0') > 0 ? (
+                      <div className="bg-amber-500 text-slate-950 font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-amber-600 flex items-center justify-center gap-1">
+                        <span>⏳</span> PARTIALLY PAID
+                      </div>
+                    ) : (
+                      <div className="bg-red-600 text-white font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-red-700 flex items-center justify-center gap-1">
+                        <span>⚠</span> UNPAID
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -3887,9 +4006,9 @@ export default function DocumentStudio({
                   <tr className="bg-slate-900 text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-slate-900">
                     <th className="py-3.5 px-4 font-bold">Receipt No / Date</th>
                     <th className="py-3.5 px-4 font-bold">Client / NIU</th>
-                    <th className="py-3.5 px-4 font-bold">Project / Payment Channel</th>
+                    <th className="py-3.5 px-4 font-bold text-right">Invoice Total (XAF)</th>
                     <th className="py-3.5 px-4 font-bold text-right">Paid Amount (XAF)</th>
-                    <th className="py-3.5 px-4 font-bold text-center font-mono">Tax / Status</th>
+                    <th className="py-3.5 px-4 font-bold text-center font-mono">Remaining Balance</th>
                     <th className="py-3.5 px-4 font-bold text-center">Actions</th>
                   </tr>
                 </thead>
@@ -3897,7 +4016,11 @@ export default function DocumentStudio({
                   {savedReceipts.map((receiptItem) => {
                     const baseAmt = parseFloat(receiptItem.receiptAmount || '0');
                     const vatRate = parseFloat(receiptItem.receiptTaxRate || '0');
-                    const totalAmt = baseAmt + (baseAmt * vatRate) / 100;
+                    const totalPaidAmt = baseAmt + (baseAmt * vatRate) / 100;
+                    const invTotal = parseFloat(receiptItem.invoiceTotalAmount || '0');
+                    const remBal = parseFloat(receiptItem.remainingBalance || '0');
+                    const isPaidInFull = remBal <= 0;
+
                     return (
                       <tr 
                         key={receiptItem.id} 
@@ -3912,23 +4035,26 @@ export default function DocumentStudio({
                         <td className="py-3.5 px-4 font-medium text-slate-300">
                           <div className="space-y-0.5">
                             <p className="font-semibold text-white">{receiptItem.clientName}</p>
-                            <p className="text-[10px] text-slate-500 font-mono">{receiptItem.clientNiu || 'No Tax ID'}</p>
+                            <p className="text-[10px] text-slate-500 font-mono">{receiptItem.receiptProject || 'General Project'}</p>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-400">
-                          <div className="space-y-0.5 max-w-xs truncate">
-                            <p className="truncate font-semibold text-slate-300">{receiptItem.receiptProject}</p>
-                            <p className="truncate text-[10px] text-slate-500 font-sans">{receiptItem.receiptMethod}</p>
-                          </div>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-300 text-xs">
+                          {invTotal > 0 ? invTotal.toLocaleString() : 'N/A'}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-500 text-xs">
-                          {totalAmt.toLocaleString()}
+                          {totalPaidAmt.toLocaleString()}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex flex-col items-center gap-1">
-                            <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 rounded font-bold">
-                              ✓ CERTIFIED
-                            </span>
+                            {isPaidInFull ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold uppercase">
+                                ✓ PAID IN FULL
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-amber-400 border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded-full font-bold uppercase">
+                                OUTSTANDING: {remBal.toLocaleString()}
+                              </span>
+                            )}
                             <span className="text-[9px] text-slate-500">VAT: {receiptItem.receiptTaxRate}%</span>
                           </div>
                         </td>

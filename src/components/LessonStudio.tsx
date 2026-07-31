@@ -252,22 +252,11 @@ export default function LessonStudio({ showToast, activeSyllabus, setActiveSylla
   const [isSaving, setIsSaving] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'plan' | 'lecture' | 'slides' | 'worksheet' | 'quiz' | 'metadata' | 'media'>('plan');
 
-  // Media Cloud Upload states & Persistence
-  const [uploadedMediaFiles, setUploadedMediaFiles] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('minesec_media_files');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Media Cloud Upload states
+  const [uploadedMediaFiles, setUploadedMediaFiles] = useState<any[]>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState<boolean>(false);
   const [mediaUploadProgress, setMediaUploadProgress] = useState<string>('');
   const [dragOverActive, setDragOverActive] = useState<boolean>(false);
-
-  useEffect(() => {
-    localStorage.setItem('minesec_media_files', JSON.stringify(uploadedMediaFiles));
-  }, [uploadedMediaFiles]);
 
   const handleMediaUpload = async (file: File) => {
     setIsUploadingMedia(true);

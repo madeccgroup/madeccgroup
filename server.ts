@@ -29,7 +29,8 @@ import {
   boqSections,
   boqItems,
   boqRevisions,
-  boqAuditLogs
+  boqAuditLogs,
+  structuralProjects
 } from './src/db/schema.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { requireAuth, requireAdmin, requireStaffOrAdmin } from './src/middleware/auth.ts';
@@ -5458,7 +5459,9 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       clientName,
       clientNiu,
       receiptProject,
+      invoiceTotalAmount,
       receiptAmount,
+      remainingBalance,
       receiptTaxRate,
       receiptMethod,
       receiptMemo,
@@ -5486,7 +5489,9 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
         clientName,
         clientNiu: clientNiu || null,
         receiptProject,
+        invoiceTotalAmount: invoiceTotalAmount || null,
         receiptAmount,
+        remainingBalance: remainingBalance || null,
         receiptTaxRate: receiptTaxRate || '0',
         receiptMethod,
         receiptMemo: receiptMemo || null,
@@ -5557,7 +5562,9 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       clientName,
       clientEmail,
       receiptProject,
+      invoiceTotalAmount,
       receiptAmount,
+      remainingBalance,
       receiptTaxRate,
       receiptMethod,
       receiptMemo,
@@ -5574,9 +5581,13 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       const vatAmount = (amountRaw * vatRateRaw) / 100;
       const totalPaid = amountRaw + vatAmount;
 
+      const invTotalNum = parseFloat(invoiceTotalAmount || '0');
+      const remBalNum = parseFloat(remainingBalance || '0');
+      const isPaidInFull = remBalNum <= 0;
+
       const verificationUrl = `${req.protocol}://${req.get('host')}/?verify=${verificationToken}`;
       const subject = `[RECEIPT CERTIFICATE] MADECC Group SARL — Receipt Ref: ${receiptNo}`;
-      const text = `Dear ${clientName},\n\nYour payment for project "${receiptProject}" was received and certified.\nReceipt Ref: ${receiptNo}\nTotal Paid: ${totalPaid.toLocaleString()} XAF\n\nVerify online: ${verificationUrl}`;
+      const text = `Dear ${clientName},\n\nYour payment for project "${receiptProject}" was received and certified.\nReceipt Ref: ${receiptNo}\nAmount Paid: ${totalPaid.toLocaleString()} XAF\nTotal Invoice Amount: ${invTotalNum.toLocaleString()} XAF\nRemaining Balance: ${isPaidInFull ? '0 XAF (PAID IN FULL)' : remBalNum.toLocaleString() + ' XAF'}\n\nVerify online: ${verificationUrl}`;
 
       const html = `
 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f8fafc; color: #0f172a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
@@ -5594,18 +5605,23 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
   </p>
   
   <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 0 0 24px 0;">
-    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">Receipt Breakdown</h4>
+    <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">Receipt & Account Balance Statement</h4>
     <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
       <tr>
-        <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 40%;">Receipt Ref:</td>
+        <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Receipt Ref:</td>
         <td style="padding: 6px 0; color: #0f172a; font-family: monospace; font-weight: bold;">${receiptNo}</td>
       </tr>
       <tr>
         <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Payment Mode:</td>
         <td style="padding: 6px 0; color: #0f172a;">${receiptMethod}</td>
       </tr>
+      ${invTotalNum > 0 ? `
       <tr>
-        <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Base Amount:</td>
+        <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Total Invoice Amount:</td>
+        <td style="padding: 6px 0; color: #0f172a; font-weight: bold;">${invTotalNum.toLocaleString()} XAF</td>
+      </tr>` : ''}
+      <tr>
+        <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Amount Paid (Base):</td>
         <td style="padding: 6px 0; color: #0f172a;">${amountRaw.toLocaleString()} XAF</td>
       </tr>
       <tr>
@@ -5613,8 +5629,14 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
         <td style="padding: 6px 0; color: #0f172a;">${vatAmount.toLocaleString()} XAF</td>
       </tr>
       <tr style="border-top: 1px solid #f1f5f9;">
-        <td style="padding: 10px 0 6px 0; color: #0f172a; font-weight: bold; font-size: 15px;">Total Paid:</td>
+        <td style="padding: 10px 0 6px 0; color: #0f172a; font-weight: bold; font-size: 15px;">Total Paid This Receipt:</td>
         <td style="padding: 10px 0 6px 0; color: #d97706; font-weight: bold; font-size: 16px;">${totalPaid.toLocaleString()} XAF</td>
+      </tr>
+      <tr style="border-top: 2px solid #e2e8f0; background-color: ${isPaidInFull ? '#f0fdf4' : '#fffbeb'};">
+        <td style="padding: 12px; color: ${isPaidInFull ? '#166534' : '#92400e'}; font-weight: bold; font-size: 15px;">Remaining Balance:</td>
+        <td style="padding: 12px; color: ${isPaidInFull ? '#15803d' : '#b45309'}; font-weight: bold; font-size: 16px;">
+          ${isPaidInFull ? '<span style="background-color: #22c55e; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 12px; letter-spacing: 0.05em; display: inline-block;">PAID IN FULL</span>' : remBalNum.toLocaleString() + ' XAF'}
+        </td>
       </tr>
     </table>
   </div>
@@ -5688,6 +5710,291 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
     } catch (error: any) {
       console.error('[REGENERATE_RECEIPT_TOKEN_ERROR]', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==========================================
+  // STRUCTURAL LOAD & WEIGHT CALCULATOR API
+  // ==========================================
+
+  // List all structural projects
+  app.get('/api/structural/projects', requireAuth, async (req: any, res) => {
+    try {
+      const list = await db.select().from(structuralProjects).orderBy(desc(structuralProjects.updatedAt));
+      res.json(list);
+    } catch (error: any) {
+      console.error('[GET_STRUCTURAL_PROJECTS_ERROR]', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single structural project
+  app.get('/api/structural/projects/:id', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await db.select().from(structuralProjects).where(eq(structuralProjects.id, id)).limit(1);
+      if (result.length === 0) {
+        return res.status(404).json({ error: 'Structural project record not found' });
+      }
+      res.json(result[0]);
+    } catch (error: any) {
+      console.error('[GET_STRUCTURAL_PROJECT_ERROR]', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new structural project
+  app.post('/api/structural/projects', requireAuth, async (req: any, res) => {
+    try {
+      const {
+        projectCode,
+        projectName,
+        clientName,
+        clientEmail,
+        location,
+        preparedBy,
+        designInputs,
+        drawings,
+        detectedElements,
+        calculationsResult,
+        notes
+      } = req.body;
+
+      const code = projectCode || `STR-${Date.now().toString().slice(-6)}`;
+      const result = await db.insert(structuralProjects).values({
+        projectCode: code,
+        projectName: projectName || 'Untitled Structural Project',
+        clientName: clientName || 'Valued Client',
+        clientEmail: clientEmail || null,
+        location: location || 'Douala / Yaoundé',
+        preparedBy: preparedBy || req.dbUser.fullName || 'MADECC Structural Engineer',
+        status: 'DRAFT',
+        designInputs: designInputs || {},
+        drawings: drawings || [],
+        detectedElements: detectedElements || {},
+        calculationsResult: calculationsResult || {},
+        notes: notes || null
+      }).returning();
+
+      res.status(201).json(result[0]);
+    } catch (error: any) {
+      console.error('[CREATE_STRUCTURAL_PROJECT_ERROR]', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update structural project
+  app.put('/api/structural/projects/:id', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const {
+        projectName,
+        clientName,
+        clientEmail,
+        location,
+        preparedBy,
+        status,
+        designInputs,
+        drawings,
+        detectedElements,
+        calculationsResult,
+        revisionNumber,
+        notes
+      } = req.body;
+
+      const result = await db.update(structuralProjects)
+        .set({
+          projectName,
+          clientName,
+          clientEmail,
+          location,
+          preparedBy,
+          status,
+          designInputs,
+          drawings,
+          detectedElements,
+          calculationsResult,
+          revisionNumber,
+          notes,
+          updatedAt: new Date()
+        })
+        .where(eq(structuralProjects.id, id))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: 'Structural project not found' });
+      }
+      res.json(result[0]);
+    } catch (error: any) {
+      console.error('[UPDATE_STRUCTURAL_PROJECT_ERROR]', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete structural project
+  app.delete('/api/structural/projects/:id', requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(structuralProjects).where(eq(structuralProjects.id, id));
+      res.json({ success: true, message: 'Structural project deleted' });
+    } catch (error: any) {
+      console.error('[DELETE_STRUCTURAL_PROJECT_ERROR]', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Floorplan & Structural Drawing Recognition endpoint
+  app.post('/api/structural/analyze-plan', async (req: any, res) => {
+    try {
+      const { drawingUrl, drawingName, projectStoreys = 1 } = req.body;
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        return res.status(500).json({
+          success: false,
+          status: 'failed',
+          error: {
+            code: 'AI_UNAVAILABLE',
+            message: 'Gemini AI service client is not initialized on the server.',
+            retryable: true
+          }
+        });
+      }
+
+      if (!drawingUrl) {
+        return res.status(400).json({
+          success: false,
+          status: 'failed',
+          error: {
+            code: 'MISSING_DRAWING_URL',
+            message: 'Drawing URL or base64 data is required for plan analysis.',
+            retryable: false
+          }
+        });
+      }
+
+      let detected: any = null;
+      let lastErrorMsg = '';
+
+      try {
+        const prompt = `You are a licensed Structural Civil Engineer analyzing an uploaded architectural / structural floor plan drawing ("${drawingName || 'Floor Plan'}").
+Analyze the drawing layout and extract exact or estimated structural components for a ${projectStoreys}-storey building.
+Return ONLY valid JSON in this exact structure without markdown backticks:
+{
+  "gridLines": ["Grid A-F (Width: 12.5m)", "Grid 1-5 (Length: 18.0m)"],
+  "walls": { "totalLengthM": 145, "thicknessMm": 200, "material": "Hollow Concrete Blocks" },
+  "columns": { "count": 16, "widthMm": 250, "depthMm": 250, "avgHeightM": 3.0 },
+  "footings": { "count": 16, "lengthM": 1.5, "widthM": 1.5, "depthM": 0.4 },
+  "plinthBeams": { "totalLengthM": 95, "widthMm": 200, "depthMm": 400 },
+  "beams": { "totalLengthM": 120, "widthMm": 200, "depthMm": 450 },
+  "slabs": { "totalAreaM2": 225, "thicknessMm": 150, "type": "Solid RC Slab" },
+  "lintels": { "count": 14, "totalLengthM": 21, "widthMm": 200, "depthMm": 200 },
+  "staircases": { "count": 1, "type": "Dog-legged RC Staircase", "flightSteps": 18 },
+  "roofOutlines": { "areaM2": 260, "pitchDeg": 18, "type": "Hardwood Truss with Aluminum Sheet" },
+  "openings": { "doorsCount": 10, "windowsCount": 12, "totalOpeningsAreaM2": 38 },
+  "roomNames": ["Main Living Hall", "Master Bedroom", "Kitchen", "Guest Suite", "Veranda", "Corridor"],
+  "dimensions": { "buildingLengthM": 18.0, "buildingWidthM": 12.5, "grossFloorAreaM2": 225 }
+}`;
+
+        let contents: any = prompt;
+
+        if (drawingUrl.startsWith('data:image/')) {
+          const matches = drawingUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+          if (matches) {
+            contents = [
+              {
+                inlineData: {
+                  mimeType: matches[1],
+                  data: matches[2]
+                }
+              },
+              prompt
+            ];
+          }
+        } else if (drawingUrl.startsWith('http://') || drawingUrl.startsWith('https://')) {
+          try {
+            const fetchRes = await fetch(drawingUrl);
+            if (fetchRes.ok) {
+              const arrayBuffer = await fetchRes.arrayBuffer();
+              const base64Data = Buffer.from(arrayBuffer).toString('base64');
+              const contentType = fetchRes.headers.get('content-type') || 'image/png';
+              contents = [
+                {
+                  inlineData: {
+                    mimeType: contentType.includes('pdf') ? 'application/pdf' : contentType,
+                    data: base64Data
+                  }
+                },
+                prompt
+              ];
+            }
+          } catch (fetchErr: any) {
+            console.warn('[AI_PLAN_FETCH_WARN] Could not download image URL for Gemini Vision:', fetchErr?.message);
+          }
+        }
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents
+        });
+
+        const rawText = response.text || '';
+        const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        detected = JSON.parse(cleanedText);
+
+        // Validate mandatory keys in AI response
+        if (!detected || typeof detected !== 'object' || !detected.gridLines || !detected.columns || !detected.dimensions) {
+          throw new Error('AI Vision returned an incomplete response structure.');
+        }
+
+      } catch (visionErr: any) {
+        let errMsg = visionErr?.message || 'Gemini Vision API call failed.';
+        try {
+          if (errMsg.includes('API key was reported as leaked') || errMsg.includes('API_KEY_INVALID') || errMsg.includes('API key not valid')) {
+            errMsg = 'The server Gemini API key is invalid or reported as leaked. Please update the API key in environment configuration.';
+          } else if (errMsg.startsWith('{')) {
+            const parsedErr = JSON.parse(errMsg);
+            if (parsedErr?.error?.message) {
+              errMsg = parsedErr.error.message;
+            }
+          }
+        } catch (parseErr) {}
+        lastErrorMsg = errMsg;
+        console.warn('[AI_PLAN_VISION_ERROR] Gemini vision analysis failed:', lastErrorMsg);
+      }
+
+      // If AI plan analysis failed or produced malformed response, DO NOT GENERATE PSEUDO-STRUCTURAL DEFAULTS
+      if (!detected) {
+        return res.status(422).json({
+          success: false,
+          status: 'failed',
+          drawingName: drawingName || 'FloorPlan.pdf',
+          error: {
+            code: 'AI_ANALYSIS_FAILED',
+            message: `Architectural drawing analysis failed: ${lastErrorMsg || 'Gemini Vision API could not parse layout geometry.'}`,
+            retryable: true
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        status: 'completed',
+        drawingName: drawingName || 'FloorPlan.pdf',
+        detectedElements: detected,
+        confidence: 96
+      });
+    } catch (error: any) {
+      console.error('[ANALYZE_PLAN_ERROR]', error);
+      res.status(500).json({
+        success: false,
+        status: 'failed',
+        error: {
+          code: 'SERVER_ERROR',
+          message: error.message || 'Internal server error during plan analysis',
+          retryable: true
+        }
+      });
     }
   });
 

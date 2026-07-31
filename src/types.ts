@@ -177,7 +177,9 @@ export interface SignedReceipt {
   clientName: string;
   clientNiu: string | null;
   receiptProject: string;
+  invoiceTotalAmount?: string | null;
   receiptAmount: string;
+  remainingBalance?: string | null;
   receiptTaxRate: string;
   receiptMethod: string;
   receiptMemo: string | null;

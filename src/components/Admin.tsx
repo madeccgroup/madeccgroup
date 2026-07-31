@@ -37,7 +37,8 @@ import {
   Download,
   Database,
   Code,
-  Sparkles
+  Sparkles,
+  Calculator
 } from 'lucide-react';
 import { 
   User, 
@@ -65,6 +66,7 @@ import LessonStudio from './LessonStudio.tsx';
 import SyllabusUpload from './SyllabusUpload.tsx';
 import ExtendedLessonArchitect from './ExtendedLessonArchitect.tsx';
 import BoqStudio from './BoqStudio.tsx';
+import StructuralCalculator from './StructuralCalculator.tsx';
 import { getOptimizedImageUrl, getYouTubeEmbedUrl, ensureAbsoluteUrl } from '../lib/utils.ts';
 
 const safeConfirm = (message: string): boolean => {
@@ -121,7 +123,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   };
 
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio'>('analytics');
+  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio' | 'structural-calculator'>('analytics');
   const [activeSyllabus, setActiveSyllabus] = useState<any | null>(null);
 
   // Live analytics state from backend
@@ -1526,6 +1528,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
               { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
               { id: 'boq-studio', label: 'BOQ Rate Estimator', icon: FileText },
+              { id: 'structural-calculator', label: 'Structural Loads & Weights', icon: Calculator },
               { id: 'lesson-studio', label: 'MINESEC Lesson Prep', icon: GraduationCap },
               { id: 'syllabus-upload', label: 'Syllabus Manager', icon: BookOpen },
               { id: 'extended-lesson-architect', label: 'Extended Lesson Architect', icon: Sparkles },
@@ -4346,6 +4349,13 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
         {activeAdminTab === 'boq-studio' && (
           <BoqStudio
+            showToast={showToast}
+            currentUser={dbUser}
+          />
+        )}
+
+        {activeAdminTab === 'structural-calculator' && (
+          <StructuralCalculator
             showToast={showToast}
             currentUser={dbUser}
           />
