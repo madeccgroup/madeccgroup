@@ -36,6 +36,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { generateBoqDocx, generateBoqCsv } from '../utils/boqExport';
 import { generateBoqPdf } from '../utils/boqPdfExport';
+import { getAuthToken } from '../lib/firebase';
 
 interface BoqItem {
   id?: number;
@@ -108,7 +109,7 @@ interface BoqStudioProps {
 }
 
 const PREDEFINED_UNITS = [
-  'm', 'm²', 'm³', 'kg', 't', 'No.', 'item', 'LS', 'day', 'hour', 'bag', 'set', 'lot', 'packet', 'bar', 'ml', 'l', 'mm', 'cm', 'boards'
+  'm', 'm²', 'm³', 'kg', 't', 'No.', 'item', 'LS', 'day', 'hour', 'bag', 'set', 'lot'
 ];
 
 const PREDEFINED_SECTIONS_TEMPLATES = [
@@ -220,9 +221,13 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
 
   const logAuditEvent = async (boqId: number, action: string, details: string) => {
     try {
+      const token = await getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       await fetch(`/api/boqs/${boqId}/audit-event`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ action, details })
       });
     } catch (err) {
@@ -239,7 +244,11 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
   const fetchBoqData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/boqs');
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/boqs', { headers });
       const contentType = res.headers.get('content-type');
       if (res.ok && contentType && contentType.includes('application/json')) {
         const data = await res.json();
@@ -255,13 +264,17 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
 
   const fetchProjectsAndClients = async () => {
     try {
-      const projRes = await fetch('/api/projects');
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const projRes = await fetch('/api/projects', { headers });
       const projContentType = projRes.headers.get('content-type');
       if (projRes.ok && projContentType && projContentType.includes('application/json')) {
         const pData = await projRes.json();
         setProjectsList(pData);
       }
-      const userRes = await fetch('/api/users');
+      const userRes = await fetch('/api/users', { headers });
       const userContentType = userRes.headers.get('content-type');
       if (userRes.ok && userContentType && userContentType.includes('application/json')) {
         const uData = await userRes.json();
@@ -332,7 +345,11 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
   const handleOpenBoq = async (id: number, targetView?: 'editor' | 'review' | 'approved_view') => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/boqs/${id}`);
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/boqs/${id}`, { headers });
       if (res.ok) {
         const fullBoq = await res.json();
         setCurrentBoq(fullBoq);
@@ -535,21 +552,33 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
   };
 
   // Save BOQ (Draft / Update)
-  const handleSaveBoq = async () => {
+  const handleSaveBoq = async (): Promise<BoqData | null> => {
     if (!currentBoq.projectName || !currentBoq.clientName) {
       if (showToast) showToast('Please specify Project Name and Client Name before saving', 'error');
-      return;
+      return null;
     }
 
     setSaving(true);
     try {
+      const token = await getAuthToken();
+      if (!token) {
+        if (showToast) showToast('Please sign in to save BOQ estimates', 'error');
+        setSaving(false);
+        return null;
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+
       const isExisting = Boolean(currentBoq.id);
       const url = isExisting ? `/api/boqs/${currentBoq.id}` : '/api/boqs';
       const method = isExisting ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(currentBoq)
       });
 
@@ -558,13 +587,17 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
         setCurrentBoq(saved);
         if (showToast) showToast(`BOQ ${saved.boqReference} saved successfully!`, 'success');
         fetchBoqData();
+        return saved;
       } else {
-        const errJson = await res.json();
-        if (showToast) showToast(errJson.error || 'Failed to save BOQ', 'error');
+        const errJson = await res.json().catch(() => ({}));
+        const msg = errJson.error || `Save failed (${res.status})`;
+        if (showToast) showToast(msg, 'error');
+        return null;
       }
     } catch (err: any) {
       console.error('Save BOQ error:', err);
       if (showToast) showToast('Failed to save BOQ to live database', 'error');
+      return null;
     } finally {
       setSaving(false);
     }
@@ -572,20 +605,42 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
 
   // Submit for Manager Review
   const handleSubmitReview = async () => {
-    await handleSaveBoq();
-    if (!currentBoq.id) return;
+    const savedBoq = await handleSaveBoq();
+    const targetBoq = savedBoq || currentBoq;
+    if (!targetBoq || !targetBoq.id) {
+      if (showToast) showToast('Unable to submit: Save draft failed or missing BOQ ID', 'error');
+      return;
+    }
 
     try {
-      const res = await fetch(`/api/boqs/${currentBoq.id}/submit-review`, { method: 'POST' });
+      const token = await getAuthToken();
+      if (!token) {
+        if (showToast) showToast('Please sign in to submit BOQ for review', 'error');
+        return;
+      }
+
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`
+      };
+
+      const res = await fetch(`/api/boqs/${targetBoq.id}/submit-review`, {
+        method: 'POST',
+        headers
+      });
+
       if (res.ok) {
         const updated = await res.json();
         setCurrentBoq(updated);
         if (showToast) showToast(`BOQ ${updated.boqReference} submitted for review!`, 'success');
         setViewMode('review');
         fetchBoqData();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        if (showToast) showToast(errJson.error || 'Failed to submit for review', 'error');
       }
     } catch (err) {
       console.error('Submit review error:', err);
+      if (showToast) showToast('Network error while submitting review', 'error');
     }
   };
 
@@ -598,7 +653,21 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/boqs/${currentBoq.id}/approve`, { method: 'POST' });
+      const token = await getAuthToken();
+      if (!token) {
+        if (showToast) showToast('Please sign in with Admin credentials to approve', 'error');
+        return;
+      }
+
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`
+      };
+
+      const res = await fetch(`/api/boqs/${currentBoq.id}/approve`, {
+        method: 'POST',
+        headers
+      });
+
       if (res.ok) {
         const approved = await res.json();
         setCurrentBoq(approved);
@@ -606,11 +675,12 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
         setViewMode('approved_view');
         fetchBoqData();
       } else {
-        const errJson = await res.json();
+        const errJson = await res.json().catch(() => ({}));
         if (showToast) showToast(errJson.error || 'Approval failed', 'error');
       }
     } catch (err: any) {
       console.error('Approve error:', err);
+      if (showToast) showToast('Network error during approval', 'error');
     } finally {
       setSaving(false);
     }
@@ -622,7 +692,21 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/boqs/${currentBoq.id}/revision`, { method: 'POST' });
+      const token = await getAuthToken();
+      if (!token) {
+        if (showToast) showToast('Please sign in to create a revision', 'error');
+        return;
+      }
+
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`
+      };
+
+      const res = await fetch(`/api/boqs/${currentBoq.id}/revision`, {
+        method: 'POST',
+        headers
+      });
+
       if (res.ok) {
         const rev = await res.json();
         setCurrentBoq(rev);
@@ -630,11 +714,12 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
         setViewMode('editor');
         fetchBoqData();
       } else {
-        const errJson = await res.json();
+        const errJson = await res.json().catch(() => ({}));
         if (showToast) showToast(errJson.error || 'Failed creating revision', 'error');
       }
     } catch (err) {
       console.error('Revision error:', err);
+      if (showToast) showToast('Network error creating revision', 'error');
     } finally {
       setSaving(false);
     }
@@ -647,16 +732,34 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
     }
 
     try {
-      const res = await fetch(`/api/boqs/${id}`, { method: 'DELETE' });
+      const token = await getAuthToken();
+      if (!token) {
+        if (showToast) showToast('Please sign in to delete BOQ', 'error');
+        return;
+      }
+
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${token}`
+      };
+
+      const res = await fetch(`/api/boqs/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+
       if (res.ok) {
         if (showToast) showToast('BOQ estimate deleted', 'info');
         fetchBoqData();
         if (currentBoq.id === id) {
           setViewMode('list');
         }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        if (showToast) showToast(errJson.error || 'Delete failed', 'error');
       }
     } catch (err) {
       console.error('Delete error:', err);
+      if (showToast) showToast('Network error during deletion', 'error');
     }
   };
 
@@ -679,10 +782,15 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
       formData.append('file', pdfBlob, pdfFileName);
 
       // Upload to server /api/upload
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       let pdfPublicUrl = '';
       try {
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
+          headers,
           body: formData
         });
 
@@ -697,9 +805,12 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
 
       // Save PDF URL in database if BOQ exists
       if (currentBoq.id && pdfPublicUrl) {
+        const jsonHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) jsonHeaders['Authorization'] = `Bearer ${token}`;
+
         await fetch(`/api/boqs/${currentBoq.id}/pdf`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: jsonHeaders,
           body: JSON.stringify({ pdfUrl: pdfPublicUrl })
         });
         setCurrentBoq(prev => ({ ...prev, pdfUrl: pdfPublicUrl }));
@@ -810,9 +921,13 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
 
     setSendingEmail(true);
     try {
+      const token = await getAuthToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch(`/api/boqs/${emailTargetBoq.id}/send-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           recipientEmail: emailRecipient,
           subject: emailSubject,

@@ -18,6 +18,9 @@ export default function About() {
   const [documents, setDocuments] = useState<CompanyDocument[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loadingTeam, setLoadingTeam] = useState(true);
+  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+
+  const DEFAULT_FALLBACK = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80';
 
   useEffect(() => {
     const fetchDocs = async () => {
@@ -35,7 +38,12 @@ export default function About() {
       try {
         const res = await fetch('/api/team');
         if (res.ok) {
-          setTeam(await res.json());
+          const membersList = await res.json();
+          console.log('[ABOUT_TEAM_LOG] Fetched team members:', membersList.length);
+          membersList.forEach((m: TeamMember) => {
+            console.log(`[TEAM_MEMBER_LOG] ID: ${m.id} | Name: ${m.name} | Role: ${m.role} | Specialization: ${m.specialization} | Image: ${m.image} | Email: ${m.email}`);
+          });
+          setTeam(membersList);
         }
       } catch (err) {
         console.error('Error fetching team members:', err);
@@ -228,19 +236,17 @@ export default function About() {
                   <div className="space-y-4">
                     {/* Headshot */}
                     <div className="aspect-square rounded-xl overflow-hidden relative bg-slate-950 border border-slate-850">
-                      {member.image ? (
-                        <img 
-                          src={member.image} 
-                          alt={member.name}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          itemProp="image"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
-                          <Users className="w-12 h-12 stroke-[1.5]" />
-                        </div>
-                      )}
+                      <img 
+                        src={failedImages[member.id] || !member.image ? DEFAULT_FALLBACK : member.image} 
+                        alt={member.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        itemProp="image"
+                        onError={(e) => {
+                          console.error(`[IMAGE_LOAD_ERROR] Failed image for member ID ${member.id} (${member.name}):`, member.image);
+                          setFailedImages(prev => ({ ...prev, [member.id]: true }));
+                        }}
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
 

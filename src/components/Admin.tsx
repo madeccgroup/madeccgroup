@@ -3794,16 +3794,16 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                       {/* Avatar & Info Header */}
                       <div className="flex items-start gap-4">
                         <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shrink-0 flex items-center justify-center">
-                          {member.image ? (
-                            <img
-                              src={member.image}
-                              alt={member.name}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <UserIcon className="w-8 h-8 text-slate-600" />
-                          )}
+                          <img
+                            src={member.image || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80'}
+                            alt={member.name}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              console.error(`[ADMIN_IMAGE_ERROR] Failed image for member ${member.id} (${member.name}):`, member.image);
+                              e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80';
+                            }}
+                          />
                         </div>
                         <div className="space-y-1 min-w-0">
                           <h3 className="font-bold text-white text-base truncate">{member.name}</h3>

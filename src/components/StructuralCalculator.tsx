@@ -359,6 +359,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
         headers,
         body: JSON.stringify({
           drawingUrl: drawingObj.url,
+          drawingData: drawingObj.dataUrl,
           drawingName: drawingObj.name,
           projectStoreys: designInputs.storeys
         })
@@ -368,7 +369,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
 
       if (res.ok && data && data.success && data.detectedElements) {
         setDetectedElements(data.detectedElements);
-        setAiConfidence(data.confidence || 96);
+        setAiConfidence(data.confidence || 95);
         setAnalysisStatus('completed');
         if (showToast) showToast(`AI Vision analysis complete! Extracted grid elements and structural geometry for ${drawingObj.name}.`, 'success');
         setActiveTab('inputs');
@@ -389,6 +390,16 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
     }
   };
 
+  // Helper: Read file as Base64 Data URL
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Upload New Drawing Handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -400,10 +411,39 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
+      const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+      const allowedExts = ['png', 'jpg', 'jpeg', 'webp', 'pdf'];
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        let fileUrl = '';
 
+        // 1. File verification: zero-byte check
+        if (file.size === 0) {
+          if (showToast) showToast(`Cannot process ${file.name}: The file is empty (0 bytes).`, 'error');
+          continue;
+        }
+
+        // 2. File verification: file size check (25MB limit)
+        if (file.size > 25 * 1024 * 1024) {
+          if (showToast) showToast(`Cannot process ${file.name}: File size exceeds 25MB limit.`, 'error');
+          continue;
+        }
+
+        // 3. File verification: unsupported MIME / extension check
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        if (!allowedMimes.includes(file.type) && !allowedExts.includes(ext)) {
+          if (showToast) showToast(`Unsupported file format for ${file.name}. Please upload PNG, JPG, WEBP, or PDF drawings.`, 'error');
+          continue;
+        }
+
+        let base64Data = '';
+        try {
+          base64Data = await readFileAsDataUrl(file);
+        } catch (readErr) {
+          console.warn('Could not read file as data URL:', readErr);
+        }
+
+        let fileUrl = '';
         try {
           const formData = new FormData();
           formData.append('file', file);
@@ -423,14 +463,15 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
         }
 
         if (!fileUrl) {
-          fileUrl = URL.createObjectURL(file);
+          fileUrl = base64Data || URL.createObjectURL(file);
         }
 
         const newDrawing = {
           id: Date.now().toString() + i,
           name: file.name,
-          type: file.name.split('.').pop()?.toUpperCase() || 'DOCUMENT',
+          type: ext.toUpperCase() || 'DOCUMENT',
           url: fileUrl,
+          dataUrl: base64Data,
           uploadedAt: new Date().toISOString().split('T')[0]
         };
 
