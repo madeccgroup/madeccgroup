@@ -67,6 +67,8 @@ import SyllabusUpload from './SyllabusUpload.tsx';
 import ExtendedLessonArchitect from './ExtendedLessonArchitect.tsx';
 import BoqStudio from './BoqStudio.tsx';
 import StructuralCalculator from './StructuralCalculator.tsx';
+import LabourCalculator from './LabourCalculator.tsx';
+import DrawingTakeoffStudio from './DrawingTakeoffStudio.tsx';
 import { getOptimizedImageUrl, getYouTubeEmbedUrl, ensureAbsoluteUrl } from '../lib/utils.ts';
 
 const safeConfirm = (message: string): boolean => {
@@ -123,7 +125,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   };
 
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio' | 'structural-calculator'>('analytics');
+  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio' | 'structural-calculator' | 'labour-calculator'>('analytics');
   const [activeSyllabus, setActiveSyllabus] = useState<any | null>(null);
 
   // Live analytics state from backend
@@ -1542,7 +1544,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
               { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
               { id: 'boq-studio', label: 'BOQ Rate Estimator', icon: FileText },
+              { id: 'drawing-studio', label: 'AI Drawing & Takeoff', icon: Sparkles },
               { id: 'structural-calculator', label: 'Structural Loads & Weights', icon: Calculator },
+              { id: 'labour-calculator', label: 'Labour Calculator', icon: Calculator },
               { id: 'lesson-studio', label: 'MINESEC Lesson Prep', icon: GraduationCap },
               { id: 'syllabus-upload', label: 'Syllabus Manager', icon: BookOpen },
               { id: 'extended-lesson-architect', label: 'Extended Lesson Architect', icon: Sparkles },
@@ -4419,6 +4423,21 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           <StructuralCalculator
             showToast={showToast}
             currentUser={dbUser}
+          />
+        )}
+
+        {activeAdminTab === 'labour-calculator' && (
+          <LabourCalculator
+            userRole={dbUser?.role || 'admin'}
+            userName={dbUser?.name || 'Engineer'}
+          />
+        )}
+
+        {activeAdminTab === 'drawing-studio' && (
+          <DrawingTakeoffStudio
+            showToast={showToast}
+            currentUser={dbUser}
+            onNavigateToLabour={() => setActiveAdminTab('labour-calculator' as any)}
           />
         )}
 

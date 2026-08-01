@@ -310,24 +310,49 @@ export const boqs = pgTable('boqs', {
   description: text('description'),
   datePrepared: timestamp('date_prepared').defaultNow().notNull(),
   preparedBy: text('prepared_by').notNull(),
+  createdBy: text('created_by'),
+  updatedBy: text('updated_by'),
   revisionNumber: text('revision_number').default('REV-00').notNull(),
   currency: text('currency').default('XAF').notNull(),
-  status: text('status').default('DRAFT').notNull(), // DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED
+  status: text('status').default('DRAFT').notNull(), // DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED, COMPLETED
   overheadPercent: numeric('overhead_percent').default('0').notNull(),
   contingencyPercent: numeric('contingency_percent').default('0').notNull(),
   profitPercent: numeric('profit_percent').default('0').notNull(),
   taxPercent: numeric('tax_percent').default('0').notNull(),
+  discountPercent: numeric('discount_percent').default('0'),
   subtotal: numeric('subtotal').default('0').notNull(),
   overheadAmount: numeric('overhead_amount').default('0').notNull(),
   contingencyAmount: numeric('contingency_amount').default('0').notNull(),
   profitAmount: numeric('profit_amount').default('0').notNull(),
+  discountAmount: numeric('discount_amount').default('0'),
+  transportAmount: numeric('transport_amount').default('0'),
+  supervisionAmount: numeric('supervision_amount').default('0'),
   taxAmount: numeric('tax_amount').default('0').notNull(),
   grandTotal: numeric('grand_total').default('0').notNull(),
+  notes: text('notes'),
+  attachments: json('attachments'),
+  aiResults: json('ai_results'),
+  metadata: json('metadata'),
   pdfUrl: text('pdf_url'),
   approvedBy: text('approved_by'),
   approvedAt: timestamp('approved_at'),
   sentToClientAt: timestamp('sent_to_client_at'),
   sentToClientBy: text('sent_to_client_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 21.5 Managed Units of Measurement Library
+export const boqUnits = pgTable('boq_units', {
+  id: serial('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  name: text('name').notNull(),
+  category: text('category').notNull(), // 'Length', 'Area', 'Volume', 'Weight', 'Time', 'Count', 'Masonry', 'Concrete', 'Steel', 'Roofing', 'Doors & Windows', 'Electrical', 'Plumbing', 'External Works'
+  description: text('description'),
+  isDefault: boolean('is_default').default(false).notNull(),
+  isDisabled: boolean('is_disabled').default(false).notNull(),
+  isFavourite: boolean('is_favourite').default(false).notNull(),
+  displayOrder: integer('display_order').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -438,5 +463,77 @@ export const boqItemsRelations = relations(boqItems, ({ one }) => ({
     references: [boqs.id],
   }),
 }));
+
+// Labour Calculator Table
+export const labourCalculations = pgTable('labour_calculations', {
+  id: serial('id').primaryKey(),
+  quotationRef: text('quotation_ref').notNull(),
+  projectName: text('project_name').notNull(),
+  clientName: text('client_name').notNull(),
+  clientEmail: text('client_email'),
+  location: text('location').notNull(),
+  projectType: text('project_type').notNull(),
+  buildingFloors: integer('building_floors').default(1).notNull(),
+  date: text('date').notNull(),
+  preparedBy: text('prepared_by').notNull(),
+  approvedBy: text('approved_by'),
+  status: text('status').default('DRAFT').notNull(), // DRAFT, PENDING, FINAL, APPROVED, ARCHIVED, TRASH
+  currency: text('currency').default('XAF').notNull(),
+  overheadPercent: numeric('overhead_percent').default('10.00'),
+  contingencyPercent: numeric('contingency_percent').default('5.00'),
+  profitPercent: numeric('profit_percent').default('15.00'),
+  discountPercent: numeric('discount_percent').default('0.00'),
+  taxPercent: numeric('tax_percent').default('19.25'),
+  baseSubtotal: numeric('base_subtotal').default('0.00'),
+  overheadAmount: numeric('overhead_amount').default('0.00'),
+  contingencyAmount: numeric('contingency_amount').default('0.00'),
+  profitAmount: numeric('profit_amount').default('0.00'),
+  discountAmount: numeric('discount_amount').default('0.00'),
+  taxableNet: numeric('taxable_net').default('0.00'),
+  taxAmount: numeric('tax_amount').default('0.00'),
+  grandTotal: numeric('grand_total').default('0.00'),
+  paidAmount: numeric('paid_amount').default('0.00'),
+  balanceDue: numeric('balance_due').default('0.00'),
+  revisionNumber: text('revision_number').default('REV-01').notNull(),
+  sectionsData: json('sections_data').notNull(), // JSON list of sections & items
+  revisionsHistory: json('revisions_history'), // List of past revisions
+  auditLogsData: json('audit_logs_data'), // List of audit log actions
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// AI Drawing Upload, Processing, Analysis & Quantity Takeoff Table
+export const drawingTakeoffs = pgTable('drawing_takeoffs', {
+  id: serial('id').primaryKey(),
+  takeoffRef: text('takeoff_ref').notNull(),
+  projectName: text('project_name').notNull(),
+  clientName: text('client_name').notNull(),
+  clientEmail: text('client_email'),
+  location: text('location').notNull(),
+  drawingName: text('drawing_name').notNull(),
+  fileType: text('file_type').notNull(),
+  fileSize: integer('file_size').default(0),
+  fileUrl: text('file_url'),
+  mimeType: text('mime_type'),
+  metadata: json('metadata'), // pageCount, paperSize, scale, resolution, orientation, hash, softwareOrigin, revision, etc.
+  analysisStage: text('analysis_stage').default('Validation').notNull(),
+  pipelineLog: json('pipeline_log'), // Array of logs for all 12 stages & recovery attempts
+  detectedElements: json('detected_elements').notNull(), // walls, columns, footings, beams, slabs, doors, windows, etc.
+  quantitiesData: json('quantities_data').notNull(), // Block count, Concrete m3, Steel kg, Excavation m3, Formwork m2, etc.
+  labourEstimateData: json('labour_estimate_data'), // Bronze, Silver, Gold, Platinum package totals and item breakdown
+  status: text('status').default('DRAFT').notNull(), // DRAFT, IN_REVIEW, APPROVED, ARCHIVED, SOFT_DELETED
+  aiVerified: boolean('ai_verified').default(false).notNull(),
+  preparedBy: text('prepared_by').notNull(),
+  approvedBy: text('approved_by'),
+  approvalNotes: text('approval_notes'),
+  revisionNumber: text('revision_number').default('REV-01').notNull(),
+  revisionsHistory: json('revisions_history'),
+  auditLogsData: json('audit_logs_data'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 
 
