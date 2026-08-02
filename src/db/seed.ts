@@ -210,6 +210,143 @@ export async function seedDatabase() {
           created_at TIMESTAMP DEFAULT NOW() NOT NULL,
           updated_at TIMESTAMP DEFAULT NOW() NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS construction_projects (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL UNIQUE,
+          project_name TEXT NOT NULL,
+          client TEXT NOT NULL,
+          contractor TEXT,
+          consultant TEXT,
+          location TEXT NOT NULL,
+          gps_coordinates TEXT,
+          building_type TEXT DEFAULT 'Residential' NOT NULL,
+          number_of_floors INTEGER DEFAULT 1,
+          currency TEXT DEFAULT 'XAF' NOT NULL,
+          contract_sum NUMERIC DEFAULT '0',
+          start_date TEXT,
+          completion_date TEXT,
+          project_status TEXT DEFAULT 'Planning' NOT NULL,
+          created_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS construction_drawings (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          file_url TEXT NOT NULL,
+          file_type TEXT NOT NULL,
+          file_size_mb NUMERIC,
+          category TEXT DEFAULT 'Architectural' NOT NULL,
+          version TEXT DEFAULT 'v1.0' NOT NULL,
+          uploaded_by TEXT,
+          uploaded_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS drawing_analysis (
+          id SERIAL PRIMARY KEY,
+          drawing_id INTEGER,
+          project_id TEXT NOT NULL,
+          detected_elements JSON NOT NULL,
+          confidence_score NUMERIC DEFAULT '95.0',
+          engineer_status TEXT DEFAULT 'Pending Review',
+          reviewed_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS quantities_takeoff (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          item TEXT NOT NULL,
+          category TEXT NOT NULL,
+          description TEXT NOT NULL,
+          source TEXT,
+          formula TEXT,
+          quantity NUMERIC DEFAULT '0' NOT NULL,
+          unit TEXT NOT NULL,
+          confidence_level NUMERIC DEFAULT '95.0',
+          approved BOOLEAN DEFAULT FALSE,
+          approved_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS construction_programmes (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          programme_name TEXT NOT NULL,
+          activities_data JSON NOT NULL,
+          completion_percentage NUMERIC DEFAULT '0',
+          status TEXT DEFAULT 'Draft',
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS procurement_orders (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          material_name TEXT NOT NULL,
+          quantity NUMERIC DEFAULT '0' NOT NULL,
+          unit TEXT NOT NULL,
+          required_date TEXT,
+          supplier TEXT,
+          purchase_status TEXT DEFAULT 'Draft',
+          cost NUMERIC DEFAULT '0',
+          delivery_status TEXT DEFAULT 'Pending',
+          stock_balance NUMERIC DEFAULT '0',
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS reinforcement_schedules (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          member TEXT NOT NULL,
+          bar_mark TEXT NOT NULL,
+          shape_code TEXT NOT NULL,
+          diameter_mm INTEGER NOT NULL,
+          cut_length_m NUMERIC NOT NULL,
+          total_bars INTEGER NOT NULL,
+          total_weight_kg NUMERIC NOT NULL,
+          cutting_list JSON,
+          approved BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS cashflow_forecasts (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          period_name TEXT NOT NULL,
+          forecast_data JSON NOT NULL,
+          s_curve_data JSON,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS structural_calculations (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          element_name TEXT NOT NULL,
+          design_code TEXT DEFAULT 'EN 1992 Eurocode 2' NOT NULL,
+          inputs_data JSON NOT NULL,
+          steps_data JSON NOT NULL,
+          results_data JSON NOT NULL,
+          approved_by_engineer BOOLEAN DEFAULT FALSE,
+          engineer_name TEXT,
+          disclaimer_notice TEXT DEFAULT 'AI-generated engineering outputs are design assistance drafts. Final responsibility, verification and approval remain with qualified engineers.',
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS module_versions (
+          id SERIAL PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          module_name TEXT NOT NULL,
+          version_number TEXT NOT NULL,
+          user_email TEXT NOT NULL,
+          change_description TEXT NOT NULL,
+          snapshot_data JSON NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
       `);
       console.log('✅ BOQ, Receipts & Structural Calc infrastructure ready in Neon DB.');
     } catch (boqTableErr) {

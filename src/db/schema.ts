@@ -535,5 +535,156 @@ export const drawingTakeoffs = pgTable('drawing_takeoffs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// ==========================================
+// MADECC AI CONSTRUCTION INTELLIGENCE TABLES
+// ==========================================
+
+// 26. Construction Projects Table
+export const constructionProjects = pgTable('construction_projects', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull().unique(),
+  projectName: text('project_name').notNull(),
+  client: text('client').notNull(),
+  contractor: text('contractor'),
+  consultant: text('consultant'),
+  location: text('location').notNull(),
+  gpsCoordinates: text('gps_coordinates'),
+  buildingType: text('building_type').notNull().default('Residential'),
+  numberOfFloors: integer('number_of_floors').default(1),
+  currency: text('currency').notNull().default('XAF'),
+  contractSum: numeric('contract_sum').default('0'),
+  startDate: text('start_date'),
+  completionDate: text('completion_date'),
+  projectStatus: text('project_status').notNull().default('Planning'), // Planning, Active, Completed, On-Hold, Archived
+  createdBy: text('created_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 27. Construction Drawings Table
+export const constructionDrawings = pgTable('construction_drawings', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  title: text('title').notNull(),
+  fileName: text('file_name').notNull(),
+  fileUrl: text('file_url').notNull(),
+  fileType: text('file_type').notNull(), // PDF, DWG, DXF, IFC, PNG, JPG
+  fileSizeMb: numeric('file_size_mb'),
+  category: text('category').notNull().default('Architectural'), // Architectural, Structural, MEP, Civil
+  version: text('version').notNull().default('v1.0'),
+  uploadedBy: text('uploaded_by'),
+  uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+});
+
+// 28. Drawing Analysis Output Table
+export const drawingAnalysis = pgTable('drawing_analysis', {
+  id: serial('id').primaryKey(),
+  drawingId: integer('drawing_id'),
+  projectId: text('project_id').notNull(),
+  detectedElements: json('detected_elements').notNull(), // Rooms, Dimensions, Columns, Beams, Foundations, etc.
+  confidenceScore: numeric('confidence_score').default('95.0'),
+  engineerStatus: text('engineer_status').default('Pending Review'), // Pending Review, Approved, Rejected
+  reviewedBy: text('reviewed_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// 29. Quantities Take-Off Table
+export const quantitiesTakeoff = pgTable('quantities_takeoff', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  item: text('item').notNull(),
+  category: text('category').notNull(), // Earthworks, Foundation, Structure, Architectural, Openings
+  description: text('description').notNull(),
+  source: text('source'),
+  formula: text('formula'),
+  quantity: numeric('quantity').notNull().default('0'),
+  unit: text('unit').notNull(),
+  confidenceLevel: numeric('confidence_level').default('95.0'),
+  approved: boolean('approved').default(false),
+  approvedBy: text('approved_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// 30. Construction Programmes (Schedules & Gantt) Table
+export const constructionProgrammes = pgTable('construction_programmes', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  programmeName: text('programme_name').notNull(),
+  activitiesData: json('activities_data').notNull(), // List of activities, start, duration, dependencies, critical path, % complete
+  completionPercentage: numeric('completion_percentage').default('0'),
+  status: text('status').default('Draft'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 31. Procurement Orders & Material Tracking
+export const procurementOrders = pgTable('procurement_orders', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  materialName: text('material_name').notNull(),
+  quantity: numeric('quantity').notNull().default('0'),
+  unit: text('unit').notNull(),
+  requiredDate: text('required_date'),
+  supplier: text('supplier'),
+  purchaseStatus: text('purchase_status').default('Draft'), // Draft, Ordered, Shipped, Delivered, Cancelled
+  cost: numeric('cost').default('0'),
+  deliveryStatus: text('delivery_status').default('Pending'),
+  stockBalance: numeric('stock_balance').default('0'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// 32. Reinforcement Bar Bending Schedules Table
+export const reinforcementSchedules = pgTable('reinforcement_schedules', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  member: text('member').notNull(), // Beam, Column, Slab, Footing
+  barMark: text('bar_mark').notNull(),
+  shapeCode: text('shape_code').notNull(),
+  diameterMm: integer('diameter_mm').notNull(),
+  cutLengthM: numeric('cut_length_m').notNull(),
+  totalBars: integer('total_bars').notNull(),
+  totalWeightKg: numeric('total_weight_kg').notNull(),
+  cuttingList: json('cutting_list'),
+  approved: boolean('approved').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// 33. Cashflow Forecasts Table
+export const cashflowForecasts = pgTable('cashflow_forecasts', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  periodName: text('period_name').notNull(), // e.g. Month 1, Week 1
+  forecastData: json('forecast_data').notNull(), // Income, Materials, Labour, Equipment, Expenses, Profit, Balance
+  sCurveData: json('s_curve_data'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// 34. Structural Engineering Assistant Calculations Table
+export const structuralCalculations = pgTable('structural_calculations', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  elementName: text('element_name').notNull(), // Beam, Column, Slab, Foundation
+  designCode: text('design_code').default('EN 1992 Eurocode 2').notNull(),
+  inputsData: json('inputs_data').notNull(),
+  stepsData: json('steps_data').notNull(),
+  resultsData: json('results_data').notNull(),
+  approvedByEngineer: boolean('approved_by_engineer').default(false),
+  engineerName: text('engineer_name'),
+  disclaimerNotice: text('disclaimer_notice').default('AI-generated engineering outputs are design assistance drafts. Final responsibility, verification and approval remain with qualified engineers.'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// 35. Module Versions & Audits Table
+export const moduleVersions = pgTable('module_versions', {
+  id: serial('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  moduleName: text('module_name').notNull(),
+  versionNumber: text('version_number').notNull(),
+  userEmail: text('user_email').notNull(),
+  changeDescription: text('change_description').notNull(),
+  snapshotData: json('snapshot_data').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 
 

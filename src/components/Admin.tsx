@@ -69,6 +69,7 @@ import BoqStudio from './BoqStudio.tsx';
 import StructuralCalculator from './StructuralCalculator.tsx';
 import LabourCalculator from './LabourCalculator.tsx';
 import DrawingTakeoffStudio from './DrawingTakeoffStudio.tsx';
+import AIConstructionIntelligence from './AIConstructionIntelligence.tsx';
 import { getOptimizedImageUrl, getYouTubeEmbedUrl, ensureAbsoluteUrl } from '../lib/utils.ts';
 
 const safeConfirm = (message: string): boolean => {
@@ -1533,6 +1534,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
           <nav className="space-y-1">
             {[
+              { id: 'ai-construction-intelligence', label: '★ AI Construction Platform', icon: Sparkles },
               { id: 'analytics', label: 'Dashboard Analytics', icon: TrendingUp },
               { id: 'projects', label: 'Manage Projects', icon: Building2 },
               { id: 'reviews', label: 'Approve Reviews', icon: Star },
@@ -1543,8 +1545,6 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               { id: 'documents', label: 'Company Documents', icon: FileText },
               { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
               { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
-              { id: 'boq-studio', label: 'BOQ Rate Estimator', icon: FileText },
-              { id: 'drawing-studio', label: 'AI Drawing & Takeoff', icon: Sparkles },
               { id: 'structural-calculator', label: 'Structural Loads & Weights', icon: Calculator },
               { id: 'labour-calculator', label: 'Labour Calculator', icon: Calculator },
               { id: 'lesson-studio', label: 'MINESEC Lesson Prep', icon: GraduationCap },
@@ -1793,8 +1793,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             min="0"
                             max="100"
                             className="w-full bg-slate-900 border border-slate-800 rounded py-2 px-3 text-sm text-white focus:border-amber-500 outline-none"
-                            value={newMilestonePercent}
-                            onChange={(e) => setNewMilestonePercent(parseInt(e.target.value))}
+                            value={Number.isNaN(newMilestonePercent) ? '' : newMilestonePercent}
+                            onChange={(e) => setNewMilestonePercent(parseInt(e.target.value) || 0)}
                           />
                         </div>
 
@@ -1876,8 +1876,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                                   min="0"
                                   max="100"
                                   className="w-full accent-amber-500"
-                                  value={m.percentage}
-                                  onChange={(e) => handleUpdateMilestone(m.id, m.milestoneName, parseInt(e.target.value), m.description, m.status)}
+                                  value={Number.isNaN(Number(m.percentage)) ? 0 : m.percentage}
+                                  onChange={(e) => handleUpdateMilestone(m.id, m.milestoneName, parseInt(e.target.value) || 0, m.description, m.status)}
                                 />
                               </div>
 
@@ -4438,6 +4438,17 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             showToast={showToast}
             currentUser={dbUser}
             onNavigateToLabour={() => setActiveAdminTab('labour-calculator' as any)}
+          />
+        )}
+
+        {activeAdminTab === 'ai-construction-intelligence' && (
+          <AIConstructionIntelligence
+            dbUser={dbUser}
+            showToast={showToast}
+            getAuthHeaders={async () => {
+              const token = await getAuthToken();
+              return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+            }}
           />
         )}
 
