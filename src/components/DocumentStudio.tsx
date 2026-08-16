@@ -1,3 +1,4 @@
+﻿import { trackDocumentDownload } from '../services/analytics';
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -294,11 +295,11 @@ export default function DocumentStudio({
   const [representativeTitle, setRepresentativeTitle] = useState('Managing Director');
   const [representativeId, setRepresentativeId] = useState('M081612457896A');
 
-  const [contractHeadOffice, setContractHeadOffice] = useState('Yaoundé, Cameroon');
+  const [contractHeadOffice, setContractHeadOffice] = useState('YaoundÃ©, Cameroon');
   const [contractTel, setContractTel] = useState('+237 683 31 64 86');
   const [contractEmail, setContractEmail] = useState('contact@madecc.com');
   const [contractNo, setContractNo] = useState('MADECC-2026-LA-089');
-  const [contractProjectLocation, setContractProjectLocation] = useState('Yaoundé, Cameroon');
+  const [contractProjectLocation, setContractProjectLocation] = useState('YaoundÃ©, Cameroon');
   const [contractDate, setContractDate] = useState('July 5, 2026');
   const [contractAgreedBalance, setContractAgreedBalance] = useState('872000');
   const [contractAdvancePayment, setContractAdvancePayment] = useState('372000');
@@ -333,7 +334,7 @@ export default function DocumentStudio({
   // ==========================================
   const [contractSubMode, setContractSubMode] = useState<'works' | 'articles' | 'blueprints' | 'safety' | 'pedagogical'>('works');
   const [aoaCompanyName, setAoaCompanyName] = useState('MADECC CIVIL WORKS SARL');
-  const [aoaLegalForm, setAoaLegalForm] = useState('SARL (Société à Responsabilité Limitée)');
+  const [aoaLegalForm, setAoaLegalForm] = useState('SARL (SociÃ©tÃ© Ã  ResponsabilitÃ© LimitÃ©e)');
   const [aoaJurisdiction, setAoaJurisdiction] = useState('Cameroon (OHADA Uniform Act) & Worldwide');
   const [aoaHeadOffice, setAoaHeadOffice] = useState('Akwa Boulevard, Douala, Cameroon');
   const [aoaDurationYears, setAoaDurationYears] = useState('99');
@@ -355,7 +356,7 @@ export default function DocumentStudio({
   const [blueprintTitle, setBlueprintTitle] = useState('Standard Reinforced Concrete Strip Footing Detail');
   const [blueprintScale, setBlueprintScale] = useState('1:20');
   const [blueprintDesignedBy, setBlueprintDesignedBy] = useState('Dr. Marcel Mbida, Senior Civil Engineer');
-  const [blueprintSiteLocation, setBlueprintSiteLocation] = useState('Yaoundé Site Zone B');
+  const [blueprintSiteLocation, setBlueprintSiteLocation] = useState('YaoundÃ© Site Zone B');
   const [blueprintMaterialsSpecs, setBlueprintMaterialsSpecs] = useState('C30/37 Concrete, CPA-45 Portland Cement, FeE500 Steel rebars');
   const [blueprintNotes, setBlueprintNotes] = useState('Minimum clear cover to reinforcement: 50mm. Lap length: 50 * bar diameter. Soil bearing capacity must exceed 150 kPa. Ensure complete compaction using mechanical poker vibrators.');
 
@@ -405,7 +406,7 @@ export default function DocumentStudio({
           startDate: contractDate,
           preparedBy: representativeName,
           checkedBy: 'Marcus Ndip',
-          approvedBy: 'Dr. Amélie Fotso',
+          approvedBy: 'Dr. AmÃ©lie Fotso',
           description: contractScope,
           items: [
             { itemNumber: '1.0', description: 'Labor & Construction Scope', unit: 'LS', quantity: 1, rate: parseFloat(contractValue) || 2200000, amount: parseFloat(contractValue) || 2200000 },
@@ -514,8 +515,8 @@ export default function DocumentStudio({
         },
         {
           number: 2,
-          title: "ARTICLE 2: REGISTERED OFFICE (SIÈGE SOCIAL) AND DOMICILE",
-          content: `**2.1. Purpose & Scope:** Establishing the official address for statutory notices, tax declarations, and legal jurisdictions.\n\n**2.2. Legal Authority:** OHADA AUDSCGIE Articles 24 to 26 and Cameroonian tax residence statutes.\n\n**2.3. Location:** The registered office is located at: ${aoaHeadOffice}.\n\n**2.4. Procedures for Transfer:** The registered office designates the legal forum for any notification, administrative filing, or judicial action. The General Manager (Gérant) is authorized to transfer the registered office within the same city or territory by simple management decision. A transfer to a different city or region requires approval from the shareholders through an Extraordinary General Meeting (EGM) and subsequent update of the Trade and Personal Property Credit Register (RCCM).\n\n**2.5. Record Keeping:** All official letters, court writs, and regulatory notifications received at the registered office must be recorded in an incoming mail ledger overseen by the Company Secretary.`
+          title: "ARTICLE 2: REGISTERED OFFICE (SIÃˆGE SOCIAL) AND DOMICILE",
+          content: `**2.1. Purpose & Scope:** Establishing the official address for statutory notices, tax declarations, and legal jurisdictions.\n\n**2.2. Legal Authority:** OHADA AUDSCGIE Articles 24 to 26 and Cameroonian tax residence statutes.\n\n**2.3. Location:** The registered office is located at: ${aoaHeadOffice}.\n\n**2.4. Procedures for Transfer:** The registered office designates the legal forum for any notification, administrative filing, or judicial action. The General Manager (GÃ©rant) is authorized to transfer the registered office within the same city or territory by simple management decision. A transfer to a different city or region requires approval from the shareholders through an Extraordinary General Meeting (EGM) and subsequent update of the Trade and Personal Property Credit Register (RCCM).\n\n**2.5. Record Keeping:** All official letters, court writs, and regulatory notifications received at the registered office must be recorded in an incoming mail ledger overseen by the Company Secretary.`
         },
         {
           number: 3,
@@ -524,7 +525,7 @@ export default function DocumentStudio({
         },
         {
           number: 4,
-          title: "ARTICLE 4: CORPORATE DURATION (DURÉE)",
+          title: "ARTICLE 4: CORPORATE DURATION (DURÃ‰E)",
           content: `**4.1. Purpose & Scope:** Defining the legal lifespan of the company and rules for extension or early dissolution.\n\n**4.2. Legal Authority:** OHADA AUDSCGIE Article 28.\n\n**4.3. Lifespan:** The company is established for a duration of ninety-nine (99) years starting from its formal registration in the RCCM of Cameroon.\n\n**4.4. Procedures for Extension:** At least one (1) year prior to the expiration of the company's term, the General Manager must convene an Extraordinary General Meeting of shareholders to decide whether the company's duration should be extended. This decision must be made in accordance with the voting requirements of an EGM and filed with the notary public and the RCCM.\n\n**4.5. Failures and Penalties:** If the Manager fails to convene this meeting, any shareholder may petition the President of the competent commercial court to appoint a corporate representative to hold the meeting, with costs borne by the company.`
         },
         {
@@ -534,18 +535,18 @@ export default function DocumentStudio({
         },
         {
           number: 6,
-          title: "ARTICLE 6: STATUTORY MANAGEMENT & LIMITATIONS OF POWER (GÉRANCE)",
-          content: `**6.1. Purpose & Scope:** Governing the executive management of the company and limiting the powers of the Gérant.\n\n**6.2. Legal Authority:** OHADA AUDSCGIE Articles 323 to 328.\n\n**6.3. Appointment:** The company is managed and legally bound by its initial General Manager (Gérant): ${aoaInitialManager}, appointed for an indefinite term, unless removed by the shareholders.\n\n**6.4. Scope of Authority:** The Gérant has the broadest executive powers to act in all circumstances in the name of the company and conduct civil works operations. However, the Manager's authority is subject to board-approved limits.\n\n**6.5. Mandated Limitations of Power:** The Gérant is strictly prohibited from executing borrowing agreements exceeding 50% of the company's share capital, or selling substantial corporate real estate and assets, without the prior written authorization of the shareholders in a General Meeting. Violations of these limitations shall constitute grounds for immediate dismissal and personal liability for damages.`
+          title: "ARTICLE 6: STATUTORY MANAGEMENT & LIMITATIONS OF POWER (GÃ‰RANCE)",
+          content: `**6.1. Purpose & Scope:** Governing the executive management of the company and limiting the powers of the GÃ©rant.\n\n**6.2. Legal Authority:** OHADA AUDSCGIE Articles 323 to 328.\n\n**6.3. Appointment:** The company is managed and legally bound by its initial General Manager (GÃ©rant): ${aoaInitialManager}, appointed for an indefinite term, unless removed by the shareholders.\n\n**6.4. Scope of Authority:** The GÃ©rant has the broadest executive powers to act in all circumstances in the name of the company and conduct civil works operations. However, the Manager's authority is subject to board-approved limits.\n\n**6.5. Mandated Limitations of Power:** The GÃ©rant is strictly prohibited from executing borrowing agreements exceeding 50% of the company's share capital, or selling substantial corporate real estate and assets, without the prior written authorization of the shareholders in a General Meeting. Violations of these limitations shall constitute grounds for immediate dismissal and personal liability for damages.`
         },
         {
           number: 7,
           title: "ARTICLE 7: SHAREHOLDERS' GENERAL MEETINGS (VOTING & NOTICES)",
-          content: `**7.1. Purpose & Legal Authority:** Governing all collective decisions of the company's shareholders. Governed strictly under OHADA AUDSCGIE Articles 546 to 561.\n\n**7.2. Annual General Meeting (AGM) Mandates:**\n- 7.2.1. Held mandatorily within six (6) months of the close of each financial year (by June 30th).\n- 7.2.2. Responsibilities: Approval of the annual financial statements; appointment or removal of directors and statutory managers; appointment of external auditors; declaration of dividends; approval of strategic projects and major construction contracts exceeding 50% of capital; and authorizations for capital increases.\n\n**7.3. Extraordinary General Meeting (EGM) Mandates:**\n- 7.3.1. Convened by the Gérant, the statutory auditor, or shareholders representing at least twenty percent (20%) of the share capital in emergency circumstances.\n- 7.3.2. Responsibilities: Authorizing mergers, acquisitions, splits, spin-offs, early voluntary liquidation, amendments to these Articles of Association, sale of substantial corporate real estate or capital assets, and borrowing beyond approved limits.\n\n**7.4. Notice of Meetings & Documents:**\n- 7.4.1. Notice Period: Written notification delivered by hand against signature, registered post with acknowledgment of receipt, or official electronic mail (email) with read-receipt, sent at least fifteen (15) calendar days prior to the meeting date.\n- 7.4.2. Supporting Documents: Convocations must contain a precise Agenda and must be accompanied by draft resolutions, financial statements, the General Manager's report, and the Auditor's report.\n\n**7.5. Quorums, Adjournments & Voting Rights:**\n- 7.5.1. AGM Quorum: On first call, representing at least one-quarter (25%) of the shares. On second call, no quorum is required. Resolutions are passed by a simple majority of votes cast (50% + 1 vote).\n- 7.5.2. EGM Quorum: On first call, representing at least one-half (50%) of the share capital. On second call, representing at least one-quarter (25%) of the share capital. Resolutions require a two-thirds (66.67%) majority of votes present or represented.\n- 7.5.3. Voting Rights: Strictly "one share, one vote". Voting may be executed in person, by proxy to another shareholder, or through secure electronic voting. Ballots may be cast by show of hands, or secret ballot upon request of any shareholder. The Chairman shall have a casting vote only where expressly authorized.\n\n**7.6. Minutes & Record Keeping:** All deliberations must be recorded in formal Minutes (Procès-verbaux), signed by the General Manager/Chairman and the secretary of the assembly, and permanently stored in a sequential, numbered corporate minutes register (Registre des délibérations) preserved at the registered office. Failure to maintain correct records shall incur administrative penalties of 500,000 FCFA per instance.`
+          content: `**7.1. Purpose & Legal Authority:** Governing all collective decisions of the company's shareholders. Governed strictly under OHADA AUDSCGIE Articles 546 to 561.\n\n**7.2. Annual General Meeting (AGM) Mandates:**\n- 7.2.1. Held mandatorily within six (6) months of the close of each financial year (by June 30th).\n- 7.2.2. Responsibilities: Approval of the annual financial statements; appointment or removal of directors and statutory managers; appointment of external auditors; declaration of dividends; approval of strategic projects and major construction contracts exceeding 50% of capital; and authorizations for capital increases.\n\n**7.3. Extraordinary General Meeting (EGM) Mandates:**\n- 7.3.1. Convened by the GÃ©rant, the statutory auditor, or shareholders representing at least twenty percent (20%) of the share capital in emergency circumstances.\n- 7.3.2. Responsibilities: Authorizing mergers, acquisitions, splits, spin-offs, early voluntary liquidation, amendments to these Articles of Association, sale of substantial corporate real estate or capital assets, and borrowing beyond approved limits.\n\n**7.4. Notice of Meetings & Documents:**\n- 7.4.1. Notice Period: Written notification delivered by hand against signature, registered post with acknowledgment of receipt, or official electronic mail (email) with read-receipt, sent at least fifteen (15) calendar days prior to the meeting date.\n- 7.4.2. Supporting Documents: Convocations must contain a precise Agenda and must be accompanied by draft resolutions, financial statements, the General Manager's report, and the Auditor's report.\n\n**7.5. Quorums, Adjournments & Voting Rights:**\n- 7.5.1. AGM Quorum: On first call, representing at least one-quarter (25%) of the shares. On second call, no quorum is required. Resolutions are passed by a simple majority of votes cast (50% + 1 vote).\n- 7.5.2. EGM Quorum: On first call, representing at least one-half (50%) of the share capital. On second call, representing at least one-quarter (25%) of the share capital. Resolutions require a two-thirds (66.67%) majority of votes present or represented.\n- 7.5.3. Voting Rights: Strictly "one share, one vote". Voting may be executed in person, by proxy to another shareholder, or through secure electronic voting. Ballots may be cast by show of hands, or secret ballot upon request of any shareholder. The Chairman shall have a casting vote only where expressly authorized.\n\n**7.6. Minutes & Record Keeping:** All deliberations must be recorded in formal Minutes (ProcÃ¨s-verbaux), signed by the General Manager/Chairman and the secretary of the assembly, and permanently stored in a sequential, numbered corporate minutes register (Registre des dÃ©libÃ©rations) preserved at the registered office. Failure to maintain correct records shall incur administrative penalties of 500,000 FCFA per instance.`
         },
         {
           number: 8,
           title: "ARTICLE 8: TRANSFER, TRANSMISSION, AND PLEDGING OF SHARES",
-          content: `**8.1. Purpose & Legal Authority:** Regulating any changes in share ownership to maintain corporate stability and protect shareholders' assets under OHADA AUDSCGIE Articles 317 to 322.\n\n**8.2. Right of First Refusal (Pre-emption Right):** Existing shareholders enjoy an absolute right of first refusal. Any shareholder desiring to transfer shares to a non-shareholder third party must submit a written request via registered post to the General Manager, specifying the name of the transferee, the number of shares, and the agreed price. The General Manager shall notify all shareholders within seven (7) business days. Shareholders have thirty (30) calendar days from receipt to exercise their pre-emption rights proportionally.\n\n**8.3. Board Approval (Consent Clause):** Any transfer of shares to a non-shareholder third party requires mandatory prior approval by the General Meeting of shareholders representing at least three-quarters (75%) of the company's capital.\n\n**8.4. Valuation of Shares:** In the event of a dispute over the fair value of shares, the price shall be determined by an independent certified accountant/valuation expert (Expert-Comptable Agréé CEMAC) appointed by mutual agreement of the parties or, failing that, by the President of the competent commercial court of Cameroon.\n\n**8.5. Share Certificates & Transfer Register:** Shares are nominative and represented by Share Certificates signed by the General Manager. All transactions must be recorded in the company's physical and digital Share Transfer Register (Registre des transferts de parts). If lost or destroyed, a replacement certificate is issued only after a 30-day public notice period and submission of a sworn indemnity bond.\n\n**8.6. Transmission upon Death of a Shareholder:** Heirs, successions, and executors do not automatically become active voting partners. The company's operations shall continue. Heirs must submit certified probate documents and be formally approved by the remaining shareholders within ninety (90) days. Executor powers are limited to estate preservation until approval.\n\n**8.7. Bankruptcy & Insolvency:** In the event of bankruptcy of a shareholder, the company reserves the right to purchase the bankrupt shareholder's shares at fair market value (determined by an expert) to prevent creditors from seizing voting controls.\n\n**8.8. Compliance Restrictions & Penalties:** Transfers that would create severe conflicts of interest, breach national security laws, violate Cameroonian public procurement regulations, or breach OHADA maximum shareholding guidelines are strictly prohibited and void *ab initio*. Violators shall be penalized via temporary suspension of dividend rights.`
+          content: `**8.1. Purpose & Legal Authority:** Regulating any changes in share ownership to maintain corporate stability and protect shareholders' assets under OHADA AUDSCGIE Articles 317 to 322.\n\n**8.2. Right of First Refusal (Pre-emption Right):** Existing shareholders enjoy an absolute right of first refusal. Any shareholder desiring to transfer shares to a non-shareholder third party must submit a written request via registered post to the General Manager, specifying the name of the transferee, the number of shares, and the agreed price. The General Manager shall notify all shareholders within seven (7) business days. Shareholders have thirty (30) calendar days from receipt to exercise their pre-emption rights proportionally.\n\n**8.3. Board Approval (Consent Clause):** Any transfer of shares to a non-shareholder third party requires mandatory prior approval by the General Meeting of shareholders representing at least three-quarters (75%) of the company's capital.\n\n**8.4. Valuation of Shares:** In the event of a dispute over the fair value of shares, the price shall be determined by an independent certified accountant/valuation expert (Expert-Comptable AgrÃ©Ã© CEMAC) appointed by mutual agreement of the parties or, failing that, by the President of the competent commercial court of Cameroon.\n\n**8.5. Share Certificates & Transfer Register:** Shares are nominative and represented by Share Certificates signed by the General Manager. All transactions must be recorded in the company's physical and digital Share Transfer Register (Registre des transferts de parts). If lost or destroyed, a replacement certificate is issued only after a 30-day public notice period and submission of a sworn indemnity bond.\n\n**8.6. Transmission upon Death of a Shareholder:** Heirs, successions, and executors do not automatically become active voting partners. The company's operations shall continue. Heirs must submit certified probate documents and be formally approved by the remaining shareholders within ninety (90) days. Executor powers are limited to estate preservation until approval.\n\n**8.7. Bankruptcy & Insolvency:** In the event of bankruptcy of a shareholder, the company reserves the right to purchase the bankrupt shareholder's shares at fair market value (determined by an expert) to prevent creditors from seizing voting controls.\n\n**8.8. Compliance Restrictions & Penalties:** Transfers that would create severe conflicts of interest, breach national security laws, violate Cameroonian public procurement regulations, or breach OHADA maximum shareholding guidelines are strictly prohibited and void *ab initio*. Violators shall be penalized via temporary suspension of dividend rights.`
         },
         {
           number: 9,
@@ -560,17 +561,17 @@ export default function DocumentStudio({
         {
           number: 11,
           title: "ARTICLE 11: CORPORATE GOVERNANCE & EXECUTIVE MANAGEMENT",
-          content: `**11.1. Purpose & Scope:** Establishing a robust, dual-tier corporate governance framework to steer strategic direction and operations.\n\n**11.2. Board of Directors:** Composed of three (3) to twelve (12) members appointed by the AGM for a term of four (4) years. The Board is responsible for defining the strategic direction of the company, approving tenders exceeding 500,000,000 FCFA, and supervising executive management.\n\n**11.3. Managing Director (Directeur Général):** Appointed by the Board of Directors to execute daily operations, manage engineering sites, sign commercial agreements, and represent the company vis-à-vis clients and authorities.\n\n**11.4. Company Secretary (Secrétaire Général):** Responsible for statutory compliance, legal filings, organizing general meetings, ensuring that directors are kept fully informed of their legal duties under Cameroonian and OHADA laws, and preserving physical and digital corporate records.`
+          content: `**11.1. Purpose & Scope:** Establishing a robust, dual-tier corporate governance framework to steer strategic direction and operations.\n\n**11.2. Board of Directors:** Composed of three (3) to twelve (12) members appointed by the AGM for a term of four (4) years. The Board is responsible for defining the strategic direction of the company, approving tenders exceeding 500,000,000 FCFA, and supervising executive management.\n\n**11.3. Managing Director (Directeur GÃ©nÃ©ral):** Appointed by the Board of Directors to execute daily operations, manage engineering sites, sign commercial agreements, and represent the company vis-Ã -vis clients and authorities.\n\n**11.4. Company Secretary (SecrÃ©taire GÃ©nÃ©ral):** Responsible for statutory compliance, legal filings, organizing general meetings, ensuring that directors are kept fully informed of their legal duties under Cameroonian and OHADA laws, and preserving physical and digital corporate records.`
         },
         {
           number: 12,
           title: "ARTICLE 12: PUBLIC PROCUREMENT, TENDER PROCEDURES, AND FIDIC CONTRACTS",
-          content: `**12.1. Scope & Applicability:** All public contracts, infrastructure tenders, and private engineering agreements under Cameroon MINMAP guidelines.\n\n**12.2. FIDIC Adherence:** All international and high-value domestic construction agreements must utilize standard international construction templates, specifically the International Federation of Consulting Engineers (FIDIC) standard forms (Red, Yellow, or Silver Books depending on the project structure).\n\n**12.3. Joint Ventures (JV) and Consortia:** Participation in tenders through JVs or consortia must be backed by a comprehensive Joint Venture Agreement detailing the division of civil engineering works, percentage of financial participation, mutual indemnities, and joint and several liability (responsabilité solidaire) before Cameroonian authorities.\n\n**12.4. Subcontractors and Consultants:** All subcontractors, consultants, architects, and surveyors must be vetted through a rigorous pre-qualification procurement policy, ensuring compliance with HSE norms, technical capacity, and financial solvency.`
+          content: `**12.1. Scope & Applicability:** All public contracts, infrastructure tenders, and private engineering agreements under Cameroon MINMAP guidelines.\n\n**12.2. FIDIC Adherence:** All international and high-value domestic construction agreements must utilize standard international construction templates, specifically the International Federation of Consulting Engineers (FIDIC) standard forms (Red, Yellow, or Silver Books depending on the project structure).\n\n**12.3. Joint Ventures (JV) and Consortia:** Participation in tenders through JVs or consortia must be backed by a comprehensive Joint Venture Agreement detailing the division of civil engineering works, percentage of financial participation, mutual indemnities, and joint and several liability (responsabilitÃ© solidaire) before Cameroonian authorities.\n\n**12.4. Subcontractors and Consultants:** All subcontractors, consultants, architects, and surveyors must be vetted through a rigorous pre-qualification procurement policy, ensuring compliance with HSE norms, technical capacity, and financial solvency.`
         },
         {
           number: 13,
           title: "ARTICLE 13: SITE OPERATIONS, HSE, AND DEFECTS LIABILITY",
-          content: `**13.1. Purpose & Scope:** Establishing standards for physical engineering works, worker safety, and client construction guarantees.\n\n**13.2. Occupational Health, Safety, and Environment (HSE):** The company enforces a zero-accident policy across all active construction sites. Daily site safety briefings, mandatory certified Personal Protective Equipment (PPE), and continuous safety inspections are mandatory.\n\n**13.3. Environmental Protection:** All civil projects must conduct a prior Environmental Impact Assessment (EIA) in compliance with Cameroonian environmental legislation and secure the necessary building permits.\n\n**13.4. Defects Liability Period (DLP) & Warranties:** The company formally guarantees its constructions. Every project shall incorporate a Defects Liability Period of twelve (12) months during which all engineering and technical defects must be repaired at the company's cost.\n\n**13.5. Garanti Décennal (Ten-Year Structural Guarantee):** In accordance with Article 1792 of the Civil Code in force in Cameroon, the company maintains a strict ten-year structural guarantee covering the complete stability and solid foundation of all built infrastructures.`
+          content: `**13.1. Purpose & Scope:** Establishing standards for physical engineering works, worker safety, and client construction guarantees.\n\n**13.2. Occupational Health, Safety, and Environment (HSE):** The company enforces a zero-accident policy across all active construction sites. Daily site safety briefings, mandatory certified Personal Protective Equipment (PPE), and continuous safety inspections are mandatory.\n\n**13.3. Environmental Protection:** All civil projects must conduct a prior Environmental Impact Assessment (EIA) in compliance with Cameroonian environmental legislation and secure the necessary building permits.\n\n**13.4. Defects Liability Period (DLP) & Warranties:** The company formally guarantees its constructions. Every project shall incorporate a Defects Liability Period of twelve (12) months during which all engineering and technical defects must be repaired at the company's cost.\n\n**13.5. Garanti DÃ©cennal (Ten-Year Structural Guarantee):** In accordance with Article 1792 of the Civil Code in force in Cameroon, the company maintains a strict ten-year structural guarantee covering the complete stability and solid foundation of all built infrastructures.`
         },
         {
           number: 14,
@@ -585,7 +586,7 @@ export default function DocumentStudio({
         {
           number: 16,
           title: "ARTICLE 16: DISPUTE RESOLUTION, ARBITRATION, AND GOVERNING LAW",
-          content: `**16.1. Purpose & Scope:** Regulating conflicts between shareholders, or between the company and third-party developers.\n\n**16.2. Governing Law:** These Articles, corporate operations, and construction contracts are governed by and construed in accordance with the laws of the Republic of Cameroon and the OHADA Uniform Acts.\n\n**16.3. Amicable Settlement (Mediation):** Any dispute arising from these Articles or corporate operations shall first be submitted to mandatory amicable mediation before a certified corporate mediator within thirty (30) days.\n\n**16.4. Arbitration:** Failing amicable resolution, the dispute shall be finally settled under the Rules of Arbitration of the GICAM Arbitration Center (Centre d'Arbitrage du GICAM) in Douala, or the Common Court of Justice and Arbitration (CCJA) of OHADA in Abidjan, Côte d'Ivoire. Deliberations shall be held in French or English.\n\n**16.5. Force Majeure:** Neither party nor the company shall be liable for delays or failures resulting from acts of God, war, severe civil unrest, regional lockouts, or extreme natural disasters beyond control.`
+          content: `**16.1. Purpose & Scope:** Regulating conflicts between shareholders, or between the company and third-party developers.\n\n**16.2. Governing Law:** These Articles, corporate operations, and construction contracts are governed by and construed in accordance with the laws of the Republic of Cameroon and the OHADA Uniform Acts.\n\n**16.3. Amicable Settlement (Mediation):** Any dispute arising from these Articles or corporate operations shall first be submitted to mandatory amicable mediation before a certified corporate mediator within thirty (30) days.\n\n**16.4. Arbitration:** Failing amicable resolution, the dispute shall be finally settled under the Rules of Arbitration of the GICAM Arbitration Center (Centre d'Arbitrage du GICAM) in Douala, or the Common Court of Justice and Arbitration (CCJA) of OHADA in Abidjan, CÃ´te d'Ivoire. Deliberations shall be held in French or English.\n\n**16.5. Force Majeure:** Neither party nor the company shall be liable for delays or failures resulting from acts of God, war, severe civil unrest, regional lockouts, or extreme natural disasters beyond control.`
         }
       ],
       signoff: `Done in good faith and executed by the initial founders on this date.\n\nGeneral Manager: ${aoaInitialManager}\nRepresentative Stamp: MADECC COMPLIANCE LEDGER SEAL`
@@ -1472,7 +1473,7 @@ export default function DocumentStudio({
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(isA4 ? 7 : 5.5);
           doc.setTextColor(148, 163, 184);
-          doc.text('MADECC GROUP SARL — CONSTRUCTION LABOR AGREEMENT', padding, padding + 2);
+          doc.text('MADECC GROUP SARL â€” CONSTRUCTION LABOR AGREEMENT', padding, padding + 2);
           doc.text(`Contract No: ${contractNo}`, w - padding - 45, padding + 2);
           doc.setDrawColor(226, 232, 240);
           doc.setLineWidth(0.3);
@@ -1575,7 +1576,7 @@ export default function DocumentStudio({
 
       let bulletList = defaultBullets;
       if (contractScope) {
-        const customLines = contractScope.split(/[\n•;]+/).map(s => s.trim()).filter(Boolean);
+        const customLines = contractScope.split(/[\nâ€¢;]+/).map(s => s.trim()).filter(Boolean);
         if (customLines.length > 0) {
           bulletList = customLines;
         }
@@ -1585,7 +1586,7 @@ export default function DocumentStudio({
         checkPageBreak(5);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(245, 158, 11);
-        doc.text('•', padding + 3, currentY);
+        doc.text('â€¢', padding + 3, currentY);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(51, 65, 85);
         const splitBullet = doc.splitTextToSize(bullet, w - padding * 2 - 6);
@@ -1690,7 +1691,7 @@ export default function DocumentStudio({
         'Any work already completed shall remain payable regardless of subsequent suspension or termination of the project by the Client.',
         'The Contractor shall not be required to continue work beyond any payment milestone until the corresponding payment has been made.',
         'The Client shall provide unrestricted access to the construction site throughout the execution of the works.',
-        'Any dispute arising under this Agreement shall first be resolved amicably. Where no agreement is reached, the dispute shall be submitted to the competent courts of Yaoundé, Cameroon.'
+        'Any dispute arising under this Agreement shall first be resolved amicably. Where no agreement is reached, the dispute shall be submitted to the competent courts of YaoundÃ©, Cameroon.'
       ];
 
       protectionPoints.forEach((clause, index) => {
@@ -1858,7 +1859,7 @@ export default function DocumentStudio({
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(isA4 ? 6.5 : 4.5);
       doc.setTextColor(100, 116, 139);
-      doc.text('Civil Engineering • Building Construction • Renovation • Structural Works • Project Management.', w / 2, currentY, { align: 'center' });
+      doc.text('Civil Engineering â€¢ Building Construction â€¢ Renovation â€¢ Structural Works â€¢ Project Management.', w / 2, currentY, { align: 'center' });
 
       currentY += 3;
       doc.setFont('helvetica', 'italic');
@@ -2120,7 +2121,7 @@ export default function DocumentStudio({
       doc.setFontSize(isA4 ? 6.5 : 4.5);
       doc.setTextColor(148, 163, 184);
       doc.text('This payment receipt acts as proof of mobilization under legal guidelines of the', padding, h - padding - 4);
-      doc.text('General Tax Code of the Republic of Cameroon (Code Général des Impôts). Sec-ID verified.', padding, h - padding - 1.5);
+      doc.text('General Tax Code of the Republic of Cameroon (Code GÃ©nÃ©ral des ImpÃ´ts). Sec-ID verified.', padding, h - padding - 1.5);
 
       doc.save(`MADECC_Digital_Receipt_${receiptNumber}_${format.toUpperCase()}.pdf`);
     }
@@ -2305,7 +2306,7 @@ export default function DocumentStudio({
                         onChange={(e) => setClientCity(e.target.value)}
                       >
                         <option value="Douala">Douala</option>
-                        <option value="Yaoundé">Yaoundé</option>
+                        <option value="YaoundÃ©">YaoundÃ©</option>
                         <option value="Kribi">Kribi</option>
                         <option value="Garoua">Garoua</option>
                         <option value="Bamenda">Bamenda</option>
@@ -2351,7 +2352,7 @@ export default function DocumentStudio({
                       >
                         <option value="XAF">XAF (FCFA)</option>
                         <option value="USD">USD ($)</option>
-                        <option value="EUR">EUR (€)</option>
+                        <option value="EUR">EUR (â‚¬)</option>
                       </select>
                     </div>
                   </div>
@@ -2426,7 +2427,7 @@ export default function DocumentStudio({
                         <label className="text-xs text-slate-500 font-bold uppercase block">Head Office</label>
                         <input
                           type="text"
-                          placeholder="e.g. Yaoundé, Cameroon"
+                          placeholder="e.g. YaoundÃ©, Cameroon"
                           className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
                           value={contractHeadOffice}
                           onChange={(e) => setContractHeadOffice(e.target.value)}
@@ -2448,7 +2449,7 @@ export default function DocumentStudio({
                         <label className="text-xs text-slate-500 font-bold uppercase block">Project Location</label>
                         <input
                           type="text"
-                          placeholder="e.g. Yaoundé, Cameroon"
+                          placeholder="e.g. YaoundÃ©, Cameroon"
                           className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
                           value={contractProjectLocation}
                           onChange={(e) => setContractProjectLocation(e.target.value)}
@@ -2550,11 +2551,11 @@ export default function DocumentStudio({
                         value={aoaLegalForm}
                         onChange={(e) => setAoaLegalForm(e.target.value)}
                       >
-                        <option value="SARL (Société à Responsabilité Limitée)">SARL (Société à Responsabilité Limitée)</option>
-                        <option value="SA (Société Anonyme) with Board">SA (Société Anonyme) with Board of Directors</option>
-                        <option value="SAS (Société par Actions Simplifiée)">SAS (Société par Actions Simplifiée)</option>
+                        <option value="SARL (SociÃ©tÃ© Ã  ResponsabilitÃ© LimitÃ©e)">SARL (SociÃ©tÃ© Ã  ResponsabilitÃ© LimitÃ©e)</option>
+                        <option value="SA (SociÃ©tÃ© Anonyme) with Board">SA (SociÃ©tÃ© Anonyme) with Board of Directors</option>
+                        <option value="SAS (SociÃ©tÃ© par Actions SimplifiÃ©e)">SAS (SociÃ©tÃ© par Actions SimplifiÃ©e)</option>
                         <option value="LLC (Limited Liability Company) Standard">LLC (Limited Liability Company)</option>
-                        <option value="SNC (Société en Nom Collectif)">SNC (Société en Nom Collectif)</option>
+                        <option value="SNC (SociÃ©tÃ© en Nom Collectif)">SNC (SociÃ©tÃ© en Nom Collectif)</option>
                       </select>
                     </div>
                   </div>
@@ -2573,7 +2574,7 @@ export default function DocumentStudio({
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-500 font-bold uppercase block">Registered Siège Social (Head Office)</label>
+                      <label className="text-xs text-slate-500 font-bold uppercase block">Registered SiÃ¨ge Social (Head Office)</label>
                       <input
                         type="text"
                         placeholder="e.g. Akwa Boulevard, Douala, Cameroon"
@@ -3016,7 +3017,7 @@ export default function DocumentStudio({
                           onClick={() => setShowAdminSignaturePad(true)}
                           className="w-full bg-slate-950 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 text-slate-300 py-2 px-3 rounded-lg text-xs font-mono uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-1.5"
                         >
-                          ✍ Draw Signature Pad
+                          âœ Draw Signature Pad
                         </button>
                       )}
 
@@ -3158,7 +3159,7 @@ export default function DocumentStudio({
                     <label className="text-xs text-slate-500 font-bold uppercase block">Linked Project</label>
                     <input
                       type="text"
-                      placeholder="e.g. Yaoundé Municipal Library"
+                      placeholder="e.g. YaoundÃ© Municipal Library"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
                       value={receiptProject}
                       onChange={(e) => setReceiptProject(e.target.value)}
@@ -3180,11 +3181,11 @@ export default function DocumentStudio({
                 <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-xl space-y-3">
                   <div className="flex items-center justify-between border-b border-amber-500/10 pb-2">
                     <span className="text-xs font-bold text-amber-500 uppercase tracking-wide flex items-center gap-1.5">
-                      💳 Account Balance & Invoice Controls
+                      ðŸ’³ Account Balance & Invoice Controls
                     </span>
                     {parseFloat(receiptRemainingBalance || '0') <= 0 ? (
                       <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        ✓ PAID IN FULL
+                        âœ“ PAID IN FULL
                       </span>
                     ) : (
                       <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
@@ -3262,7 +3263,7 @@ export default function DocumentStudio({
                       <option value="Orange Money">Orange Money</option>
                       <option value="Afriland First Bank Transfer">Afriland First Bank</option>
                       <option value="UBA Bank Transfer">UBA Bank S.A.</option>
-                      <option value="Société Générale Transfer">Société Générale Cameroun</option>
+                      <option value="SociÃ©tÃ© GÃ©nÃ©rale Transfer">SociÃ©tÃ© GÃ©nÃ©rale Cameroun</option>
                       <option value="Cash Clearing Desk">Cash Clearing Desk</option>
                     </select>
                   </div>
@@ -3334,7 +3335,7 @@ export default function DocumentStudio({
                           onClick={() => setShowReceiptSignaturePad(true)}
                           className="w-full bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-300 py-2 px-3 rounded-lg text-xs font-mono uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-1.5"
                         >
-                          ✍ Draw Signature Pad
+                          âœ Draw Signature Pad
                         </button>
                       )}
 
@@ -3468,7 +3469,7 @@ export default function DocumentStudio({
                   {/* Main Legal Title */}
                   <div className="text-center py-1">
                     <h1 className="font-sans font-black text-[10.5px] text-slate-900 tracking-tight uppercase">CONSTRUCTION LABOR AGREEMENT</h1>
-                    <span className="font-sans text-[7.5px] font-bold text-amber-600 tracking-wider block">WORKS CONTRACT — REINFORCED STRUCTURES</span>
+                    <span className="font-sans text-[7.5px] font-bold text-amber-600 tracking-wider block">WORKS CONTRACT â€” REINFORCED STRUCTURES</span>
                   </div>
 
                   {/* Key Parameters Box */}
@@ -3729,7 +3730,7 @@ export default function DocumentStudio({
                   {/* Veteran Coach Block */}
                   <div className="p-3 bg-amber-50/40 border border-amber-500/10 rounded-xl space-y-1">
                     <span className="font-extrabold text-amber-800 text-[8px] uppercase tracking-wider block flex items-center gap-1">
-                      ⚡ VETERAN PEDAGOGICAL SCAFFOLDING & COACHING ADVICE
+                      âš¡ VETERAN PEDAGOGICAL SCAFFOLDING & COACHING ADVICE
                     </span>
                     <p className="text-slate-700 text-[7.5px] leading-relaxed text-justify italic whitespace-pre-wrap font-sans">
                       {pedagogicalTeacherCoaching}
@@ -3757,7 +3758,7 @@ export default function DocumentStudio({
 
                   {/* Certified Footing */}
                   <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[7px] text-slate-400">
-                    <p>Aligned with MINESEC CBA Directives (Cameroon Technical Lycée Framework)</p>
+                    <p>Aligned with MINESEC CBA Directives (Cameroon Technical LycÃ©e Framework)</p>
                     <p className="font-mono">Drafted July 2026</p>
                   </div>
                 </div>
@@ -3839,15 +3840,15 @@ export default function DocumentStudio({
 
                     {parseFloat(receiptRemainingBalance || '0') <= 0 ? (
                       <div className="bg-emerald-600 text-white font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-emerald-700 flex items-center justify-center gap-1">
-                        <span>✓</span> PAID IN FULL
+                        <span>âœ“</span> PAID IN FULL
                       </div>
                     ) : parseFloat(receiptAmount || '0') > 0 ? (
                       <div className="bg-amber-500 text-slate-950 font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-amber-600 flex items-center justify-center gap-1">
-                        <span>⏳</span> PARTIALLY PAID
+                        <span>â³</span> PARTIALLY PAID
                       </div>
                     ) : (
                       <div className="bg-red-600 text-white font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-red-700 flex items-center justify-center gap-1">
-                        <span>⚠</span> UNPAID
+                        <span>âš </span> UNPAID
                       </div>
                     )}
                   </div>
@@ -4048,7 +4049,7 @@ export default function DocumentStudio({
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1 rounded-full font-bold">
-                          ✓ SEALED & LIVE
+                          âœ“ SEALED & LIVE
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
@@ -4182,7 +4183,7 @@ export default function DocumentStudio({
                           <div className="flex flex-col items-center gap-1">
                             {isPaidInFull ? (
                               <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold uppercase">
-                                ✓ PAID IN FULL
+                                âœ“ PAID IN FULL
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[9px] font-mono text-amber-400 border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded-full font-bold uppercase">
@@ -4312,7 +4313,7 @@ export default function DocumentStudio({
                   <div><strong className="text-slate-500 font-bold block uppercase">COMPANY NAME:</strong> <p className="text-slate-950 font-black text-[9px] uppercase tracking-wide">{aoaCompanyName || '[ ENTERPRISE NAME AWAITING ]'}</p></div>
                   <div><strong className="text-slate-500 font-bold block uppercase">LEGAL STRUCTURE:</strong> <p className="text-slate-900 font-bold text-[8.5px]">{aoaLegalForm}</p></div>
                   <div><strong className="text-slate-500 font-bold block uppercase">SHARE CAPITAL:</strong> <p className="text-slate-900 font-mono font-bold text-[8.5px]">{aoaShareCapital || `10,000,000 ${contractCurrency}`}</p></div>
-                  <div><strong className="text-slate-500 font-bold block uppercase">REGISTERED OFFICE (SIÈGE):</strong> <p className="text-slate-800 text-[8px] font-medium">{aoaHeadOffice || 'Douala, Cameroon'}</p></div>
+                  <div><strong className="text-slate-500 font-bold block uppercase">REGISTERED OFFICE (SIÃˆGE):</strong> <p className="text-slate-800 text-[8px] font-medium">{aoaHeadOffice || 'Douala, Cameroon'}</p></div>
                 </div>
 
                 <div className="space-y-2 text-[9px] text-slate-700 leading-normal">
@@ -4442,3 +4443,4 @@ export default function DocumentStudio({
     </div>
   );
 }
+

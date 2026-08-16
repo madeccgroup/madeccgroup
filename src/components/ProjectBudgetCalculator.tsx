@@ -1,3 +1,4 @@
+﻿import { trackCalculatorStart, trackCalculatorComplete, trackBudgetRange } from '../services/analytics';
 import React, { useState, useEffect } from 'react';
 import {
   Calculator,
@@ -46,7 +47,7 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
   const [projectType, setProjectType] = useState<string>('Residential House');
   const [customProjectType, setCustomProjectType] = useState<string>('');
   const [region, setRegion] = useState<string>('Centre');
-  const [location, setLocation] = useState<string>('Yaoundé');
+  const [location, setLocation] = useState<string>('YaoundÃ©');
   const [unitSystem, setUnitSystem] = useState<'m2' | 'ft2'>('m2');
   const [rawAreaInput, setRawAreaInput] = useState<string>('180');
   const [numberOfFloors, setNumberOfFloors] = useState<number>(1);
@@ -244,7 +245,7 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
       doc.setFontSize(10);
       doc.text(`Project Type: ${calculationResult.projectType}`, 14, 46);
       doc.text(`Location: ${calculationResult.location} (${calculationResult.region || 'Cameroon'})`, 14, 52);
-      doc.text(`Total Floor Area: ${calculationResult.totalFloorAreaM2} m² (${calculationResult.numberOfFloors} Storeys)`, 14, 58);
+      doc.text(`Total Floor Area: ${calculationResult.totalFloorAreaM2} mÂ² (${calculationResult.numberOfFloors} Storeys)`, 14, 58);
       doc.text(`Construction Standard: ${calculationResult.constructionStandard}`, 14, 64);
 
       // Budget Box
@@ -259,12 +260,12 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
       doc.setFontSize(18);
       doc.setFont('Helvetica', 'bold');
       doc.setTextColor(217, 119, 6);
-      doc.text(`XAF ${calculationResult.estimatedBudgetMin.toLocaleString()} – XAF ${calculationResult.estimatedBudgetMax.toLocaleString()}`, 20, 92);
+      doc.text(`XAF ${calculationResult.estimatedBudgetMin.toLocaleString()} â€“ XAF ${calculationResult.estimatedBudgetMax.toLocaleString()}`, 20, 92);
 
       doc.setFontSize(10);
       doc.setFont('Helvetica', 'normal');
       doc.setTextColor(71, 85, 105);
-      doc.text(`Expected Total: XAF ${calculationResult.estimatedBudgetExpected.toLocaleString()} (~XAF ${calculationResult.costPerM2.toLocaleString()} / m²)`, 20, 99);
+      doc.text(`Expected Total: XAF ${calculationResult.estimatedBudgetExpected.toLocaleString()} (~XAF ${calculationResult.costPerM2.toLocaleString()} / mÂ²)`, 20, 99);
 
       // Category Breakdown Table
       doc.setFont('Helvetica', 'bold');
@@ -320,7 +321,7 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
     const text = `Hello MADECC Group, I generated a Project Budget Estimate on your website:
 Ref: ${calculationResult.estimateReference}
 Type: ${calculationResult.projectType}
-Area: ${calculationResult.totalFloorAreaM2} m²
+Area: ${calculationResult.totalFloorAreaM2} mÂ²
 Location: ${calculationResult.location}
 Expected Budget: XAF ${calculationResult.estimatedBudgetExpected.toLocaleString()}
 I would like to discuss this project and request a formal BOQ.`;
@@ -489,7 +490,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         value={region}
                         onChange={(e) => {
                           setRegion(e.target.value);
-                          if (e.target.value === 'Centre') setLocation('Yaoundé');
+                          if (e.target.value === 'Centre') setLocation('YaoundÃ©');
                           else if (e.target.value === 'Littoral') setLocation('Douala');
                           else if (e.target.value === 'North') setLocation('Garoua');
                           else if (e.target.value === 'West') setLocation('Bafoussam');
@@ -497,7 +498,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       >
-                        <option value="Centre">Centre Region (Yaoundé)</option>
+                        <option value="Centre">Centre Region (YaoundÃ©)</option>
                         <option value="Littoral">Littoral Region (Douala, Kribi link)</option>
                         <option value="South">South Region (Kribi, Ebolowa)</option>
                         <option value="West">West Region (Bafoussam, Dschang)</option>
@@ -505,7 +506,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         <option value="South-West">South-West Region (Limbe, Buea)</option>
                         <option value="North">North Region (Garoua)</option>
                         <option value="Far North">Far North Region (Maroua)</option>
-                        <option value="Adamawa">Adamawa Region (Ngaoundéré)</option>
+                        <option value="Adamawa">Adamawa Region (NgaoundÃ©rÃ©)</option>
                         <option value="East">East Region (Bertoua)</option>
                       </select>
                     </div>
@@ -516,7 +517,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         type="text"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. Yaoundé (Odza), Douala (Bonamoussadi), Kribi"
+                        placeholder="e.g. YaoundÃ© (Odza), Douala (Bonamoussadi), Kribi"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       />
                     </div>
@@ -529,7 +530,7 @@ I would like to discuss this project and request a formal BOQ.`;
                       <div className="text-xs font-bold text-slate-800">Regional Factor Applied</div>
                       <div className="text-xs text-slate-600 mt-0.5">
                         {region === 'Littoral' && 'Douala benefits from sea port proximity for cement, steel, and imported tiles.'}
-                        {region === 'Centre' && 'Yaoundé reflects standard national baseline pricing for central quarry aggregates and materials.'}
+                        {region === 'Centre' && 'YaoundÃ© reflects standard national baseline pricing for central quarry aggregates and materials.'}
                         {region === 'North' || region === 'Far North' ? 'Northern regions include long-haul heavy transport adjustments for steel and cement.' : 'Local material transport and quarry distances automatically factored into unit rates.'}
                       </div>
                     </div>
@@ -555,14 +556,14 @@ I would like to discuss this project and request a formal BOQ.`;
                             onClick={() => setUnitSystem('m2')}
                             className={`px-2 py-0.5 rounded ${unitSystem === 'm2' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-600'}`}
                           >
-                            Square Meters (m²)
+                            Square Meters (mÂ²)
                           </button>
                           <button
                             type="button"
                             onClick={() => setUnitSystem('ft2')}
                             className={`px-2 py-0.5 rounded ${unitSystem === 'ft2' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-600'}`}
                           >
-                            Square Feet (ft²)
+                            Square Feet (ftÂ²)
                           </button>
                         </div>
                       </div>
@@ -577,13 +578,13 @@ I would like to discuss this project and request a formal BOQ.`;
                           className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-lg font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                          {unitSystem === 'm2' ? 'm²' : 'ft²'}
+                          {unitSystem === 'm2' ? 'mÂ²' : 'ftÂ²'}
                         </span>
                       </div>
 
                       {unitSystem === 'ft2' && (
                         <div className="text-[11px] text-slate-500 mt-1">
-                          Equivalent to <span className="font-bold text-slate-800">{areaInM2.toFixed(1)} m²</span>
+                          Equivalent to <span className="font-bold text-slate-800">{areaInM2.toFixed(1)} mÂ²</span>
                         </div>
                       )}
                     </div>
@@ -791,7 +792,7 @@ I would like to discuss this project and request a formal BOQ.`;
                     </div>
                     <div className="flex justify-between border-b border-slate-200 pb-2">
                       <span className="text-slate-500">Total Built Area:</span>
-                      <span className="font-bold text-slate-900">{areaInM2.toFixed(1)} m² ({numberOfFloors} Floors)</span>
+                      <span className="font-bold text-slate-900">{areaInM2.toFixed(1)} mÂ² ({numberOfFloors} Floors)</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-200 pb-2">
                       <span className="text-slate-500">Construction Standard:</span>
@@ -888,10 +889,10 @@ I would like to discuss this project and request a formal BOQ.`;
                     Estimated Total Budget Range (FCFA / XAF)
                   </div>
                   <div className="text-3xl sm:text-5xl font-black text-amber-400 tracking-tight mb-2">
-                    XAF {calculationResult.estimatedBudgetMin?.toLocaleString()} – XAF {calculationResult.estimatedBudgetMax?.toLocaleString()}
+                    XAF {calculationResult.estimatedBudgetMin?.toLocaleString()} â€“ XAF {calculationResult.estimatedBudgetMax?.toLocaleString()}
                   </div>
                   <div className="text-sm text-slate-300 font-medium">
-                    Expected Total: <span className="text-white font-bold">XAF {calculationResult.estimatedBudgetExpected?.toLocaleString()}</span> &bull; Rate per m²: <span className="text-amber-300 font-bold">XAF {calculationResult.costPerM2?.toLocaleString()} / m²</span>
+                    Expected Total: <span className="text-white font-bold">XAF {calculationResult.estimatedBudgetExpected?.toLocaleString()}</span> &bull; Rate per mÂ²: <span className="text-amber-300 font-bold">XAF {calculationResult.costPerM2?.toLocaleString()} / mÂ²</span>
                   </div>
                 </div>
 
@@ -907,7 +908,7 @@ I would like to discuss this project and request a formal BOQ.`;
                   </div>
                   <div>
                     <div className="text-slate-400">Built Floor Area</div>
-                    <div className="font-bold text-white mt-0.5">{calculationResult.totalFloorAreaM2} m²</div>
+                    <div className="font-bold text-white mt-0.5">{calculationResult.totalFloorAreaM2} mÂ²</div>
                   </div>
                   <div>
                     <div className="text-slate-400">Quality Standard</div>
@@ -1111,3 +1112,4 @@ I would like to discuss this project and request a formal BOQ.`;
     </div>
   );
 };
+

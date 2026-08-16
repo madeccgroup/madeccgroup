@@ -1,3 +1,4 @@
+﻿import { trackProjectView, trackProjectCTA } from '../services/analytics';
 import { useState, useEffect } from 'react';
 import {
   FolderKanban,
@@ -462,7 +463,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                           </span>
                         </div>
                         <span className="text-amber-500 font-bold inline-flex items-center gap-1 group-hover:text-amber-400 transition-colors">
-                          View Milestone Timeline →
+                          View Milestone Timeline â†’
                         </span>
                       </div>
                     </div>
@@ -580,3 +581,4 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
     </div>
   );
 }
+

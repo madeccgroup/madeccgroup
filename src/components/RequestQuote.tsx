@@ -1,3 +1,4 @@
+﻿import { trackQuoteStart, trackQuoteSubmit, trackLead, trackFormError } from '../services/analytics';
 import React, { useState, useEffect } from 'react';
 import { getCsrfHeaders } from '../lib/csrf.ts';
 import {
@@ -39,14 +40,14 @@ interface RequestQuoteProps {
 }
 
 const CAMEROON_REGIONS = [
-  'Centre (Yaoundé)',
+  'Centre (YaoundÃ©)',
   'Littoral (Douala)',
   'West (Bafoussam)',
   'North West (Bamenda)',
   'South West (Buea/Limbe)',
   'South (Ebolowa/Kribi)',
   'East (Bertoua)',
-  'Adamawa (Ngaoundéré)',
+  'Adamawa (NgaoundÃ©rÃ©)',
   'North (Garoua)',
   'Far North (Maroua)',
   'Diaspora / International Client'
@@ -141,13 +142,13 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
     projectStage: 'Idea / Concept Stage',
     storeys: 1,
     floorArea: '',
-    floorAreaUnit: 'm²',
+    floorAreaUnit: 'mÂ²',
 
     // Step 2: Site & Location
-    region: 'Centre (Yaoundé)',
+    region: 'Centre (YaoundÃ©)',
     division: '',
     subdivision: '',
-    city: 'Yaoundé',
+    city: 'YaoundÃ©',
     neighborhood: '',
     siteAddress: '',
     siteStatus: 'Land fully acquired & clear',
@@ -775,7 +776,7 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
 
               {copiedRefText && (
                 <div className="text-xs font-bold text-emerald-600 transition-all">
-                  ✓ Reference copied to clipboard!
+                  âœ“ Reference copied to clipboard!
                 </div>
               )}
             </div>
@@ -917,11 +918,11 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
                     projectStage: 'Idea / Concept Stage',
                     storeys: 1,
                     floorArea: '',
-                    floorAreaUnit: 'm²',
-                    region: 'Centre (Yaoundé)',
+                    floorAreaUnit: 'mÂ²',
+                    region: 'Centre (YaoundÃ©)',
                     division: '',
                     subdivision: '',
-                    city: 'Yaoundé',
+                    city: 'YaoundÃ©',
                     neighborhood: '',
                     siteAddress: '',
                     siteStatus: 'Land fully acquired & clear',
@@ -1013,7 +1014,7 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. 4-Bedroom Modern Duplex in Bastos, Yaoundé"
+                        placeholder="e.g. 4-Bedroom Modern Duplex in Bastos, YaoundÃ©"
                         value={formData.projectName}
                         onChange={(e) => handleInputChange('projectName', e.target.value)}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
@@ -1106,7 +1107,7 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Est. Floor Area (m²)</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Est. Floor Area (mÂ²)</label>
                       <input
                         type="number"
                         placeholder="e.g. 250"
@@ -1153,7 +1154,7 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Yaoundé, Douala, Kribi, Limbe"
+                        placeholder="e.g. YaoundÃ©, Douala, Kribi, Limbe"
                         value={formData.city}
                         onChange={(e) => handleInputChange('city', e.target.value)}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
@@ -1217,7 +1218,7 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       >
                         <option value="XAF">XAF (FCFA)</option>
-                        <option value="EUR">EUR (€)</option>
+                        <option value="EUR">EUR (â‚¬)</option>
                         <option value="USD">USD ($)</option>
                       </select>
                     </div>
@@ -1517,7 +1518,7 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
                           {isVerified && (
                             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
                               <Check className="w-4 h-4 stroke-[3]" />
-                              ✓ Human verification completed
+                              âœ“ Human verification completed
                             </div>
                           )}
 
@@ -1565,10 +1566,10 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-2">
                     <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Request Summary</div>
                     <div className="grid grid-cols-2 gap-2 text-slate-600">
-                      <div>• Project: <strong>{formData.projectName || 'Untitled Project'}</strong></div>
-                      <div>• Location: <strong>{formData.city}, {formData.region}</strong></div>
-                      <div>• Services: <strong>{formData.servicesRequested.length} selected</strong></div>
-                      <div>• Urgency: <strong>{formData.urgency}</strong></div>
+                      <div>â€¢ Project: <strong>{formData.projectName || 'Untitled Project'}</strong></div>
+                      <div>â€¢ Location: <strong>{formData.city}, {formData.region}</strong></div>
+                      <div>â€¢ Services: <strong>{formData.servicesRequested.length} selected</strong></div>
+                      <div>â€¢ Urgency: <strong>{formData.urgency}</strong></div>
                     </div>
                   </div>
                 </div>
@@ -1622,3 +1623,4 @@ export const RequestQuote: React.FC<RequestQuoteProps> = ({ onNavigateToTab, pre
     </div>
   );
 };
+

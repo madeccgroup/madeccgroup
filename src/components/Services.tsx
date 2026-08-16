@@ -1,3 +1,4 @@
+﻿import { trackServiceView, trackServiceCTA } from '../services/analytics';
 import React, { useState, useEffect } from 'react';
 import {
   Building2,
@@ -123,7 +124,7 @@ export const SERVICES_DATA: ServiceItem[] = [
       { title: 'Pavement Layer Works', desc: 'Sub-base, base course compaction, and asphalt or interlock stone paving.' }
     ],
     faqs: [
-      { q: 'How do you handle difficult hillside terrain in Yaoundé/Bafoussam?', a: 'We engineer custom retaining walls (gabions, cantilever RC walls) and benching protocols to guarantee slope stability.' }
+      { q: 'How do you handle difficult hillside terrain in YaoundÃ©/Bafoussam?', a: 'We engineer custom retaining walls (gabions, cantilever RC walls) and benching protocols to guarantee slope stability.' }
     ],
     ctaLabel: 'Request Civil Engineering Quote'
   },
@@ -196,7 +197,7 @@ export const SERVICES_DATA: ServiceItem[] = [
       { title: 'Working Drawings', desc: 'Producing precise dimensioned drawings for site construction.' }
     ],
     faqs: [
-      { q: 'Do you help obtain building permits in Yaoundé and Douala?', a: 'Yes, we prepare all required architectural and engineering dossiers formatted specifically for municipal council submissions.' }
+      { q: 'Do you help obtain building permits in YaoundÃ© and Douala?', a: 'Yes, we prepare all required architectural and engineering dossiers formatted specifically for municipal council submissions.' }
     ],
     ctaLabel: 'Start a Design Project'
   },
@@ -207,7 +208,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     category: 'Cost & Commercial',
     icon: Calculator,
     shortDesc: 'Independent cost planning, quantity take-offs, budget estimation, material schedules, and commercial cost monitoring.',
-    overview: 'Quantity surveying is central to MADECC’s core identity. We protect property owners from cost overruns through transparent quantity measurements and real Cameroon market unit rate benchmarking.',
+    overview: 'Quantity surveying is central to MADECCâ€™s core identity. We protect property owners from cost overruns through transparent quantity measurements and real Cameroon market unit rate benchmarking.',
     whatWeDeliver: [
       'Detailed material quantity take-offs',
       'Pre-construction budget forecasting & cost planning',
@@ -222,7 +223,7 @@ export const SERVICES_DATA: ServiceItem[] = [
     ],
     deliverables: [
       'Comprehensive Itemized Cost Estimate Report',
-      'Material Breakdown Schedule (Cement bags, Rebar tonnes, Sand m³)',
+      'Material Breakdown Schedule (Cement bags, Rebar tonnes, Sand mÂ³)',
       'Payment Certificate Recommendations'
     ],
     processSteps: [
@@ -231,7 +232,7 @@ export const SERVICES_DATA: ServiceItem[] = [
       { title: 'Cost Reporting', desc: 'Compiling structured category cost breakdowns.' }
     ],
     faqs: [
-      { q: 'How accurate are MADECC Quantity Surveyor estimates?', a: 'Our estimates draw directly from active supplier invoices across Douala, Yaoundé, and Garoua, offering +/- 3% material accuracy.' }
+      { q: 'How accurate are MADECC Quantity Surveyor estimates?', a: 'Our estimates draw directly from active supplier invoices across Douala, YaoundÃ©, and Garoua, offering +/- 3% material accuracy.' }
     ],
     ctaLabel: 'Request Cost Estimate'
   },
@@ -385,7 +386,7 @@ export const SERVICES_DATA: ServiceItem[] = [
       'Vertical building extension (Adding storeys / floors)',
       'Roof timber replacement & modern sheet conversion',
       'Commercial office & retail interior refurbishment',
-      'Façade modernization & exterior rendering'
+      'FaÃ§ade modernization & exterior rendering'
     ],
     typicalProjects: [
       'Bungalow to Duplex Conversion & Vertical Extension',
@@ -626,7 +627,7 @@ export const Services: React.FC<ServicesProps> = ({ onNavigateToTab }) => {
               { title: 'Transparent Cost Estimation', desc: 'Itemized material quantity breakdowns and real Cameroon market price indices eliminate surprises.' },
               { title: 'Quantity Surveying Rigor', desc: 'SMM-compliant Bills of Quantities protect you from bloated contractor quotes.' },
               { title: 'Technology-Enabled Dashboards', desc: 'Diaspora and local clients receive weekly digital photo/video progress updates and budget reports.' },
-              { title: 'Local Cameroon Market Expertise', desc: 'Deep knowledge of regional soil types, quarry sources, and logistics in Yaoundé, Douala, and all 10 regions.' },
+              { title: 'Local Cameroon Market Expertise', desc: 'Deep knowledge of regional soil types, quarry sources, and logistics in YaoundÃ©, Douala, and all 10 regions.' },
               { title: 'Integrated Services', desc: 'From initial architectural sketches to foundation pouring and final finishing under one umbrella.' }
             ].map((item, i) => (
               <div key={i} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
@@ -670,7 +671,7 @@ export const Services: React.FC<ServicesProps> = ({ onNavigateToTab }) => {
                 a: 'Yes. We offer independent technical supervision and quality control to protect project owners and enforce compliance.'
               },
               {
-                q: 'Does MADECC work outside Yaoundé and Douala?',
+                q: 'Does MADECC work outside YaoundÃ© and Douala?',
                 a: 'Yes. We execute and supervise projects across all 10 regions of Cameroon, including Kribi, Bafoussam, Bamenda, Garoua, and Maroua.'
               },
               {
@@ -812,3 +813,4 @@ export const Services: React.FC<ServicesProps> = ({ onNavigateToTab }) => {
     </div>
   );
 };
+

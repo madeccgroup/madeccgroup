@@ -1,3 +1,4 @@
+﻿import { trackBidStart, trackBidSubmit, trackFormError } from '../services/analytics';
 import React, { useState } from 'react';
 import {
   Calendar,
@@ -29,7 +30,7 @@ const CONSULTATION_TYPES = [
 
 const MEETING_MODES = [
   'Virtual Video Meeting (Google Meet / Zoom)',
-  'In-Person at MADECC Yaoundé Office',
+  'In-Person at MADECC YaoundÃ© Office',
   'On-Site Meeting at Project Location'
 ];
 
@@ -44,7 +45,7 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
     meetingMode: MEETING_MODES[0],
     preferredDate: '',
     preferredTime: '10:00 AM',
-    projectLocation: 'Yaoundé',
+    projectLocation: 'YaoundÃ©',
     notes: ''
   });
 
@@ -76,9 +77,9 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-left text-slate-700 space-y-1">
             <div className="font-bold text-slate-900 mb-1">Session Details:</div>
-            <div>• Type: {formData.consultationType}</div>
-            <div>• Mode: {formData.meetingMode}</div>
-            <div>• Contact: {formData.clientPhone} ({formData.clientEmail})</div>
+            <div>â€¢ Type: {formData.consultationType}</div>
+            <div>â€¢ Mode: {formData.meetingMode}</div>
+            <div>â€¢ Contact: {formData.clientPhone} ({formData.clientEmail})</div>
           </div>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -244,3 +245,4 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
     </div>
   );
 };
+

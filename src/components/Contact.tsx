@@ -1,3 +1,4 @@
+﻿import { trackContactStart, trackContactSubmit, trackFormError } from '../services/analytics';
 import React, { useState } from 'react';
 import { getCsrfHeaders } from '../lib/csrf.ts';
 import { useLanguage } from '../lib/LanguageContext.tsx';
@@ -314,3 +315,4 @@ export default function Contact() {
     </div>
   );
 }
+
