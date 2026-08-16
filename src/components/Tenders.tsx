@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import {
-  FileText,
-  Search,
-  Calendar,
-  Clock,
-  MapPin,
-  Building2,
-  CheckCircle2,
-  AlertTriangle,
-  Download,
-  Send,
-  X,
-  Eye,
-  Sparkles,
-  Upload,
-  ShieldCheck,
+import { 
+  FileText, 
+  Search, 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  Building2, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Download, 
+  Send, 
+  X, 
+  Eye, 
+  Sparkles, 
+  Upload, 
+  ShieldCheck, 
   ChevronRight,
   Briefcase
 } from 'lucide-react';
@@ -196,9 +196,9 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
     const matchesCat = selectedCategory === 'All' || t.categoryName === selectedCategory;
     const matchesStatus = statusFilter === 'ALL' || t.status === statusFilter;
     const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = !query ||
-      t.title.toLowerCase().includes(query) ||
-      t.tenderNumber.toLowerCase().includes(query) ||
+    const matchesSearch = !query || 
+      t.title.toLowerCase().includes(query) || 
+      t.tenderNumber.toLowerCase().includes(query) || 
       t.location.toLowerCase().includes(query) ||
       t.description.toLowerCase().includes(query);
     return matchesCat && matchesStatus && matchesSearch;
@@ -219,7 +219,7 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
 
   return (
     <div className="bg-slate-950 text-slate-100 min-h-screen">
-
+      
       {/* HERO BANNER */}
       <section className="relative py-20 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -239,7 +239,7 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative">
             <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input
+            <input 
               type="text"
               placeholder="Search by tender number, title, trade category or city..."
               value={searchQuery}
@@ -252,10 +252,10 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
 
       {/* MAIN LISTINGS SECTION */}
       <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+        
         {/* Category & Status Filter Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-800">
-
+          
           <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 scrollbar-none">
             {categories.map((cat) => (
               <button
@@ -308,7 +308,7 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredTenders.map((tender) => (
-              <div
+              <div 
                 key={tender.id}
                 className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between"
               >
@@ -363,7 +363,7 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
       {selectedTender && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-6 sm:p-8 relative shadow-2xl my-8">
-
+            
             <button
               onClick={() => setSelectedTender(null)}
               className="absolute top-6 right-6 text-slate-400 hover:text-white p-1"
@@ -387,7 +387,7 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
             </p>
 
             <div className="space-y-6 text-xs text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-2">
-
+              
               <div>
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono text-amber-400 mb-2">1. Overview & Project Context</h4>
                 <p className="whitespace-pre-line bg-slate-950 p-4 rounded-xl border border-slate-800">{selectedTender.description}</p>
@@ -458,7 +458,7 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
       {eoiModalOpen && selectedTender && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 relative shadow-2xl">
-
+            
             <button
               onClick={() => setEoiModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-white p-1"
@@ -504,8 +504,8 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
 
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Company / Enterprise Name *</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     required
                     value={eoiCompany}
                     onChange={(e) => setEoiCompany(e.target.value)}
@@ -517,8 +517,8 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Contact Person *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={eoiContact}
                       onChange={(e) => setEoiContact(e.target.value)}
@@ -529,8 +529,8 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Email Address *</label>
-                    <input
-                      type="email"
+                    <input 
+                      type="email" 
                       required
                       value={eoiEmail}
                       onChange={(e) => setEoiEmail(e.target.value)}
@@ -542,8 +542,8 @@ export const Tenders: React.FC<Props> = ({ onNavigateToTab }) => {
 
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Phone / WhatsApp *</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     required
                     value={eoiPhone}
                     onChange={(e) => setEoiPhone(e.target.value)}

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import {
-  HelpCircle,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  Copy,
-  Search,
-  Filter,
-  CheckCircle2,
-  Clock,
-  Archive,
-  Download,
-  FileText,
+import { 
+  HelpCircle, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  Copy, 
+  Search, 
+  Filter, 
+  CheckCircle2, 
+  Clock, 
+  Archive, 
+  Download, 
+  FileText, 
   X,
   History,
   Tag,
@@ -49,7 +49,7 @@ interface FAQCategory {
 
 export const AdminFaq: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'faqs' | 'categories' | 'audit'>('faqs');
-
+  
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [categories, setCategories] = useState<FAQCategory[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -194,7 +194,7 @@ export const AdminFaq: React.FC = () => {
 
   return (
     <div className="p-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800">
-
+      
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800">
         <div>
@@ -276,8 +276,8 @@ export const AdminFaq: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
+              <input 
+                type="text" 
                 placeholder="Search questions or answers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -437,8 +437,8 @@ export const AdminFaq: React.FC = () => {
             <form onSubmit={handleSaveFaq} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Question *</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   required
                   value={editingFaq.question || ''}
                   onChange={(e) => setEditingFaq({ ...editingFaq, question: e.target.value })}
@@ -514,8 +514,8 @@ export const AdminFaq: React.FC = () => {
             <form onSubmit={handleSaveCategory} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Category Name</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   required
                   value={editingCat.name || ''}
                   onChange={(e) => setEditingCat({ ...editingCat, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}

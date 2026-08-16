@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Leaf,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  Copy,
-  Save,
-  Download,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-  FileText,
-  Layers,
-  ArrowUp,
-  ArrowDown,
-  Upload,
+import { 
+  Leaf, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  Copy, 
+  Save, 
+  Download, 
+  CheckCircle2, 
+  Clock, 
+  Sparkles, 
+  FileText, 
+  Layers, 
+  ArrowUp, 
+  ArrowDown, 
+  Upload, 
   X,
   History,
   Globe,
@@ -70,7 +70,7 @@ interface Metric {
 
 export const AdminSustainability: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'initiatives' | 'social' | 'metrics' | 'audit'>('overview');
-
+  
   // Data state
   const [content, setContent] = useState<SustainabilityContent>({
     title: 'Sustainability & Social Impact',
@@ -241,7 +241,7 @@ export const AdminSustainability: React.FC = () => {
 
   return (
     <div className="p-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800">
-
+      
       {/* MODULE HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800">
         <div>
@@ -305,8 +305,8 @@ export const AdminSustainability: React.FC = () => {
         <form onSubmit={handleSaveOverview} className="space-y-6">
           <div>
             <label className="block text-xs font-mono text-slate-300 mb-1">Page Hero Title</label>
-            <input
-              type="text"
+            <input 
+              type="text" 
               value={content.title}
               onChange={(e) => setContent({ ...content, title: e.target.value })}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:border-amber-500 focus:outline-none"
@@ -315,8 +315,8 @@ export const AdminSustainability: React.FC = () => {
 
           <div>
             <label className="block text-xs font-mono text-slate-300 mb-1">Hero Subtitle</label>
-            <input
-              type="text"
+            <input 
+              type="text" 
               value={content.heroSubtitle}
               onChange={(e) => setContent({ ...content, heroSubtitle: e.target.value })}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:border-amber-500 focus:outline-none"
@@ -546,8 +546,8 @@ export const AdminSustainability: React.FC = () => {
             <form onSubmit={handleSaveInitiative} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Title</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   required
                   value={editingInit.title || ''}
                   onChange={(e) => setEditingInit({ ...editingInit, title: e.target.value })}
@@ -581,8 +581,8 @@ export const AdminSustainability: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Impact Summary / Metric</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   value={editingInit.impactSummary || ''}
                   onChange={(e) => setEditingInit({ ...editingInit, impactSummary: e.target.value })}
                   placeholder="e.g. 28% reduction in embodied CO2"
@@ -618,8 +618,8 @@ export const AdminSustainability: React.FC = () => {
             <form onSubmit={handleSaveSocialProject} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Project Title</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   required
                   value={editingSocial.title || ''}
                   onChange={(e) => setEditingSocial({ ...editingSocial, title: e.target.value })}
@@ -629,8 +629,8 @@ export const AdminSustainability: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Location</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   value={editingSocial.location || ''}
                   onChange={(e) => setEditingSocial({ ...editingSocial, location: e.target.value })}
                   placeholder="e.g. Douala, Littoral Region"
@@ -650,8 +650,8 @@ export const AdminSustainability: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Impact Metrics Summary</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   value={editingSocial.impactMetricsText || ''}
                   onChange={(e) => setEditingSocial({ ...editingSocial, impactMetricsText: e.target.value })}
                   placeholder="e.g. 120 Youth Trained | 94% Placement"
@@ -687,8 +687,8 @@ export const AdminSustainability: React.FC = () => {
             <form onSubmit={handleSaveMetric} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Label</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   required
                   value={editingMetric.label || ''}
                   onChange={(e) => setEditingMetric({ ...editingMetric, label: e.target.value })}
@@ -699,8 +699,8 @@ export const AdminSustainability: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Achieved Value</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   required
                   value={editingMetric.value || ''}
                   onChange={(e) => setEditingMetric({ ...editingMetric, value: e.target.value })}

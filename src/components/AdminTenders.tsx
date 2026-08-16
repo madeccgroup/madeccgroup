@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Briefcase,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  Copy,
-  Search,
-  Filter,
-  Download,
-  FileText,
-  Save,
-  X,
-  Send,
-  CheckCircle2,
-  Clock,
+import { 
+  Briefcase, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  Copy, 
+  Search, 
+  Filter, 
+  Download, 
+  FileText, 
+  Save, 
+  X, 
+  Send, 
+  CheckCircle2, 
+  Clock, 
   AlertCircle,
   History,
   Building2,
@@ -59,7 +59,7 @@ interface EoiSubmission {
 
 export const AdminTenders: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'tenders' | 'eois' | 'audit'>('tenders');
-
+  
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [eois, setEois] = useState<EoiSubmission[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -201,7 +201,7 @@ export const AdminTenders: React.FC = () => {
 
   return (
     <div className="p-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800">
-
+      
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800">
         <div>
@@ -214,9 +214,9 @@ export const AdminTenders: React.FC = () => {
 
         <button
           onClick={() => {
-            setEditingTender({
-              categoryName: 'Structural Works',
-              status: 'OPEN',
+            setEditingTender({ 
+              categoryName: 'Structural Works', 
+              status: 'OPEN', 
               tenderNumber: `TND-2026-MDCC-${Math.floor(100 + Math.random() * 900)}`,
               openingDate: new Date().toISOString().split('T')[0]
             });
@@ -276,8 +276,8 @@ export const AdminTenders: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
+              <input 
+                type="text" 
                 placeholder="Search tender or location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -422,12 +422,12 @@ export const AdminTenders: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white mb-4">Edit Tender Opportunity</h3>
             <form onSubmit={handleSaveTender} className="space-y-4">
-
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Tender Reference No *</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     required
                     value={editingTender.tenderNumber || ''}
                     onChange={(e) => setEditingTender({ ...editingTender, tenderNumber: e.target.value })}
@@ -437,8 +437,8 @@ export const AdminTenders: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Category *</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     required
                     value={editingTender.categoryName || ''}
                     onChange={(e) => setEditingTender({ ...editingTender, categoryName: e.target.value })}
@@ -450,8 +450,8 @@ export const AdminTenders: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">Tender Title *</label>
-                <input
-                  type="text"
+                <input 
+                  type="text" 
                   required
                   value={editingTender.title || ''}
                   onChange={(e) => setEditingTender({ ...editingTender, title: e.target.value })}
@@ -462,8 +462,8 @@ export const AdminTenders: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Client / Project</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     value={editingTender.clientProject || ''}
                     onChange={(e) => setEditingTender({ ...editingTender, clientProject: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
@@ -472,8 +472,8 @@ export const AdminTenders: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Location</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     value={editingTender.location || ''}
                     onChange={(e) => setEditingTender({ ...editingTender, location: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
@@ -514,8 +514,8 @@ export const AdminTenders: React.FC = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Opening Date</label>
-                  <input
-                    type="date"
+                  <input 
+                    type="date" 
                     value={editingTender.openingDate || ''}
                     onChange={(e) => setEditingTender({ ...editingTender, openingDate: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
@@ -524,8 +524,8 @@ export const AdminTenders: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Closing Date</label>
-                  <input
-                    type="date"
+                  <input 
+                    type="date" 
                     value={editingTender.closingDate || ''}
                     onChange={(e) => setEditingTender({ ...editingTender, closingDate: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
@@ -574,7 +574,7 @@ export const AdminTenders: React.FC = () => {
       {selectedEoi && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 relative">
-
+            
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
               <div>
                 <span className="font-mono text-xs text-amber-400 font-bold block">{selectedEoi.submissionNumber}</span>

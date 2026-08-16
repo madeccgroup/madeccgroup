@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Truck,
-  HardHat,
-  Search,
-  Filter,
-  Eye,
-  FileText,
-  Download,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  AlertCircle,
-  ShieldCheck,
-  UserCheck,
-  Save,
+import { 
+  Truck, 
+  HardHat, 
+  Search, 
+  Filter, 
+  Eye, 
+  FileText, 
+  Download, 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  AlertCircle, 
+  ShieldCheck, 
+  UserCheck, 
+  Save, 
   X,
   Building2,
   Lock,
@@ -69,7 +69,7 @@ interface SubcontractorApp {
 
 export const AdminSuppliers: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'suppliers' | 'subcontractors' | 'audit'>('suppliers');
-
+  
   const [suppliers, setSuppliers] = useState<SupplierApp[]>([]);
   const [subcontractors, setSubcontractors] = useState<SubcontractorApp[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -203,7 +203,7 @@ export const AdminSuppliers: React.FC = () => {
 
   return (
     <div className="p-6 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800">
-
+      
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800">
         <div>
@@ -222,7 +222,7 @@ export const AdminSuppliers: React.FC = () => {
 
       {/* TABS & FILTERS BAR */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-
+        
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('suppliers')}
@@ -262,8 +262,8 @@ export const AdminSuppliers: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
+              <input 
+                type="text" 
                 placeholder="Search vendor or category..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -372,7 +372,7 @@ export const AdminSuppliers: React.FC = () => {
       {selectedSupplier && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-end p-0">
           <div className="bg-slate-900 border-l border-slate-800 max-w-xl w-full h-full p-6 relative overflow-y-auto shadow-2xl flex flex-col justify-between">
-
+            
             <div>
               <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
                 <div>
@@ -420,7 +420,7 @@ export const AdminSuppliers: React.FC = () => {
 
                   <div>
                     <label className="block font-mono text-slate-400 mb-1">Assigned Evaluator</label>
-                    <input
+                    <input 
                       type="text"
                       value={assignedReviewer}
                       onChange={(e) => setAssignedReviewer(e.target.value)}
@@ -469,7 +469,7 @@ export const AdminSuppliers: React.FC = () => {
       {selectedSubcontractor && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-end p-0">
           <div className="bg-slate-900 border-l border-slate-800 max-w-xl w-full h-full p-6 relative overflow-y-auto shadow-2xl flex flex-col justify-between">
-
+            
             <div>
               <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
                 <div>

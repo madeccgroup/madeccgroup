@@ -7,6 +7,10 @@ export const auth = getAuth(app);
 export const googleAuthProvider = new GoogleAuthProvider();
 
 export async function getAuthToken(): Promise<string | null> {
+  const reviewerToken = sessionStorage.getItem('reviewer_token');
+  if (reviewerToken) {
+    return reviewerToken;
+  }
   const bypass = sessionStorage.getItem('admin_token');
   if (bypass === 'Adminmadeccgroup') {
     return 'ADMIN_BYPASS:Adminmadeccgroup';

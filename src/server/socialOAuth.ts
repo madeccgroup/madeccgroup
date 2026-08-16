@@ -1,4 +1,4 @@
-﻿import { Express, Request, Response } from 'express';
+import { Express, Request, Response } from 'express';
 import crypto from 'crypto';
 import { eq, desc, inArray } from 'drizzle-orm';
 import {
@@ -142,39 +142,45 @@ setInterval(() => {
 
 // Helper to derive current application base URL with environment awareness
 export function getAppBaseUrl(req?: Request, forceProduction?: boolean): string {
-  const productionUrl = 'https://madeccgroup.online';
-
-  // Production OAuth is permanently pinned to the official MADECC domain.
-  // Never derive the OAuth origin from the incoming Host header.
-  if (process.env.NODE_ENV === 'production' || forceProduction) {
-    return productionUrl;
+  // Explicit force production override (e.g. for generating production OAuth URIs)
+  if (forceProduction || req?.query?.domain === 'production' || req?.query?.force_production === 'true') {
+    return 'https://madeccgroup.online';
   }
 
-  // Development only.
-  const configuredUrl =
-    process.env.OAUTH_BASE_URL ||
-    process.env.APP_URL;
-
-  if (configuredUrl) {
-    const normalizedUrl = configuredUrl.trim().replace(/\/+$/, '');
-
-    if (
-      normalizedUrl.startsWith('http://localhost:') ||
-      normalizedUrl.startsWith('https://localhost:') ||
-      normalizedUrl.startsWith('http://127.0.0.1:') ||
-      normalizedUrl.startsWith('https://127.0.0.1:')
-    ) {
-      return normalizedUrl;
+  // 1. Production environment resolution
+  if (process.env.NODE_ENV === 'production') {
+    const prodUrl = process.env.PRODUCTION_URL || process.env.PUBLIC_APP_URL || process.env.APP_URL;
+    if (prodUrl && prodUrl.startsWith('http') && !prodUrl.includes('localhost')) {
+      return prodUrl.replace(/\/$/, '');
     }
-
-    if (normalizedUrl.startsWith('https://')) {
-      return normalizedUrl;
-    }
+    return 'https://madeccgroup.online';
   }
 
-  // Final development fallback.
+  // 2. Request header inspection: if incoming request is accessing the production domain
   if (req) {
-    return `${req.protocol}://${req.get('host')}`.replace(/\/+$/, '');
+    const hostHeader = req.get('x-forwarded-host') || req.get('host') || '';
+    if (hostHeader.includes('madeccgroup.online')) {
+      return 'https://madeccgroup.online';
+    }
+  }
+
+  // 3. Explicit environment variable configuration for staging / preview / development
+  if (process.env.PRODUCTION_URL && process.env.PRODUCTION_URL.startsWith('http')) {
+    return process.env.PRODUCTION_URL.replace(/\/$/, '');
+  }
+  if (process.env.PUBLIC_APP_URL && process.env.PUBLIC_APP_URL.startsWith('http')) {
+    return process.env.PUBLIC_APP_URL.replace(/\/$/, '');
+  }
+  if (process.env.APP_URL && process.env.APP_URL.startsWith('http')) {
+    return process.env.APP_URL.replace(/\/$/, '');
+  }
+
+  // 4. Dynamic header detection from incoming HTTP request (dev container or proxy)
+  if (req) {
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const protocol = (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto) || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3000';
+    return `${protocol}://${host}`;
   }
 
   return 'http://localhost:3000';
@@ -628,7 +634,7 @@ export function setupSocialOAuthRoutes(app: Express, db: any) {
       }
 
       const state = crypto.randomBytes(32).toString('hex');
-      const baseUrl = getAppBaseUrl(req);
+      const baseUrl = getAppBaseUrl(req, true);
       const redirectUri = `${baseUrl}/api/social/oauth/${provider}/callback`;
 
       // Generate PKCE code verifier & S256 challenge for YouTube, TikTok, and X/Twitter
@@ -711,7 +717,7 @@ export function setupSocialOAuthRoutes(app: Express, db: any) {
       }
 
       const state = crypto.randomBytes(32).toString('hex');
-      const baseUrl = getAppBaseUrl(req);
+      const baseUrl = getAppBaseUrl(req, true);
       const redirectUri = `${baseUrl}/api/social/oauth/${provider}/callback`;
 
       const codeVerifier = crypto.randomBytes(32).toString('base64url');
@@ -812,7 +818,7 @@ export function setupSocialOAuthRoutes(app: Express, db: any) {
           </head>
           <body>
             <div class="card">
-              <div class="title">${status === 'success' ? 'âœ“ Account Authorized' : 'âœ• Authorization Failed'}</div>
+              <div class="title">${status === 'success' ? '✓ Account Authorized' : '✕ Authorization Failed'}</div>
               <div class="msg">${message}</div>
               <p style="font-size: 0.75rem; color: #64748b;">Closing window and updating dashboard...</p>
             </div>
@@ -2450,7 +2456,7 @@ async function publishToTwitter(
       };
     }
 
-    let text = `${content.title ? content.title + ' â€” ' : ''}${content.caption || ''}\n\n${content.ctaText || ''}\n${content.hashtags || ''}`.trim();
+    let text = `${content.title ? content.title + ' — ' : ''}${content.caption || ''}\n\n${content.ctaText || ''}\n${content.hashtags || ''}`.trim();
     if (text.length > 280) {
       text = text.substring(0, 277) + '...';
     }
@@ -3119,4 +3125,8 @@ export async function executePublishBroadcast(params: {
     publishedAt: new Date().toISOString()
   };
 }
+
+
+
+
 

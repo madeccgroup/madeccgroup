@@ -3,22 +3,23 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import crypto from 'crypto';
+import cookieParser from 'cookie-parser';
 import { setupSocialOAuthRoutes, executePublishBroadcast } from './src/server/socialOAuth.js';
 import { db } from './src/db/index.ts';
-import {
-  users,
-  categories,
-  projects,
-  projectProgress,
-  blogPosts,
-  reviews,
-  appointments,
-  contactMessages,
-  newsletterSubscribers,
-  services,
-  galleryItems,
-  heroBanners,
-  companyDocuments,
+import { 
+  users, 
+  categories, 
+  projects, 
+  projectProgress, 
+  blogPosts, 
+  reviews, 
+  appointments, 
+  contactMessages, 
+  newsletterSubscribers, 
+  services, 
+  galleryItems, 
+  heroBanners, 
+  companyDocuments, 
   auditLogs,
   teamMembers,
   signedContracts,
@@ -62,6 +63,7 @@ import {
   staffTrainingRecords,
   socialMediaChannels,
   socialMediaPosts,
+  reviewerCredentials,
   projectBudgetEstimates,
   quoteRequests,
   quoteRequestDocuments,
@@ -84,6 +86,7 @@ import { seedDatabase } from './src/db/seed.ts';
 import { requireAuth, requireAdmin, requireStaffOrAdmin, requireSocialMediaReviewerOrAdmin } from './src/middleware/auth.ts';
 import { adminAuth } from './src/lib/firebase-admin.ts';
 import { logAudit } from './src/lib/audit.ts';
+import { hashPassword, verifyPassword, signReviewerToken, ensureReviewerCredentialsTable } from './src/lib/reviewerAuth.ts';
 import { eq, desc, and, sql, ne, or } from 'drizzle-orm';
 import nodemailer from 'nodemailer';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -145,7 +148,7 @@ async function deleteFileFromCloud(fileUrl: string | null | undefined) {
     try {
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
+      
       const urlObj = new URL(fileUrl);
       const pathParts = urlObj.pathname.split('/storage/v1/object/public/');
       if (pathParts.length > 1) {
@@ -154,7 +157,7 @@ async function deleteFileFromCloud(fileUrl: string | null | undefined) {
         if (firstSlash !== -1) {
           const bucket = fullPath.substring(0, firstSlash);
           const filePath = fullPath.substring(firstSlash + 1);
-
+          
           const { error } = await supabase.storage.from(bucket).remove([filePath]);
           if (error) {
             console.error(`[STORAGE_DELETE_ERROR] Failed to delete from Supabase storage:`, error);
@@ -182,7 +185,7 @@ async function deleteFileFromCloud(fileUrl: string | null | undefined) {
         const urlObj = new URL(fileUrl);
         const pathname = urlObj.pathname;
         const parts = pathname.split('/');
-
+        
         const resourceType = parts[2] || 'image';
         const uploadIndex = parts.indexOf('upload');
         if (uploadIndex !== -1 && uploadIndex + 1 < parts.length) {
@@ -190,11 +193,11 @@ async function deleteFileFromCloud(fileUrl: string | null | undefined) {
           if (remainingParts[0] && remainingParts[0].startsWith('v') && /^\d+$/.test(remainingParts[0].substring(1))) {
             remainingParts = remainingParts.slice(1);
           }
-
+          
           const fileWithExt = remainingParts.join('/');
           const lastDotIndex = fileWithExt.lastIndexOf('.');
           const publicId = lastDotIndex !== -1 ? fileWithExt.substring(0, lastDotIndex) : fileWithExt;
-
+          
           const result = await cloudinary.v2.uploader.destroy(publicId, {
             resource_type: resourceType === 'raw' ? 'raw' : (resourceType === 'video' ? 'video' : 'image')
           });
@@ -225,7 +228,7 @@ function validateEnvironmentVariables() {
   console.log('🔍 [ENVIRONMENT AUDIT] Auditing system environment configuration...');
   const required = ['DATABASE_URL'];
   const missingRequired = required.filter(key => !process.env[key]);
-
+  
   if (missingRequired.length > 0) {
     console.error(`❌ [FATAL CONFIG ERROR] Missing required environment variables: ${missingRequired.join(', ')}`);
     console.error('The application cannot boot without a valid DATABASE_URL connection string.');
@@ -285,8 +288,8 @@ function getTransporter() {
 }
 
 async function sendNotificationEmail(
-  subject: string,
-  text: string,
+  subject: string, 
+  text: string, 
   html: string,
   options?: { replyTo?: string; cc?: string | string[]; bcc?: string | string[] }
 ) {
@@ -321,9 +324,9 @@ async function sendNotificationEmail(
 }
 
 async function sendEmail(
-  recipient: string,
-  subject: string,
-  text: string,
+  recipient: string, 
+  subject: string, 
+  text: string, 
   html: string,
   options?: { replyTo?: string; cc?: string | string[]; bcc?: string | string[] }
 ) {
@@ -387,7 +390,7 @@ async function retryWithFallback<T>(
         }
 
         console.warn(`[GEMINI] Attempt ${attempt + 1} with model ${model} failed. Error: ${err.message || err}`);
-
+        
         if (attempt < retriesPerModel) {
           await new Promise(resolve => setTimeout(resolve, delay));
           delay *= 2;
@@ -445,21 +448,21 @@ function validateCsrfToken(token: string): boolean {
   if (!token) return false;
   const parts = token.split('.');
   if (parts.length !== 3) return false;
-
+  
   const [timestampStr, randomSalt, signature] = parts;
   const timestamp = parseInt(timestampStr, 10);
   if (isNaN(timestamp)) return false;
-
+  
   // Max token age: 24 hours
   const age = Date.now() - timestamp;
   const MAX_AGE = 24 * 60 * 60 * 1000;
   if (age < 0 || age > MAX_AGE) return false;
-
+  
   const payload = `${timestampStr}.${randomSalt}`;
   const hmac = crypto.createHmac('sha256', CSRF_SECRET);
   hmac.update(payload);
   const expectedSignature = hmac.digest('hex');
-
+  
   try {
     return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
   } catch (err) {
@@ -473,6 +476,7 @@ export async function getApp() {
   if (!isDatabaseSeeded) {
     try {
       await seedDatabase();
+      await ensureReviewerCredentialsTable();
       isDatabaseSeeded = true;
     } catch (seedErr) {
       console.error('[SEED_INITIALIZATION_ERROR] Failed to run database seeding:', seedErr);
@@ -480,6 +484,7 @@ export async function getApp() {
   }
 
   const app = express();
+  app.use(cookieParser());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -504,8 +509,13 @@ export async function getApp() {
       return next();
     }
 
-    // Exclude CSRF token route (it is a GET anyway, but being safe)
-    if (req.path === '/csrf-token') {
+    // Exclude CSRF token route, reviewer login, and webhooks
+    if (
+      req.path === '/csrf-token' ||
+      req.path === '/auth/reviewer-login' ||
+      req.path.startsWith('/webhooks') ||
+      req.path.startsWith('/social/oauth')
+    ) {
       return next();
     }
 
@@ -519,13 +529,13 @@ export async function getApp() {
     const token = req.headers['x-csrf-token'];
     if (!token || typeof token !== 'string' || !validateCsrfToken(token)) {
       const isMissing = !token;
-      const debugDetail = isMissing
-        ? 'Missing CSRF token header (X-CSRF-Token).'
+      const debugDetail = isMissing 
+        ? 'Missing CSRF token header (X-CSRF-Token).' 
         : 'Invalid or expired CSRF token.';
-
+        
       console.warn(`[CSRF] Blocked unauthorized request from ${req.ip} targeting ${req.method} ${req.originalUrl}: ${debugDetail}`);
-      return res.status(403).json({
-        error: `Forbidden: ${debugDetail} To resolve, please refresh the webpage or ensure that your browser allows cookies and local storage, and then submit again.`
+      return res.status(403).json({ 
+        error: `Forbidden: ${debugDetail} To resolve, please refresh the webpage or ensure that your browser allows cookies and local storage, and then submit again.` 
       });
     }
 
@@ -533,15 +543,15 @@ export async function getApp() {
   });
 
   // Ensure uploads directory exists and serve it statically
-  const isServerlessEnvironment =
-    process.env.NETLIFY === 'true' ||
+  const isServerlessEnvironment = 
+    process.env.NETLIFY === 'true' || 
     process.env.NETLIFY === '1' ||
     process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
     process.env.LAMBDA_TASK_ROOT !== undefined ||
     process.env.FUNCTIONS_SIGNATURE !== undefined;
 
-  const uploadDir = isServerlessEnvironment
-    ? '/tmp/uploads'
+  const uploadDir = isServerlessEnvironment 
+    ? '/tmp/uploads' 
     : path.join(process.cwd(), 'uploads');
 
   if (!fs.existsSync(uploadDir)) {
@@ -650,7 +660,7 @@ export async function getApp() {
 
           fileUrl = publicUrl;
           console.log(`[STORAGE] Successfully uploaded ${req.file.originalname} to Supabase Storage: ${fileUrl}`);
-
+          
           // Remove local file after successful cloud upload
           fs.unlinkSync(req.file.path);
         } catch (supabaseErr) {
@@ -676,7 +686,7 @@ export async function getApp() {
 
             fileUrl = result.secure_url;
             console.log(`[STORAGE] Successfully uploaded ${req.file.originalname} to Cloudinary: ${fileUrl}`);
-
+            
             // Remove local file after successful cloud upload
             fs.unlinkSync(req.file.path);
           } catch (cloudinaryErr) {
@@ -748,7 +758,7 @@ export async function getApp() {
         .set({ role })
         .where(eq(users.id, req.dbUser.id))
         .returning();
-
+      
       await logAudit(req.dbUser.uid, req.dbUser.email, 'ROLE_CHANGE', `Changed own role to ${role}`);
       res.json({ user: updated[0] });
     } catch (error: any) {
@@ -762,7 +772,7 @@ export async function getApp() {
       const records = await db.select()
         .from(userSyncData)
         .where(eq(userSyncData.userId, req.dbUser.uid));
-
+      
       const dictionary: Record<string, string> = {};
       for (const r of records) {
         dictionary[r.key] = r.value;
@@ -781,7 +791,7 @@ export async function getApp() {
       return res.status(400).json({ error: 'Key is required' });
     }
     const valString = typeof value === 'string' ? value : JSON.stringify(value);
-
+    
     try {
       const existing = await db.select()
         .from(userSyncData)
@@ -877,8 +887,8 @@ export async function getApp() {
 
     const gemini = getGeminiClient();
     if (!gemini) {
-      return res.json({
-        reply: "Thank you for reaching out to MADECC Group! Our AI virtual assistant is currently offline for scheduled maintenance. Please feel free to contact our direct customer support desk at +237 683 316 486 (or on WhatsApp) or email us at madeccco5@gmail.com. We look forward to assisting you with your construction and engineering needs!"
+      return res.json({ 
+        reply: "Thank you for reaching out to MADECC Group! Our AI virtual assistant is currently offline for scheduled maintenance. Please feel free to contact our direct customer support desk at +237 683 316 486 (or on WhatsApp) or email us at madeccco5@gmail.com. We look forward to assisting you with your construction and engineering needs!" 
       });
     }
 
@@ -927,7 +937,7 @@ Answer customer inquiries professionally, explaining materials, safety complianc
   // ==========================================
   // --- CAREER STUDIO GENERATOR ENDPOINT ---
   // ==========================================
-
+  
   function getFallbackLetter(letterType: string, subType: string, senderName: string, recipientCompany: string) {
     const sName = senderName || 'Jane Doe';
     const rCompany = recipientCompany || 'MADECC Group';
@@ -1137,7 +1147,7 @@ Answer customer inquiries professionally, explaining materials, safety complianc
     } = req.body;
 
     const gemini = getGeminiClient();
-
+    
     if (!gemini) {
       console.warn('[GEMINI] Offline. Using fallback pre-crafted letters.');
       const fallback = getFallbackLetter(letterType, subType, senderName, recipientCompany);
@@ -1334,7 +1344,7 @@ Additional highlights / Custom instructions from applicant:
     } = req.body;
 
     const gemini = getGeminiClient();
-
+    
     if (!gemini) {
       console.warn('[GEMINI] Offline. Using fallback pre-crafted articles of association.');
       const fallback = getFallbackArticles(
@@ -1362,7 +1372,7 @@ Generate a structured JSON object containing:
    - "number" - Integer (1 to 16)
    - "title" - Short uppercase title of the article (e.g. "ARTICLE 7: SHAREHOLDERS' GENERAL MEETINGS", "ARTICLE 8: TRANSFER AND TRANSMISSION OF SHARES")
    - "content" - 1-2 robust, realistic, and legally-worded paragraphs explaining the specific stipulations, meticulously using correct financial terms, regulatory frameworks, local/international court jurisdiction, and corporate governance protocols.
-
+   
 The articles MUST include:
 - ARTICLE 1: LEGAL FORM AND DENOMINATION
 - ARTICLE 2: REGISTERED OFFICE (SIÈGE SOCIAL)
@@ -1546,7 +1556,7 @@ We align our delivery with the national infrastructure acceleration programs (SN
       const loc = clientDetails?.location || 'Douala, Cameroon';
 
       const systemInstruction = `You are an elite International Construction Consultant, Technical Proposal Specialist, and Senior Estimator with over 30 years of experience writing multi-million dollar public and private sector tenders (FIDIC standards) for projects in West/Central Africa (especially Cameroon) and worldwide.
-
+      
 Your task is to generate highly technical, realistic, persuasive, and professionally written content for a construction company proposal.
 Use clear formatting, markdown headers, and professional tables/lists where appropriate. Meticulously incorporate specific regional parameters (such as Cameroonian regulations, local currencies like FCFA, environmental concerns, local sourcing, and safety standards like HSE).`;
 
@@ -1775,7 +1785,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         details: b.details || null,
         updatedAt: new Date()
       }).returning();
-
+      
       await logAudit(req.dbUser.uid, req.dbUser.email, 'CREATE_SERVICE', `Created service ${b.name}`);
       res.status(201).json(result[0]);
     } catch (error: any) {
@@ -1828,7 +1838,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         })
         .where(eq(services.id, serviceId))
         .returning();
-
+      
       await logAudit(req.dbUser.uid, req.dbUser.email, 'UPDATE_SERVICE', `Updated service ${b.name} (ID: ${serviceId})`);
       res.json(result[0]);
     } catch (error: any) {
@@ -1875,7 +1885,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
       if (proj.length === 0) return res.status(404).json({ error: 'Project not found' });
 
       const progressList = await db.select().from(projectProgress).where(eq(projectProgress.projectId, projId)).orderBy(projectProgress.id);
-
+      
       res.json({
         ...proj[0],
         progress: progressList,
@@ -2127,7 +2137,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
   app.get('/api/budget-calculator/rates', async (req, res) => {
     try {
       const activeRates = await db.select().from(costLibraryItems).orderBy(costLibraryItems.category, costLibraryItems.name);
-
+      
       const regionalFactors: Record<string, number> = {
         'Centre': 1.00,
         'Littoral': 0.96,
@@ -2274,8 +2284,8 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
       };
 
       // Determine active scope ratio sum
-      let selectedScopesList: string[] = Array.isArray(selectedScopes) && selectedScopes.length > 0
-        ? selectedScopes
+      let selectedScopesList: string[] = Array.isArray(selectedScopes) && selectedScopes.length > 0 
+        ? selectedScopes 
         : Object.keys(allScopeRatios);
 
       let scopeRatioSum = 0;
@@ -2615,7 +2625,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
   app.get('/api/public/construction-cost-guide', async (req, res) => {
     try {
       const allRates = await db.select().from(costLibraryItems).orderBy(costLibraryItems.category, costLibraryItems.name);
-
+      
       const materials = allRates.filter(r => r.category === 'Material');
       const labour = allRates.filter(r => r.category === 'Labour');
       const plant = allRates.filter(r => r.category === 'Plant');
@@ -2698,9 +2708,9 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
       }
       if (search) {
         const s = String(search).toLowerCase();
-        filtered = filtered.filter(i =>
-          i.name.toLowerCase().includes(s) ||
-          i.itemCode.toLowerCase().includes(s) ||
+        filtered = filtered.filter(i => 
+          i.name.toLowerCase().includes(s) || 
+          i.itemCode.toLowerCase().includes(s) || 
           (i.specifications && i.specifications.toLowerCase().includes(s))
         );
       }
@@ -2894,7 +2904,7 @@ Source: ${qr.source || 'Website Direct'}
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px;">
           <div style="max-width: 680px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-
+            
             <div style="background-color: #0f172a; padding: 28px 32px; border-bottom: 4px solid #d97706;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
@@ -3017,7 +3027,7 @@ MADECC Group — Douala & Yaoundé, Cameroon
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px;">
           <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-
+            
             <div style="background-color: #0f172a; padding: 26px 32px; border-bottom: 4px solid #d97706;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
@@ -3263,7 +3273,7 @@ MADECC Group — Douala & Yaoundé, Cameroon
 
   function generateAntiBotChallenge(): { challengeId: string; equation: string; expiresAt: string } {
     const challengeId = `CHAL-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-
+    
     // Equations of form ax + bx ± c = d where x is integer
     const presets = [
       { a: 15, b: 5, c: 10, sign: '-', x: 5 }, // 15x + 5x - 10 = 90
@@ -3701,7 +3711,7 @@ MADECC Group — Douala & Yaoundé, Cameroon
       }
       if (search) {
         const s = String(search).toLowerCase();
-        allRequests = allRequests.filter(r =>
+        allRequests = allRequests.filter(r => 
           r.referenceNumber.toLowerCase().includes(s) ||
           r.clientName.toLowerCase().includes(s) ||
           r.clientEmail.toLowerCase().includes(s) ||
@@ -3788,7 +3798,7 @@ MADECC Group — Douala & Yaoundé, Cameroon
       const id = Number(req.params.id);
       const records = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
       if (records.length === 0) return res.status(404).json({ error: 'Request not found' });
-
+      
       const qr = records[0];
 
       // Insert into projects
@@ -3902,9 +3912,9 @@ MADECC Group — Douala & Yaoundé, Cameroon
     const { approved } = req.body;
     try {
       const result = await db.update(reviews)
-        .set({
-          approved: approved === true,
-          approvedAt: approved ? new Date() : null
+        .set({ 
+          approved: approved === true, 
+          approvedAt: approved ? new Date() : null 
         })
         .where(eq(reviews.id, reviewId))
         .returning();
@@ -4078,11 +4088,11 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
           const clientName = existing[0].clientName;
           const serviceName = existing[0].serviceName;
           const apptDate = new Date(existing[0].appointmentDate);
-
+          
           let statusText = '';
           let statusTitle = '';
           let statusColor = '#475569';
-
+          
           if (status === 'confirmed') {
             statusTitle = 'Consultation Confirmed';
             statusText = `We are pleased to inform you that your consultation has been officially confirmed by our team.`;
@@ -4287,7 +4297,7 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
           return res.status(200).json({ message: 'Already subscribed' });
         }
         const updated = await db.update(newsletterSubscribers).set({ status: 'subscribed' }).where(eq(newsletterSubscribers.email, email)).returning();
-
+        
         // Notify subscription update
         const emailSubject = `[MADECC Group] Newsletter Subscription Updated`;
         const emailText = `A newsletter subscriber re-activated their subscription:\n\nEmail: ${email}`;
@@ -4359,11 +4369,11 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
     if (!title || !category) return res.status(400).json({ error: 'Missing title or category field' });
     const finalImageUrl = (imageUrl && imageUrl.trim()) ? imageUrl.trim() : (videoUrl || 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1200');
     try {
-      const result = await db.insert(galleryItems).values({
-        title,
-        imageUrl: finalImageUrl,
+      const result = await db.insert(galleryItems).values({ 
+        title, 
+        imageUrl: finalImageUrl, 
         videoUrl: videoUrl || null,
-        category
+        category 
       }).returning();
       await logAudit(req.dbUser.uid, req.dbUser.email, 'ADD_GALLERY', `Added item to gallery: ${title}`);
       res.json(result[0]);
@@ -5470,12 +5480,12 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
   // ==========================================
   // --- CAMEROON LESSON PREPARATION ENDPOINTS ---
   // ==========================================
-
+  
   function getFallbackLessonPackage(topic: string, gradeLevel: string, subject: string, syllabusText?: string) {
     const actualTopic = topic || 'Introduction to Building Foundations & Excavation Safety';
     const actualGrade = gradeLevel || 'Form Four Building Construction (F4BA)';
     const actualSubject = subject || 'Building Construction';
-
+    
     let syllabusSection = '';
     if (syllabusText) {
       syllabusSection = `\n\n### SYLLABUS CORRELATION & FOCUS\n* **Extracted Syllabus Guidelines / Objectives:**\n${syllabusText.substring(0, 1500)}${syllabusText.length > 1500 ? '... [Content Truncated]' : ''}\n\n---\n`;
@@ -5859,7 +5869,7 @@ An engineering project in Yaoundé requires the excavation of 10 isolated column
 
 #### Part 3 (Scenario Answers)
 1. **Foundation Type:** Isolated Pad Foundation. (2 Marks)
-2. **Calculation:**
+2. **Calculation:** 
    - Volume of one pad = L × W × D = 1.2m × 1.2m × 1.0m = 1.44 m³ (2 Marks)
    - Total Volume = 1.44 m³ × 8 pads = 11.52 m³ (2 Marks)
 3. **PPE:** Hard hat (helmet), steel-toed safety boots, and high-visibility vest or gloves. (3 Marks, 1 Mark per item)`;
@@ -5894,9 +5904,9 @@ An engineering project in Yaoundé requires the excavation of 10 isolated column
     const actualTopic = topic || 'Introduction to Building Foundations & Excavation Safety';
     const actualGrade = gradeLevel || 'Form Four Building Construction (F4BA)';
     const actualSubject = subject || 'Building Construction';
-
+    
     return `# READY-TO-TEACH LECTURE: ${actualTopic}
-
+    
 ## 1. LECTURE TIMELINE & PACE (Total: 90 Minutes)
 * **00:00 - 00:15 (15 mins) | The Hook & Prior Knowledge Check:** Connecting excavation to daily life in Cameroon (e.g. building collapse events due to poor soil checks).
 * **00:15 - 00:55 (40 mins) | Direct Instruction:** Explaining structural mechanics, soil behaviors, and foundation selection rules.
@@ -5916,14 +5926,14 @@ By the end of this lecture, students will be able to:
 ## 3. TEACHER SCRIPT / DIRECT INSTRUCTION
 
 ### Introduction & The Hook (15 minutes)
-"Good morning, future builders and civil engineers. Welcome back to our **${actualSubject}** lecture. Today we are tackling a critical topic under the MINESEC curriculum: **${actualTopic}**.
+"Good morning, future builders and civil engineers. Welcome back to our **${actualSubject}** lecture. Today we are tackling a critical topic under the MINESEC curriculum: **${actualTopic}**. 
 
-Before we write anything on the board, let me ask you: Have you walked down the streets of Yaoundé or Douala and seen some walls with wide, diagonal cracks? Why does that happen?
-Yes, because the foundation was not adapted to the soil, or the excavation depth was insufficient!
+Before we write anything on the board, let me ask you: Have you walked down the streets of Yaoundé or Douala and seen some walls with wide, diagonal cracks? Why does that happen? 
+Yes, because the foundation was not adapted to the soil, or the excavation depth was insufficient! 
 A building is only as safe as its base. If you construct a multi-story building in the clayey wetlands of Bonabéri in Douala without a raft foundation, it will sink. If you build on the rocky slopes of Mount Messa in Yaoundé without anchoring, it will slide. Today, you will learn the exact science to prevent this!"
 
 ### Core Concept: Soil Profiles in Cameroon (20 minutes)
-"Let's look at soil bearing capacity.
+"Let's look at soil bearing capacity. 
 * In **Douala (coastal zones)**, we have fine, sandy, marine clays. The bearing capacity is extremely low (often below 50 kN/m²). High water table means we must pump out water continuously.
 * In **Yaoundé (high plateau)**, we have lateritic soils. These are red clay-loams with good bearing capacity (up to 150-200 kN/m²) when dry, but they become highly slippery when wet.
 * In **Maroua / Garoua (sahelian/northern zones)**, we have swell-shrink black cotton soils (vertisols). When it rains, they expand; in the dry season, they crack deeply.
@@ -5932,7 +5942,7 @@ A building is only as safe as its base. If you construct a multi-story building 
 
 ### Structural Mechanics of Foundations (20 minutes)
 "We have two main categories of foundations:
-1. **Shallow Foundations (Fondations Superficielles):**
+1. **Shallow Foundations (Fondations Superficielles):** 
    - **Strip Foundations (Semelles filantes):** Continuous strip under walls. Used for load-bearing blockwork.
    - **Pad Foundations (Semelles isolées):** Single concrete pads under reinforced concrete columns. Perfect for framed structures in solid Yaoundé clays.
    - **Raft/Mat Foundations (Radiers):** A continuous reinforced concrete slab covering the entire build area. Used for soft soils like Douala wetlands to distribute loads evenly.
@@ -6059,7 +6069,7 @@ State two safety checks a Site Supervisor must perform before authorizing labore
 ## SECTION C: PRACTICAL CBA PROBLEM-SOLVING CASE STUDY [9 Marks]
 
 ### Scenario
-You are appointed as the Lead Site Superintendent for a community health center project in Bafoussam. The design calls for **12 independent concrete pad foundations**, each measuring **1.2m x 1.2m with a thickness of 0.3m**. The soil is stable clayey-silt.
+You are appointed as the Lead Site Superintendent for a community health center project in Bafoussam. The design calls for **12 independent concrete pad foundations**, each measuring **1.2m x 1.2m with a thickness of 0.3m**. The soil is stable clayey-silt. 
 
 #### Task 1: Materials Calculation [4.5 Marks]
 Calculate the total volume of structural concrete required to pour all 12 pads. Then, using standard Cameroon batching of **350 kg/m³** (where 1 m³ concrete requires: 7 bags of cement, 400 liters of sand, 800 liters of gravel), determine the exact quantities of:
@@ -6069,7 +6079,7 @@ Calculate the total volume of structural concrete required to pour all 12 pads. 
 4. Volume of gravel required (m³)
 
 *Answer Key & Marks Allocation:*
-1. **Concrete Volume calculation:**
+1. **Concrete Volume calculation:** 
    - Volume of 1 pad = 1.2 x 1.2 x 0.3 = 0.432 m³ [1 Mark]
    - Total volume for 12 pads = 0.432 x 12 = 5.184 m³ [0.5 Mark]
 2. **Cement bags:**
@@ -6171,40 +6181,40 @@ Explain the specific layout procedure for these pad foundations, and write down 
   app.get('/api/syllabus-documents', async (req, res) => {
     try {
       let docs = await db.select().from(syllabusDocuments).orderBy(desc(syllabusDocuments.uploadedAt));
-
+      
       // Filter dynamically
       const { search, subject, gradeLevel, academicYear, category, status } = req.query;
-
+      
       if (search) {
         const query = String(search).toLowerCase();
-        docs = docs.filter(doc =>
+        docs = docs.filter(doc => 
           (doc.filename && doc.filename.toLowerCase().includes(query)) ||
           (doc.subject && doc.subject.toLowerCase().includes(query)) ||
           (doc.keyTopics && doc.keyTopics.toLowerCase().includes(query)) ||
           (doc.learningObjectives && doc.learningObjectives.toLowerCase().includes(query))
         );
       }
-
+      
       if (subject) {
         const query = String(subject).toLowerCase();
         docs = docs.filter(doc => doc.subject && doc.subject.toLowerCase() === query);
       }
-
+      
       if (gradeLevel) {
         const query = String(gradeLevel).toLowerCase();
         docs = docs.filter(doc => doc.gradeLevel && doc.gradeLevel.toLowerCase() === query);
       }
-
+      
       if (academicYear) {
         const query = String(academicYear).toLowerCase();
         docs = docs.filter(doc => doc.academicYear && doc.academicYear.toLowerCase() === query);
       }
-
+      
       if (category) {
         const query = String(category).toLowerCase();
         docs = docs.filter(doc => doc.category && doc.category.toLowerCase() === query);
       }
-
+      
       if (status) {
         const query = String(status).toLowerCase();
         docs = docs.filter(doc => doc.status && doc.status.toLowerCase() === query);
@@ -6815,7 +6825,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
 
       if (search) {
         const s = String(search).toLowerCase();
-        result = result.filter(b =>
+        result = result.filter(b => 
           (b.boqReference && b.boqReference.toLowerCase().includes(s)) ||
           (b.projectName && b.projectName.toLowerCase().includes(s)) ||
           (b.clientName && b.clientName.toLowerCase().includes(s)) ||
@@ -7619,7 +7629,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
     try {
       await ensureBoqDatabaseSchema();
       let units = await db.select().from(boqUnits).orderBy(boqUnits.category, boqUnits.code);
-
+      
       if (units.length === 0) {
         // Seed standard units automatically
         for (let idx = 0; idx < defaultUnitsLibrary.length; idx++) {
@@ -7959,13 +7969,13 @@ Return the extracted values as a JSON object matching this schema. Be highly des
               <h2 style="color: #ffffff; margin: 0; text-transform: uppercase; font-size: 20px;">MADECC GROUP S.A.R.L.</h2>
               <p style="color: #f59e0b; font-size: 12px; font-weight: bold; margin: 4px 0 0 0;">CIVIL ENGINEERING & STRUCTURAL CONSTRUCTION</p>
             </div>
-
+            
             <h3 style="color: #ffffff; font-size: 16px; margin-top: 0;">Official Bill of Quantities / Estimate</h3>
             <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">Dear <strong>${boq.clientName}</strong>,</p>
             <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">
               Please find enclosed the official approved Bill of Quantities / Construction Estimate for your project <strong>${boq.projectName}</strong> (${boq.location}).
             </p>
-
+            
             ${customMessage ? `
               <div style="background-color: #0f172a; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
                 <p style="color: #e2e8f0; font-size: 13px; font-style: italic; margin: 0;">"${customMessage}"</p>
@@ -8696,7 +8706,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
   app.post('/api/staff/access-keys', requireAuth, async (req: any, res) => {
     try {
       const { fullName, email, username, department, position, assignedProjects, assignedPermissions, tempPassword, expiryDays } = req.body;
-
+      
       const count = await db.select({ count: sql<number>`count(*)` }).from(staffAccessKeys);
       const empNum = `EMP-2026-${String(Number(count[0]?.count || 0) + 1).padStart(3, '0')}`;
       const lKey = generateLoginKey(department);
@@ -8983,7 +8993,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           })
           .where(eq(employeeProfiles.employeeNumber, employeeNumber))
           .returning();
-
+        
         return res.json(updated[0]);
       } else {
         const created = await db.insert(employeeProfiles).values({
@@ -9360,13 +9370,13 @@ Return the extracted values as a JSON object matching this schema. Be highly des
               <h2 style="color: #ffffff; margin: 0; font-size: 20px;">MADECC GROUP S.A.R.L.</h2>
               <p style="color: #f59e0b; font-size: 11px; font-weight: bold; margin: 4px 0 0 0;">AI CONSTRUCTION INTELLIGENCE PLATFORM</p>
             </div>
-
+            
             <h3 style="color: #ffffff; font-size: 16px; margin-top: 0;">Official Construction Document Shared</h3>
             <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">Dear <strong>${recipientName || 'Client / Partner'}</strong>,</p>
             <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">
               You have been granted secure access to the construction intelligence & structural engineering report for project <strong>${projectTitle}</strong>.
             </p>
-
+            
             ${customMessage ? `
               <div style="background-color: #0f172a; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 6px;">
                 <p style="color: #e2e8f0; font-size: 13px; font-style: italic; margin: 0;">"${customMessage}"</p>
@@ -9453,7 +9463,7 @@ Always include a brief liability note stating that outputs are AI-assisted desig
       // Smart Civil Engineering Fallback Response Generator
       let fallbackReply = `### MADECC AI Construction Co-Pilot Analysis\n\n`;
       const pName = projectContext?.projectName || 'Active Construction Project';
-
+      
       if (prompt.toLowerCase().includes('estimate') || prompt.toLowerCase().includes('boq')) {
         fallbackReply += `**Project:** ${pName}\n`;
         fallbackReply += `**Estimated Total Cost:** ~485,000,000 XAF\n\n`;
@@ -9501,10 +9511,10 @@ Always include a brief liability note stating that outputs are AI-assisted desig
   });
 
   app.post('/api/lessons', requireAdmin, async (req: any, res) => {
-    const {
-      lessonId, subjectId, teacherId, departmentId, academicYear, term, sequence, week,
-      lessonDuration, gradeLevel, topic, keywords, competency, learningOutcomes,
-      status, content, presentation, worksheet, versionNumber
+    const { 
+      lessonId, subjectId, teacherId, departmentId, academicYear, term, sequence, week, 
+      lessonDuration, gradeLevel, topic, keywords, competency, learningOutcomes, 
+      status, content, presentation, worksheet, versionNumber 
     } = req.body;
 
     if (!topic || !content) {
@@ -9544,10 +9554,10 @@ Always include a brief liability note stating that outputs are AI-assisted desig
 
   app.put('/api/lessons/:id', requireAdmin, async (req: any, res) => {
     const lid = req.params.id;
-    const {
-      subjectId, teacherId, departmentId, academicYear, term, sequence, week,
-      lessonDuration, gradeLevel, topic, keywords, competency, learningOutcomes,
-      status, content, presentation, worksheet, versionNumber
+    const { 
+      subjectId, teacherId, departmentId, academicYear, term, sequence, week, 
+      lessonDuration, gradeLevel, topic, keywords, competency, learningOutcomes, 
+      status, content, presentation, worksheet, versionNumber 
     } = req.body;
 
     try {
@@ -9957,7 +9967,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
         })
         .where(eq(companyDocuments.id, docId))
         .returning();
-
+      
       await logAudit(req.dbUser.uid, req.dbUser.email, 'UPDATE_DOC', `Updated safety/compliance document ID: ${docId}`);
       res.json(result[0]);
     } catch (error: any) {
@@ -10328,7 +10338,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
   // --- DATABASE BACKUP SIMULATOR & STATUS ---
   // ==========================================
   let lastBackupTime = new Date();
-
+  
   if (process.env.NODE_ENV === 'production') {
     // Set up a background thread interval on the server to simulate the scheduled database backup task.
     setInterval(async () => {
@@ -10361,14 +10371,14 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
 
       // 2. Total Contract Value (sum of contractValue with regex replace of non-numeric characters)
       const contractValueRes = (await db.execute(sql`
-        SELECT COALESCE(SUM(CAST(REGEXP_REPLACE(contract_value, '[^0-9.]', '', 'g') AS NUMERIC)), 0)::double precision as total
+        SELECT COALESCE(SUM(CAST(REGEXP_REPLACE(contract_value, '[^0-9.]', '', 'g') AS NUMERIC)), 0)::double precision as total 
         FROM signed_contracts
       `)).rows[0] as any;
       const totalContractValue = contractValueRes?.total || 0;
 
       // 3. Total Revenue (sum of receiptAmount in signedReceipts)
       const revenueRes = (await db.execute(sql`
-        SELECT COALESCE(SUM(CAST(REGEXP_REPLACE(receipt_amount, '[^0-9.]', '', 'g') AS NUMERIC)), 0)::double precision as total
+        SELECT COALESCE(SUM(CAST(REGEXP_REPLACE(receipt_amount, '[^0-9.]', '', 'g') AS NUMERIC)), 0)::double precision as total 
         FROM signed_receipts
       `)).rows[0] as any;
       const totalRevenue = revenueRes?.total || 0;
@@ -10403,7 +10413,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
 
       // 11. Total Project Budget Value
       const projectBudgetRes = (await db.execute(sql`
-        SELECT COALESCE(SUM(budget), 0)::double precision as total
+        SELECT COALESCE(SUM(budget), 0)::double precision as total 
         FROM projects
       `)).rows[0] as any;
       const totalProjectBudgetValue = projectBudgetRes?.total || 0;
@@ -10524,26 +10534,26 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       if (clientEmail && clientEmail.trim()) {
         const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
         const verificationUrl = `${appUrl}/?verify=${verificationToken}`;
-
+        
         const subject = `Action Required: Your MADECC Group Contract is Ready for Signature [Ref: ${contractNo}]`;
-
+        
         const text = `Dear ${clientName},\n\nThe MADECC Group management team has finalized and signed your infrastructure contract for the project "${contractProject}".\n\nContract Ref: ${contractNo}\nAuthorized Signatory: ${representativeName} (${representativeTitle})\nContract Value: ${parseFloat(contractValue).toLocaleString()} XAF\n\nPlease review and sign the contract online at: ${verificationUrl}\n\nWarm regards,\nMADECC Group Portal`;
-
+        
         const html = `
 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f8fafc; color: #0f172a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
   <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
     <h2 style="color: #d97706; margin: 0 0 4px 0; font-weight: 800; font-size: 26px; letter-spacing: -0.025em;">MADECC Group</h2>
     <p style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.15em; margin: 0; font-weight: 700;">Compliance Contract Registry</p>
   </div>
-
+  
   <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
     Dear <strong>${clientName}</strong>,
   </p>
-
+  
   <p style="font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
     We are pleased to inform you that the MADECC Group management team has finalized and signed your infrastructure contract for the project <strong>"${contractProject}"</strong>.
   </p>
-
+  
   <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 0 0 24px 0;">
     <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">Contract Highlights</h4>
     <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
@@ -10561,23 +10571,23 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       </tr>
     </table>
   </div>
-
+  
   <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
     To complete the legal execution, please access our secure online compliance portal where you can securely verify the terms, view the QR-code document seal, and <strong>draw your signature online</strong>.
   </p>
-
+  
   <div style="text-align: center; margin: 0 0 28px 0;">
     <a href="${verificationUrl}" style="background-color: #d97706; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.2); transition: background-color 0.2s;">
       Review & Sign Contract Online
     </a>
   </div>
-
+  
   <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; margin: 0;">
     This is a system generated notification on behalf of MADECC Group (Yaoundé / Douala, Cameroon). Please do not reply directly to this email. For any legal inquiries, please contact our support team at <a href="mailto:contact@madecc.com" style="color: #d97706; text-decoration: none; font-weight: 600;">contact@madecc.com</a>.
   </p>
 </div>
         `;
-
+        
         sendEmail(clientEmail.trim(), subject, text, html).catch(err => {
           console.error('[SMTP_ERROR] Failed to send automated client contract email:', err);
         });
@@ -10614,7 +10624,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       if (results.length === 0) {
         return res.status(404).json({ error: 'Contract not found or invalid verification token' });
       }
-
+      
       const updated = await db.update(signedContracts)
         .set({
           drawnClientSignature: drawnClientSignature || null,
@@ -10639,7 +10649,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
               <h2 style="color: #10b981; margin: 0 0 4px 0; font-weight: 800; font-size: 26px; letter-spacing: -0.025em;">MADECC Group</h2>
               <p style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.15em; margin: 0; font-weight: 700;">Digital Ledger & Compliance Verification</p>
             </div>
-
+            
             <div style="text-align: center; margin-bottom: 24px;">
               <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 50%; padding: 12px; margin-bottom: 12px;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto;"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -10651,11 +10661,11 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
             <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
               Dear <strong>${contract.clientName}</strong>,
             </p>
-
+            
             <p style="font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
               Thank you for completing the digital verification and signature process. We are pleased to inform you that your infrastructure contract has been successfully executed by all parties and is now fully active on our secure compliance registry.
             </p>
-
+            
             <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 0 0 24px 0;">
               <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">Execution Details</h4>
               <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
@@ -10677,17 +10687,17 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
                 </tr>
               </table>
             </div>
-
+            
             <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
               You can access your digitally-sealed document, audit log, and QR security code at any time via the verification portal below:
             </p>
-
+            
             <div style="text-align: center; margin: 0 0 28px 0;">
               <a href="${verificationUrl}" style="background-color: #10b981; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
                 View Verified Contract
               </a>
             </div>
-
+            
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
             <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">MADECC Group Compliance Portal &bull; Rue Joss, Bonanjo, Douala, Cameroon</p>
           </div>
@@ -10940,15 +10950,15 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
     <h2 style="color: #d97706; margin: 0 0 4px 0; font-weight: 800; font-size: 26px; letter-spacing: -0.025em;">MADECC Group</h2>
     <p style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.15em; margin: 0; font-weight: 700;">Fiscal Receipt Registry</p>
   </div>
-
+  
   <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
     Dear <strong>${clientName}</strong>,
   </p>
-
+  
   <p style="font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
     Thank you for your payment. We have processed and certified your financial receipt for the project <strong>"${receiptProject}"</strong>.
   </p>
-
+  
   <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 0 0 24px 0;">
     <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">Receipt & Account Balance Statement</h4>
     <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
@@ -10985,17 +10995,17 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       </tr>
     </table>
   </div>
-
+  
   <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
     This receipt has been certified and recorded on the physical inventory ledger. A public verification record can be retrieved online at any time by scanning the document's QR code or following the secure link below:
   </p>
-
+  
   <div style="text-align: center; margin: 0 0 28px 0;">
     <a href="${verificationUrl}" style="background-color: #d97706; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.2); transition: background-color 0.2s;">
       Verify Receipt Online
     </a>
   </div>
-
+  
   <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; margin: 0;">
     This is an automated administrative transmission from MADECC Group (Yaoundé / Douala, Cameroon). Please do not reply directly. For billing queries, please contact <a href="mailto:finance@madecc.com" style="color: #d97706; text-decoration: none; font-weight: 600;">finance@madecc.com</a>.
   </p>
@@ -11272,7 +11282,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       await ensureLabourTable();
       const body = req.body;
       const ref = body.quotationRef || `LAB-${Date.now().toString().slice(-6)}`;
-
+      
       const result = await db.insert(labourCalculations).values({
         quotationRef: ref,
         projectName: body.projectName || 'Untitled Labour Project',
@@ -12426,17 +12436,17 @@ Never wrap JSON inside markdown code blocks.`;
   setupSocialOAuthRoutes(app, db);
   app.post('/api/ai/social-content', async (req, res) => {
     try {
-      const {
-        prompt,
-        topic,
-        audience,
-        tone,
-        lang,
-        ctaStrategy,
-        preferredWhatsappNumber,
-        preferredCallNumbers,
+      const { 
+        prompt, 
+        topic, 
+        audience, 
+        tone, 
+        lang, 
+        ctaStrategy, 
+        preferredWhatsappNumber, 
+        preferredCallNumbers, 
         ctaStyle,
-        facebookUrl
+        facebookUrl 
       } = req.body;
 
       const defaultNumbers = [
@@ -12501,7 +12511,7 @@ Return JSON with exact structure:
       const strat = ctaStrategy || 'WhatsApp + Facebook + Call';
 
       if (strat === 'WhatsApp') {
-        generatedCta = isFr
+        generatedCta = isFr 
           ? `💬 Discutez de votre projet sur WhatsApp avec MADECC Group S.A. : https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`
           : `💬 Chat with MADECC Group S.A. on WhatsApp for instant quotations: https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`;
       } else if (strat === 'Facebook') {
@@ -12622,7 +12632,7 @@ Return JSON with exact structure:
     try {
       const channelId = req.params.id;
       const startTime = Date.now();
-
+      
       // Simulate real ping check / token verification
       const responseTime = Math.floor(Math.random() * 80) + 120; // 120ms - 200ms
       const platform = req.body.platform || 'social';
@@ -13063,9 +13073,7 @@ Return JSON with exact structure:
     }
 
     const state = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    const host = req.get('host') || 'localhost:3000';
-    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-    const redirectUri = `${protocol}://${host}/api/integrations/meta/callback`;
+    const redirectUri = 'https://madeccgroup.online/api/integrations/meta/callback';
 
     const scopes = [
       'pages_show_list',
@@ -13102,9 +13110,7 @@ Return JSON with exact structure:
     }
 
     try {
-      const host = req.get('host') || 'localhost:3000';
-      const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-      const redirectUri = `${protocol}://${host}/api/integrations/meta/callback`;
+      const redirectUri = 'https://madeccgroup.online/api/integrations/meta/callback';
 
       // Exchange authorization code for User Access Token
       const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${appSecret}&code=${code}`;
@@ -13204,69 +13210,130 @@ Return JSON with exact structure:
     res.status(200).send('EVENT_RECEIVED');
   });
 
-  // ==========================================
-  // --- META / FACEBOOK APP REVIEWER MANAGEMENT ---
-  // ==========================================
+  // =========================================================================
+  // --- DEDICATED NON-FIREBASE META APP REVIEWER AUTHENTICATION & MANAGEMENT ---
+  // =========================================================================
 
-  // Get Meta Reviewer Account Details & Provisioning Status
+  // 1. Reviewer Server-Side Login (Neon PostgreSQL + Bcrypt + Signed Session Cookie)
+  app.post('/api/auth/reviewer-login', async (req, res) => {
+    const reviewerEmail = (process.env.META_REVIEWER_EMAIL || 'meta-reviewer@madeccgroup.online').toLowerCase().trim();
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required' });
+    }
+
+    const inputEmail = String(email).toLowerCase().trim();
+    if (inputEmail !== reviewerEmail) {
+      return res.status(401).json({ success: false, error: 'Invalid reviewer credentials' });
+    }
+
+    try {
+      await ensureReviewerCredentialsTable();
+
+      const creds = await db
+        .select()
+        .from(reviewerCredentials)
+        .where(eq(reviewerCredentials.email, reviewerEmail))
+        .limit(1);
+
+      if (creds.length === 0) {
+        return res.status(401).json({ success: false, error: 'Reviewer account not found or uninitialized' });
+      }
+
+      const reviewer = creds[0];
+      if (!reviewer.isActive) {
+        return res.status(403).json({ success: false, error: 'Reviewer access has been suspended by MADECC Administrator' });
+      }
+
+      const isMatch = await verifyPassword(String(password), reviewer.passwordHash);
+      if (!isMatch) {
+        console.warn(`[REVIEWER_AUTH_FAIL] Incorrect password attempt for ${reviewerEmail}`);
+        return res.status(401).json({ success: false, error: 'Invalid reviewer password' });
+      }
+
+      // Update last login timestamp in PostgreSQL
+      await db
+        .update(reviewerCredentials)
+        .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+        .where(eq(reviewerCredentials.id, reviewer.id));
+
+      // Issue signed HMAC session token
+      const token = signReviewerToken({
+        uid: 'meta-reviewer-uid',
+        email: reviewer.email,
+        role: reviewer.role || 'social_media_reviewer',
+        name: reviewer.displayName || 'Meta App Review Tester',
+      });
+
+      // Set secure HttpOnly cookie for session persistence
+      res.cookie('madecc_reviewer_session', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      await logAudit(
+        'meta-reviewer-uid',
+        reviewer.email,
+        'META_REVIEWER_LOGIN',
+        'Meta App Reviewer successfully authenticated via isolated server-side PostgreSQL auth'
+      );
+
+      return res.json({
+        success: true,
+        message: 'Reviewer authenticated successfully',
+        token,
+        user: {
+          id: reviewer.id,
+          uid: 'meta-reviewer-uid',
+          email: reviewer.email,
+          name: reviewer.displayName || 'Meta App Review Tester',
+          role: 'social_media_reviewer',
+          createdAt: reviewer.createdAt
+        }
+      });
+    } catch (err: any) {
+      console.error('[REVIEWER_LOGIN_ERROR]', err);
+      return res.status(500).json({ success: false, error: err.message || 'Server error during reviewer login' });
+    }
+  });
+
+  // 2. Get Current Auth Status / Profile for Session Token
+  app.get('/api/auth/me', requireAuth, async (req: any, res) => {
+    return res.json({
+      success: true,
+      user: req.dbUser,
+      firebaseUser: req.user
+    });
+  });
+
+  // 3. Get Meta Reviewer Account Details & Provisioning Status (Admin Only)
   app.get('/api/admin/meta-reviewer', requireAdmin, async (req, res) => {
     const reviewerEmail = (process.env.META_REVIEWER_EMAIL || 'meta-reviewer@madeccgroup.online').toLowerCase().trim();
     try {
-      let firebaseUser: any = null;
-      try {
-        firebaseUser = await adminAuth.getUserByEmail(reviewerEmail);
-      } catch (e: any) {
-        if (e.code !== 'auth/user-not-found') {
-          console.warn('[META_REVIEWER_CHECK_WARN]', e.message);
-        }
-      }
+      await ensureReviewerCredentialsTable();
 
-      // If reviewer account is not yet created in Firebase but META_REVIEWER_PASSWORD is provided, auto-create it
-      if (!firebaseUser && process.env.META_REVIEWER_PASSWORD) {
-        try {
-          firebaseUser = await adminAuth.createUser({
-            email: reviewerEmail,
-            password: process.env.META_REVIEWER_PASSWORD,
-            displayName: 'Meta App Review Tester',
-            emailVerified: true
-          });
-          console.log(`[META_REVIEWER_INIT] Auto-created Firebase account for ${reviewerEmail}`);
-        } catch (createErr: any) {
-          console.error('[META_REVIEWER_AUTO_INIT_ERROR]', createErr);
-        }
-      }
+      const creds = await db
+        .select()
+        .from(reviewerCredentials)
+        .where(eq(reviewerCredentials.email, reviewerEmail))
+        .limit(1);
 
-      const dbUsers = await db.select().from(users).where(eq(users.email, reviewerEmail)).limit(1);
-      let dbUserRecord = dbUsers[0] || null;
-
-      // Ensure DB record is in sync with role: 'social_media_reviewer'
-      if (!dbUserRecord && firebaseUser) {
-        const inserted = await db.insert(users).values({
-          uid: firebaseUser.uid,
-          email: reviewerEmail,
-          name: 'Meta App Review Tester',
-          role: 'social_media_reviewer'
-        }).returning();
-        dbUserRecord = inserted[0];
-      } else if (dbUserRecord && dbUserRecord.role !== 'social_media_reviewer') {
-        const updated = await db.update(users).set({
-          role: 'social_media_reviewer',
-          name: dbUserRecord.name || 'Meta App Review Tester'
-        }).where(eq(users.id, dbUserRecord.id)).returning();
-        dbUserRecord = updated[0];
-      }
+      let record = creds[0] || null;
 
       res.json({
         email: reviewerEmail,
-        displayName: firebaseUser?.displayName || dbUserRecord?.name || 'Meta App Review Tester',
+        displayName: record?.displayName || 'Meta App Review Tester',
         role: 'social_media_reviewer',
-        status: firebaseUser?.disabled ? 'SUSPENDED' : (firebaseUser ? 'ACTIVATED' : 'NOT_INITIALIZED'),
-        disabled: !!firebaseUser?.disabled,
-        isFirebaseCreated: !!firebaseUser,
-        isDbRegistered: !!dbUserRecord,
-        uid: firebaseUser?.uid || dbUserRecord?.uid || null,
-        lastSignInTime: firebaseUser?.metadata?.lastSignInTime || null,
-        creationTime: firebaseUser?.metadata?.creationTime || dbUserRecord?.createdAt || null,
+        status: record ? (record.isActive ? 'ACTIVATED' : 'SUSPENDED') : 'NOT_INITIALIZED',
+        isActive: record ? record.isActive : false,
+        disabled: record ? !record.isActive : true,
+        isDbRegistered: !!record,
+        uid: 'meta-reviewer-uid',
+        lastSignInTime: record?.lastLoginAt || null,
+        creationTime: record?.createdAt || null,
         permissions: [
           'social_oauth_connect',
           'social_broadcast_publish',
@@ -13282,41 +13349,50 @@ Return JSON with exact structure:
     }
   });
 
-  // Reset or Update Meta Reviewer Password
+  // 4. Reset or Generate Meta Reviewer Password in Neon PostgreSQL (Admin Only)
   app.post('/api/admin/meta-reviewer/reset-password', requireAdmin, async (req, res) => {
     const reviewerEmail = (process.env.META_REVIEWER_EMAIL || 'meta-reviewer@madeccgroup.online').toLowerCase().trim();
     const { customPassword } = req.body;
     try {
-      // Generate strong 16-character password if not provided
-      const newPassword = customPassword && String(customPassword).trim().length >= 8
-        ? String(customPassword).trim()
-        : crypto.randomBytes(8).toString('hex') + 'Aa1!';
+      await ensureReviewerCredentialsTable();
 
-      let userRecord: any;
-      try {
-        userRecord = await adminAuth.getUserByEmail(reviewerEmail);
-        await adminAuth.updateUser(userRecord.uid, {
-          password: newPassword,
-          disabled: false
+      // Generate strong password if not provided
+      const newPassword = customPassword && String(customPassword).trim().length >= 8 
+        ? String(customPassword).trim() 
+        : 'M@deccMetaReview#' + crypto.randomBytes(4).toString('hex') + '!2026';
+
+      const hashed = await hashPassword(newPassword);
+
+      const existing = await db
+        .select()
+        .from(reviewerCredentials)
+        .where(eq(reviewerCredentials.email, reviewerEmail))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(reviewerCredentials).values({
+          email: reviewerEmail,
+          passwordHash: hashed,
+          displayName: 'Meta App Review Tester',
+          role: 'social_media_reviewer',
+          isActive: true
         });
-      } catch (err: any) {
-        if (err.code === 'auth/user-not-found') {
-          userRecord = await adminAuth.createUser({
-            email: reviewerEmail,
-            password: newPassword,
-            displayName: 'Meta App Review Tester',
-            emailVerified: true
-          });
-        } else {
-          throw err;
-        }
+      } else {
+        await db
+          .update(reviewerCredentials)
+          .set({
+            passwordHash: hashed,
+            isActive: true,
+            updatedAt: new Date()
+          })
+          .where(eq(reviewerCredentials.email, reviewerEmail));
       }
 
-      // Ensure PostgreSQL DB user record exists with social_media_reviewer role
+      // Ensure PostgreSQL DB users table record exists with social_media_reviewer role
       const existingDb = await db.select().from(users).where(eq(users.email, reviewerEmail)).limit(1);
       if (existingDb.length === 0) {
         await db.insert(users).values({
-          uid: userRecord.uid,
+          uid: 'meta-reviewer-uid',
           email: reviewerEmail,
           name: 'Meta App Review Tester',
           role: 'social_media_reviewer'
@@ -13329,14 +13405,15 @@ Return JSON with exact structure:
       }
 
       await logAudit(
-        'META_REVIEWER_PASSWORD_RESET',
+        (req as any).dbUser?.uid || null,
         (req as any).dbUser?.email || 'admin',
-        `Reset password credential for reviewer account ${reviewerEmail}`
+        'META_REVIEWER_PASSWORD_RESET',
+        `Generated fresh reviewer credentials in PostgreSQL for ${reviewerEmail}`
       );
 
       res.json({
         success: true,
-        message: 'Reviewer credentials updated successfully.',
+        message: 'Reviewer credentials updated successfully in Neon PostgreSQL.',
         email: reviewerEmail,
         tempPassword: newPassword
       });
@@ -13346,26 +13423,43 @@ Return JSON with exact structure:
     }
   });
 
-  // Toggle Meta Reviewer Active / Suspended State
+  // 5. Toggle Meta Reviewer Active / Suspended State in Neon PostgreSQL (Admin Only)
   app.post('/api/admin/meta-reviewer/toggle-status', requireAdmin, async (req, res) => {
     const reviewerEmail = (process.env.META_REVIEWER_EMAIL || 'meta-reviewer@madeccgroup.online').toLowerCase().trim();
     try {
-      const userRecord = await adminAuth.getUserByEmail(reviewerEmail);
-      const newDisabledState = !userRecord.disabled;
-      await adminAuth.updateUser(userRecord.uid, {
-        disabled: newDisabledState
-      });
+      await ensureReviewerCredentialsTable();
+
+      const existing = await db
+        .select()
+        .from(reviewerCredentials)
+        .where(eq(reviewerCredentials.email, reviewerEmail))
+        .limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: 'Reviewer record not found in PostgreSQL' });
+      }
+
+      const newIsActive = !existing[0].isActive;
+      await db
+        .update(reviewerCredentials)
+        .set({
+          isActive: newIsActive,
+          updatedAt: new Date()
+        })
+        .where(eq(reviewerCredentials.email, reviewerEmail));
 
       await logAudit(
-        'META_REVIEWER_STATUS_TOGGLE',
+        (req as any).dbUser?.uid || null,
         (req as any).dbUser?.email || 'admin',
-        `Changed reviewer account status to ${newDisabledState ? 'SUSPENDED' : 'ACTIVATED'}`
+        'META_REVIEWER_STATUS_TOGGLE',
+        `Changed reviewer account active state to ${newIsActive ? 'ACTIVATED' : 'SUSPENDED'}`
       );
 
       res.json({
         success: true,
-        status: newDisabledState ? 'SUSPENDED' : 'ACTIVATED',
-        disabled: newDisabledState
+        status: newIsActive ? 'ACTIVATED' : 'SUSPENDED',
+        isActive: newIsActive,
+        disabled: !newIsActive
       });
     } catch (err: any) {
       console.error('[META_REVIEWER_TOGGLE_ERROR]', err);
@@ -13413,8 +13507,8 @@ async function startServer() {
 }
 
 // Robust detection of serverless environments (Netlify / AWS Lambda)
-const isServerless =
-  process.env.NETLIFY === 'true' ||
+const isServerless = 
+  process.env.NETLIFY === 'true' || 
   process.env.NETLIFY === '1' ||
   process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
   process.env.LAMBDA_TASK_ROOT !== undefined ||
@@ -13423,3 +13517,4 @@ const isServerless =
 if (!isServerless) {
   startServer();
 }
+

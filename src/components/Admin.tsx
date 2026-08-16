@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './Toast.tsx';
-import {
-  auth,
+import { 
+  auth, 
   googleAuthProvider,
   getAuthToken
 } from '../lib/firebase.ts';
 import { signInWithPopup } from 'firebase/auth';
-import {
-  Building2,
-  Plus,
-  Trash2,
-  Edit,
-  CheckCircle,
-  XCircle,
-  Star,
-  Calendar,
-  Mail,
-  FileText,
-  ShieldCheck,
-  User as UserIcon,
-  Eye,
-  UserCheck,
-  Key,
-  Award,
+import { 
+  Building2, 
+  Plus, 
+  Trash2, 
+  Edit, 
+  CheckCircle, 
+  XCircle, 
+  Star, 
+  Calendar, 
+  Mail, 
+  FileText, 
+  ShieldCheck, 
+  User as UserIcon, 
+  Eye, 
+  UserCheck, 
+  Key, 
+  Award, 
   Image as ImageIcon,
   BookOpen,
   History,
@@ -66,17 +66,17 @@ import {
   Maximize2,
   Minimize2
 } from 'lucide-react';
-import {
-  User,
-  Project,
-  Category,
-  Review,
-  BlogPost,
-  Appointment,
-  ContactMessage,
-  NewsletterSubscriber,
-  AuditLog,
-  HeroBanner,
+import { 
+  User, 
+  Project, 
+  Category, 
+  Review, 
+  BlogPost, 
+  Appointment, 
+  ContactMessage, 
+  NewsletterSubscriber, 
+  AuditLog, 
+  HeroBanner, 
   CompanyDocument,
   ProjectProgress,
   GalleryItem,
@@ -137,11 +137,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     try {
       const csvContent = [
         headers.join(','),
-        ...rows.map(row =>
+        ...rows.map(row => 
           row.map(cell => {
             const escaped = String(cell || '').replace(/"/g, '""');
-            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
-              ? `"${escaped}"`
+            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"') 
+              ? `"${escaped}"` 
               : escaped;
           }).join(',')
         )
@@ -162,8 +162,15 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   };
 
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'command-center' | 'analytics' | 'services-cms' | 'sustainability-cms' | 'faq-cms' | 'suppliers-cms' | 'tenders-cms' | 'quote-requests' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio' | 'structural-calculator' | 'labour-calculator' | 'drawing-studio' | 'enterprise-erp' | 'ai-construction-intelligence' | 'staff-access' | 'social-studio'>('command-center');
+  const [activeAdminTab, setActiveAdminTab] = useState<'command-center' | 'analytics' | 'services-cms' | 'sustainability-cms' | 'faq-cms' | 'suppliers-cms' | 'tenders-cms' | 'quote-requests' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio' | 'structural-calculator' | 'labour-calculator' | 'drawing-studio' | 'enterprise-erp' | 'ai-construction-intelligence' | 'staff-access' | 'social-studio'>(() => dbUser?.role === 'social_media_reviewer' ? 'social-studio' : 'command-center');
   const [activeSyllabus, setActiveSyllabus] = useState<any | null>(null);
+
+  // Lock and default reviewer to Social Media Studio
+  useEffect(() => {
+    if (dbUser?.role === 'social_media_reviewer') {
+      setActiveAdminTab('social-studio');
+    }
+  }, [dbUser]);
 
   // Enterprise Navigation & Header UI State
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -482,15 +489,15 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       };
 
       const [
-        projRes,
-        catRes,
-        revRes,
-        blogRes,
-        apptRes,
-        contRes,
-        subsRes,
-        banRes,
-        docRes,
+        projRes, 
+        catRes, 
+        revRes, 
+        blogRes, 
+        apptRes, 
+        contRes, 
+        subsRes, 
+        banRes, 
+        docRes, 
         auditRes,
         galRes,
         teamRes,
@@ -559,7 +566,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         if (res.ok) {
           const data = await res.json();
           const newBackupTime = data.lastBackupTime;
-
+          
           setLastBackupTime((prev) => {
             if (prev && prev !== newBackupTime) {
               // A new backup has executed! Show a toast alert outside of the state updater function
@@ -681,10 +688,10 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       if (key !== 'Adminmadeccgroup' && key !== 'MADECC Group admin') {
         throw new Error('Invalid Admin Secret Key. Please try again.');
       }
-
+      
       // Store custom admin token in sessionStorage
       sessionStorage.setItem('admin_token', key);
-
+      
       // Verify with backend
       const response = await fetch('/api/auth/me', {
         headers: { 'Authorization': `Bearer ${key}` }
@@ -733,8 +740,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     }
   };
 
-  // Guard: Not signed in or not staff/admin
-  if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff')) {
+  // Guard: Not signed in or not staff/admin/social_media_reviewer
+  if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff' && dbUser.role !== 'social_media_reviewer')) {
     return (
       <div className="font-sans text-slate-800 bg-slate-900 min-h-screen flex items-center justify-center p-6 text-white" id="admin-login-guard">
         <div className="max-w-md w-full bg-slate-800 rounded-2xl p-8 border border-slate-700 shadow-2xl relative overflow-hidden animate-in fade-in-50 duration-300">
@@ -1483,7 +1490,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         videoUrl: ensureAbsoluteUrl(galVideoUrl) || null,
         category: galCategory.trim() || 'General Engineering'
       };
-
+      
       const url = galEditId ? `/api/gallery/${galEditId}` : '/api/gallery';
       const method = galEditId ? 'PUT' : 'POST';
 
@@ -1543,10 +1550,10 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   const handleRegenerateToken = async (id: number, type: 'contract' | 'receipt') => {
     try {
       const headers = await getAuthHeaders();
-      const url = type === 'contract'
-        ? `/api/contracts/${id}/regenerate-token`
+      const url = type === 'contract' 
+        ? `/api/contracts/${id}/regenerate-token` 
         : `/api/receipts/${id}/regenerate-token`;
-
+        
       const response = await fetch(url, {
         method: 'POST',
         headers
@@ -1768,12 +1775,12 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
   return (
     <div className="font-sans text-slate-800 bg-slate-900 min-h-screen text-slate-300 flex flex-col" id="admin-panel-root">
-
+      
       {/* TOP ENTERPRISE HEADER BAR */}
       <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
         {/* Mobile Menu & Collapse Toggle */}
         <div className="flex items-center gap-3">
-          <button
+          <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg"
           >
@@ -1888,7 +1895,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       <div className="flex-grow flex flex-col md:flex-row overflow-hidden relative">
 
         {/* ENTERPRISE SIDEBAR NAVIGATION */}
-        <aside
+        <aside 
           className={`${
             sidebarCollapsed ? 'md:w-20' : 'md:w-72'
           } ${
@@ -1896,7 +1903,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           } bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 overflow-y-auto max-h-[calc(100vh-57px)] transition-all duration-300 z-20`}
         >
           <div className="p-3 space-y-4">
-
+            
             {/* Sidebar Branding Header */}
             {!sidebarCollapsed && (
               <div className="px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-2xl mb-2">
@@ -1908,7 +1915,10 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
             {/* Collapsible Groups Nav */}
             <nav className="space-y-2">
-              {ADMIN_NAV_GROUPS.map((group) => {
+              {(dbUser?.role === 'social_media_reviewer'
+                ? ADMIN_NAV_GROUPS.filter(g => g.id === 'marketing-group')
+                : ADMIN_NAV_GROUPS
+              ).map((group) => {
                 const GroupIcon = group.icon;
                 const isOpen = !!openGroups[group.id];
                 const hasActiveItem = group.items.some(item => item.id === activeAdminTab);
@@ -1919,8 +1929,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                       <button
                         onClick={() => toggleGroup(group.id)}
                         className={`p-3 rounded-xl transition-all ${
-                          hasActiveItem
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                          hasActiveItem 
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' 
                             : 'text-slate-400 hover:text-white hover:bg-slate-900'
                         }`}
                         title={group.title}
@@ -1937,8 +1947,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                     <button
                       onClick={() => toggleGroup(group.id)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors text-left ${
-                        hasActiveItem
-                          ? 'bg-slate-900 text-amber-400 font-extrabold'
+                        hasActiveItem 
+                          ? 'bg-slate-900 text-amber-400 font-extrabold' 
                           : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
                       }`}
                     >
@@ -1970,8 +1980,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                                 setMobileMenuOpen(false);
                               }}
                               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left ${
-                                isActive
-                                  ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/10'
+                                isActive 
+                                  ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/10' 
                                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
                               }`}
                             >
@@ -2016,7 +2026,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
         {/* MAIN DISPLAY AREA */}
         <main className="flex-grow p-6 md:p-10 overflow-y-auto max-h-[calc(100vh-57px)] w-full">
-
+          
           {loadingData && (
             <div className="flex items-center gap-2 mb-6 bg-slate-800/40 border border-slate-700 p-3 rounded-xl text-xs text-amber-500 font-mono animate-pulse">
               <span className="w-3 h-3 rounded-full border border-t-amber-500 animate-spin shrink-0" />
@@ -2024,6 +2034,33 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             </div>
           )}
 
+          {/* MAIN TAB RENDERING */}
+          {dbUser?.role === 'social_media_reviewer' ? (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950/40 border border-blue-500/30 p-5 rounded-2xl flex items-center justify-between flex-wrap gap-4 shadow-xl">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold bg-blue-500/20 text-blue-400 px-2.5 py-0.5 rounded border border-blue-500/30 uppercase tracking-widest">
+                      Dedicated Meta App Review Environment
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      🟢 Authenticated via Server-Side PostgreSQL
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold text-white mt-1.5">Social Media Management & Facebook OAuth Studio</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Reviewer workspace for Meta App Review testing. Authorized for Facebook OAuth connection, page management, and social broadcasting.
+                  </p>
+                </div>
+                <div className="text-right font-mono text-[11px] text-slate-400 bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800">
+                  <div>Account: <span className="text-slate-200 font-bold">{dbUser.email}</span></div>
+                  <div>Role: <span className="text-amber-400 font-bold">social_media_reviewer</span></div>
+                </div>
+              </div>
+              <SocialMediaStudio currentUser={dbUser} />
+            </div>
+          ) : (
+            <>
           {/* COMMAND CENTER EXECUTIVE DASHBOARD VIEW */}
           {activeAdminTab === 'command-center' && (
             <div className="space-y-8 animate-in fade-in duration-300" id="command-center-view">
@@ -2093,7 +2130,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left 2 Cols: Approval Center & Quick Actions */}
                 <div className="lg:col-span-2 space-y-8">
-
+                  
                   {/* Pending Approval Center */}
                   <div className="bg-slate-950/80 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
                     <div className="flex justify-between items-center border-b border-slate-800 pb-4">
@@ -2197,7 +2234,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                 {/* Right Col: Activity Feed & System Health */}
                 <div className="space-y-8">
-
+                  
                   {/* System Health Status Widget */}
                   <div className="bg-slate-950/80 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
                     <h2 className="text-sm font-extrabold text-white flex items-center justify-between">
@@ -2271,7 +2308,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               </div>
             </div>
           )}
-
+        
         {loadingData && (
           <div className="flex items-center gap-2 mb-6 bg-slate-800/40 border border-slate-700 p-3 rounded-lg text-xs text-amber-500 font-mono animate-pulse">
             <span className="w-3 h-3 rounded-full border border-t-amber-500 animate-spin shrink-0" />
@@ -2471,7 +2508,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         {/* 2. CONTRACT PROJECTS & PROGRESS MANAGE VIEW */}
         {activeAdminTab === 'projects' && (
           <div className="space-y-8" id="admin-tab-projects">
-
+            
             {selectedProjectForMilestones ? (
               /* PROGRESS MILESTONE EDITOR FOR SPECIFIC PROJECT */
               <div className="space-y-8">
@@ -2490,7 +2527,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                 {/* Grid layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-
+                  
                   {/* Left Column: Add Milestone Form */}
                   <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2">Add Milestone</h3>
@@ -2818,7 +2855,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                     {/* Media Assets Manager */}
                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 space-y-4">
                       <span className="text-[10px] font-mono uppercase font-bold text-amber-500 tracking-wider block">Media Assets Manager</span>
-
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Cover Image Upload/Link */}
                         <div className="space-y-2">
@@ -2858,11 +2895,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs px-3 py-1.5 rounded cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0">
                                 Browse Image
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => handleFileUpload(e, 'projImage')}
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden" 
+                                  onChange={(e) => handleFileUpload(e, 'projImage')} 
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -2915,11 +2952,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3 py-1.5 rounded border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0">
                                 Browse Video
-                                <input
-                                  type="file"
-                                  accept="video/*"
-                                  className="hidden"
-                                  onChange={(e) => handleFileUpload(e, 'projVideo')}
+                                <input 
+                                  type="file" 
+                                  accept="video/*" 
+                                  className="hidden" 
+                                  onChange={(e) => handleFileUpload(e, 'projVideo')} 
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -3025,8 +3062,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         <button
                           onClick={() => handleToggleReviewApproval(r.id, r.approved)}
                           className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wide transition-all ${
-                            r.approved
-                              ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
+                            r.approved 
+                              ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' 
                               : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20'
                           }`}
                         >
@@ -3164,7 +3201,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                     {/* Media Assets Manager */}
                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 space-y-4">
                       <span className="text-[10px] font-mono uppercase font-bold text-amber-500 tracking-wider block">Media Assets Manager</span>
-
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Cover Image Upload/Link */}
                         <div className="space-y-2">
@@ -3204,11 +3241,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs px-3 py-1.5 rounded cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0">
                                 Browse Image
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => handleFileUpload(e, 'blogImage')}
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden" 
+                                  onChange={(e) => handleFileUpload(e, 'blogImage')} 
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -3261,11 +3298,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3 py-1.5 rounded border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0">
                                 Browse Video
-                                <input
-                                  type="file"
-                                  accept="video/*"
-                                  className="hidden"
-                                  onChange={(e) => handleFileUpload(e, 'blogVideo')}
+                                <input 
+                                  type="file" 
+                                  accept="video/*" 
+                                  className="hidden" 
+                                  onChange={(e) => handleFileUpload(e, 'blogVideo')} 
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -3631,7 +3668,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             {showBannerModal && (
               <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden">
-
+                  
                   {/* Modal Header */}
                   <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
                     <div>
@@ -3640,8 +3677,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         {bannerEditId ? 'Edit Hero Banner Slide' : 'Add Hero Banner Slide'}
                       </h3>
                     </div>
-                    <button
-                      onClick={() => { resetBannerForm(); setShowBannerModal(false); }}
+                    <button 
+                      onClick={() => { resetBannerForm(); setShowBannerModal(false); }} 
                       className="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-2 rounded-xl"
                       type="button"
                     >
@@ -3652,14 +3689,14 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                   {/* Modal Form */}
                   <form onSubmit={handleSaveBanner} className="flex-1 overflow-y-auto p-8 space-y-6 text-sm">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
+                      
                       {/* Left Column: Properties */}
                       <div className="space-y-6">
                         <div className="bg-slate-950/30 border border-slate-800/60 p-5 rounded-xl space-y-4">
                           <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 pb-2">
                             1. Banner Details
                           </h4>
-
+                          
                           <div className="space-y-1">
                             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide">Banner Large Title</label>
                             <input
@@ -3705,9 +3742,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="space-y-1 flex flex-col justify-center">
                               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide mb-2">Publish Status</label>
                               <label className="relative inline-flex items-center cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  className="sr-only peer"
+                                <input 
+                                  type="checkbox" 
+                                  className="sr-only peer" 
                                   checked={bannerActive}
                                   onChange={(e) => setBannerActive(e.target.checked)}
                                 />
@@ -3724,7 +3761,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                       {/* Right Column: Visual Media assets */}
                       <div className="space-y-6">
-
+                        
                         {/* Cover Image section */}
                         <div className="bg-slate-950/30 border border-slate-800/60 p-5 rounded-xl space-y-3">
                           <div className="flex justify-between items-center border-b border-slate-800/80 pb-2">
@@ -3785,9 +3822,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="mt-3 space-y-1.5 animate-in fade-in duration-300">
                               <span className="text-[10px] font-mono text-slate-500 uppercase block">Live Image Preview:</span>
                               <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
-                                <img
-                                  src={bannerImage}
-                                  alt="Cover Image Preview"
+                                <img 
+                                  src={bannerImage} 
+                                  alt="Cover Image Preview" 
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
                                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1200';
@@ -3831,7 +3868,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                                 onChange={(e) => setBannerVideoUrl(e.target.value)}
                                 placeholder="YouTube Video URL (e.g. https://youtu.be/EJMGG_f2Ejs)"
                               />
-
+                              
                               {bannerVideoUrl && (() => {
                                 const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
                                 const match = bannerVideoUrl.match(regExp);
@@ -4222,7 +4259,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             {showGalModal && (
               <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl relative my-auto flex flex-col max-h-[92vh] overflow-hidden">
-
+                  
                   {/* MODAL HEADER (Sticky Top) */}
                   <div className="p-5 sm:p-6 border-b border-slate-800 bg-slate-900/95 flex justify-between items-center shrink-0">
                     <div className="space-y-0.5">
@@ -4337,11 +4374,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-2">
                           <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3.5 py-2 rounded-lg cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0 transition-all">
                             Browse Image
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleFileUpload(e, 'galImage')}
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => handleFileUpload(e, 'galImage')} 
                               disabled={uploadingFile}
                             />
                           </label>
@@ -4398,11 +4435,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-2">
                           <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3.5 py-2 rounded-lg border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0 transition-all">
                             Browse Video
-                            <input
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={(e) => handleFileUpload(e, 'galVideo')}
+                            <input 
+                              type="file" 
+                              accept="video/*" 
+                              className="hidden" 
+                              onChange={(e) => handleFileUpload(e, 'galVideo')} 
                               disabled={uploadingFile}
                             />
                           </label>
@@ -4819,7 +4856,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           const filteredHistoryItems = allHistoryItems.filter(item => {
             const matchesType = docHistoryType === 'all' || item.type === docHistoryType;
             const term = docHistorySearch.toLowerCase().trim();
-            const matchesSearch = !term ||
+            const matchesSearch = !term || 
               item.refNo.toLowerCase().includes(term) ||
               item.clientName.toLowerCase().includes(term) ||
               item.project.toLowerCase().includes(term) ||
@@ -4832,8 +4869,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           const contractsCount = signedContracts.length;
           const receiptsCount = signedReceipts.length;
           const signedContractsCount = signedContracts.filter(c => !!c.drawnClientSignature || !!c.typedClientSignature).length;
-          const authenticityRate = totalGenerated > 0
-            ? Math.round(((signedContractsCount + receiptsCount) / totalGenerated) * 100)
+          const authenticityRate = totalGenerated > 0 
+            ? Math.round(((signedContractsCount + receiptsCount) / totalGenerated) * 100) 
             : 100;
 
           const totalFinancialFlow = signedReceipts.reduce((sum, r) => {
@@ -4884,9 +4921,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                     <span className="text-[10px] text-emerald-400 font-bold">{signedContractsCount} Signed</span>
                   </div>
                   <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full"
-                      style={{ width: `${contractsCount > 0 ? (signedContractsCount / contractsCount) * 100 : 0}%` }}
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full" 
+                      style={{ width: `${contractsCount > 0 ? (signedContractsCount / contractsCount) * 100 : 0}%` }} 
                     />
                   </div>
                 </div>
@@ -4923,8 +4960,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                       key={t}
                       onClick={() => setDocHistoryType(t)}
                       className={`text-[10px] px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all ${
-                        docHistoryType === t
-                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        docHistoryType === t 
+                          ? 'bg-amber-500 text-slate-950 shadow-sm' 
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -4969,8 +5006,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             {/* Type */}
                             <td className="p-4 text-center">
                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto border ${
-                                isContract
-                                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                                isContract 
+                                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' 
                                   : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
                               }`} title={isContract ? 'Infrastructure Contract' : 'Certified Payment Receipt'}>
                                 <TypeIcon className="w-4 h-4" />
@@ -5002,8 +5039,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <td className="p-4">
                               <div className="flex items-center gap-1.5 max-w-[190px]">
                                 <span className={`font-mono text-[9.5px] font-bold px-2 py-1 rounded border overflow-hidden truncate select-all flex-1 ${
-                                  item.isSigned
-                                    ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
+                                  item.isSigned 
+                                    ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' 
                                     : 'bg-amber-500/5 border-amber-500/20 text-amber-500'
                                 }`}>
                                   {item.verificationToken}
@@ -5231,7 +5268,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
               {/* Grid of Schemas */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
+                
                 {/* Users Table Schema */}
                 <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
                   <div className="flex justify-between items-center">
@@ -5462,7 +5499,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               </div>
 
               <div className="space-y-4">
-
+                
                 {/* GET /api/analytics */}
                 <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 space-y-4">
                   <div className="flex items-center gap-3">
@@ -5597,13 +5634,13 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                 Select a CAD or PDF blueprint to perform digital scale calibration and auto-calculate concrete volume, rebar tonnage, and wall masonry quantities.
               </p>
               <div className="pt-2 flex justify-center gap-3">
-                <button
+                <button 
                   onClick={() => setActiveAdminTab('boq-studio')}
                   className="px-5 py-2.5 bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow hover:bg-amber-400 transition-colors"
                 >
                   Go to BOQ Studio
                 </button>
-                <button
+                <button 
                   onClick={() => setActiveAdminTab('ai-construction-intelligence')}
                   className="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl border border-slate-700 hover:bg-slate-800 transition-colors"
                 >
@@ -5613,6 +5650,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             </div>
           </div>
         )}
+        </>
+      )}
 
       </main>
       </div>
@@ -5623,7 +5662,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       {showCommandPalette && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-start justify-center pt-20 px-4 animate-in fade-in duration-150">
           <div className="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-
+            
             {/* Search Input Bar */}
             <div className="p-4 border-b border-slate-800 flex items-center gap-3 bg-slate-900/50">
               <Search className="w-5 h-5 text-amber-500 shrink-0" />
@@ -5645,8 +5684,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
             {/* Results Navigation List */}
             <div className="p-3 overflow-y-auto space-y-4">
-              {ADMIN_NAV_GROUPS.map((group) => {
-                const filteredItems = group.items.filter(item =>
+              {(dbUser?.role === 'social_media_reviewer'
+                ? ADMIN_NAV_GROUPS.filter(g => g.id === 'marketing-group')
+                : ADMIN_NAV_GROUPS
+              ).map((group) => {
+                const filteredItems = group.items.filter(item => 
                   item.label.toLowerCase().includes(commandSearch.toLowerCase()) ||
                   group.title.toLowerCase().includes(commandSearch.toLowerCase())
                 );

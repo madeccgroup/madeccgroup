@@ -1,36 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Building2,
-  Database,
-  GitBranch,
-  FileCheck,
-  ShoppingCart,
-  Package,
-  TrendingUp,
-  Receipt,
-  Users,
-  Camera,
-  Sparkles,
-  ShieldCheck,
-  Briefcase,
-  BarChart3,
-  Plus,
-  Check,
-  AlertTriangle,
-  Download,
-  Search,
-  RefreshCw,
-  QrCode,
-  Calculator,
-  DollarSign,
-  FileText,
-  ArrowUpRight,
-  ArrowDownRight,
-  Sliders,
-  Eye,
-  EyeOff,
-  CheckCircle,
-  Clock,
+import { 
+  Building2, 
+  Database, 
+  GitBranch, 
+  FileCheck, 
+  ShoppingCart, 
+  Package, 
+  TrendingUp, 
+  Receipt, 
+  Users, 
+  Camera, 
+  Sparkles, 
+  ShieldCheck, 
+  Briefcase, 
+  BarChart3, 
+  Plus, 
+  Check, 
+  AlertTriangle, 
+  Download, 
+  Search, 
+  RefreshCw, 
+  QrCode, 
+  Calculator, 
+  DollarSign, 
+  FileText, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Sliders, 
+  Eye, 
+  EyeOff, 
+  CheckCircle, 
+  Clock, 
   Trash2,
   Lock,
   Layers,
@@ -293,8 +293,8 @@ export default function EnterpriseErpHub({ currentBoq, onSelectBoq, userRole = '
                 if (showToast) showToast('Switched to Internal Admin / QS View (Full Rates & Profit Visible)', 'info');
               }}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-                portalRoleView === 'internal_admin'
-                  ? 'bg-amber-500 text-slate-950 shadow'
+                portalRoleView === 'internal_admin' 
+                  ? 'bg-amber-500 text-slate-950 shadow' 
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -307,8 +307,8 @@ export default function EnterpriseErpHub({ currentBoq, onSelectBoq, userRole = '
                 if (showToast) showToast('Switched to Client Portal View (Internal Costs & Margins Masked)', 'info');
               }}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-                portalRoleView === 'client'
-                  ? 'bg-blue-600 text-white shadow'
+                portalRoleView === 'client' 
+                  ? 'bg-blue-600 text-white shadow' 
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -321,8 +321,8 @@ export default function EnterpriseErpHub({ currentBoq, onSelectBoq, userRole = '
                 if (showToast) showToast('Switched to Subcontractor / Site Engineer View', 'info');
               }}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-                portalRoleView === 'contractor'
-                  ? 'bg-purple-600 text-white shadow'
+                portalRoleView === 'contractor' 
+                  ? 'bg-purple-600 text-white shadow' 
                   : 'text-slate-400 hover:text-white'
               }`}
             >

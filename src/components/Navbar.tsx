@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 // @ts-ignore
 import logoImg from '../assets/images/madecc_logo_1783370981722.jpg';
-import {
-  auth,
-  googleAuthProvider
+import { 
+  auth, 
+  googleAuthProvider 
 } from '../lib/firebase.ts';
 import { signInWithPopup, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useTheme } from '../lib/ThemeContext.tsx';
 import { useLanguage } from '../lib/LanguageContext.tsx';
-import {
-  HardHat,
-  Menu,
-  X,
-  User as UserIcon,
-  LogOut,
-  Key,
-  ChevronDown,
+import { 
+  HardHat, 
+  Menu, 
+  X, 
+  User as UserIcon, 
+  LogOut, 
+  Key, 
+  ChevronDown, 
   ShieldCheck,
   AlertCircle,
   Sun,
@@ -34,12 +34,12 @@ interface NavbarProps {
   loadingAuth: boolean;
 }
 
-export default function Navbar({
-  currentTab,
-  setCurrentTab,
-  dbUser,
-  setDbUser,
-  loadingAuth
+export default function Navbar({ 
+  currentTab, 
+  setCurrentTab, 
+  dbUser, 
+  setDbUser, 
+  loadingAuth 
 }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
@@ -65,7 +65,7 @@ export default function Navbar({
     setLoginError(null);
     try {
       sessionStorage.setItem('admin_token', key);
-
+      
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${key}`
@@ -103,10 +103,41 @@ export default function Navbar({
 
     setSigningIn(true);
     setLoginError(null);
+
+    // Dedicated Non-Firebase Reviewer Route Check
+    const normalizedEmail = email.toLowerCase();
+    if (normalizedEmail === 'meta-reviewer@madeccgroup.online' || normalizedEmail.includes('reviewer')) {
+      try {
+        const response = await fetch('/api/auth/reviewer-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (response.ok && data.success && data.token) {
+          sessionStorage.setItem('reviewer_token', data.token);
+          setDbUser(data.user);
+          setLoginModalOpen(false);
+          setEmailInput('');
+          setPasswordInput('');
+          setCurrentTab('admin');
+          return;
+        } else {
+          throw new Error(data.error || 'Invalid reviewer credentials');
+        }
+      } catch (revErr: any) {
+        console.error('Reviewer direct login failed:', revErr);
+        setLoginError(revErr.message || 'Invalid reviewer email or password');
+        return;
+      } finally {
+        setSigningIn(false);
+      }
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const token = await userCredential.user.getIdToken();
-
+      
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -127,11 +158,33 @@ export default function Navbar({
       }
     } catch (error: any) {
       console.error('Email password login failed:', error);
+      
+      // Fallback: If Firebase failed with auth/operation-not-allowed or user-not-found, try reviewer-login endpoint as secondary check
+      try {
+        const revRes = await fetch('/api/auth/reviewer-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const revData = await revRes.json();
+        if (revRes.ok && revData.success && revData.token) {
+          sessionStorage.setItem('reviewer_token', revData.token);
+          setDbUser(revData.user);
+          setLoginModalOpen(false);
+          setEmailInput('');
+          setPasswordInput('');
+          setCurrentTab('admin');
+          return;
+        }
+      } catch (_) {}
+
       let errMsg = error?.message || 'Authentication failed.';
       if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/wrong-password' || error?.code === 'auth/user-not-found') {
         errMsg = 'Invalid email address or password. Please verify your credentials or contact administrator.';
       } else if (error?.code === 'auth/user-disabled') {
         errMsg = 'This account has been disabled by the administrator.';
+      } else if (error?.code === 'auth/operation-not-allowed') {
+        errMsg = 'Authentication provider is not enabled in Firebase. Please use Administrator Secret Key or Reviewer Login.';
       }
       setLoginError(errMsg);
     } finally {
@@ -143,6 +196,7 @@ export default function Navbar({
     try {
       await signOut(auth);
       sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('reviewer_token');
       setDbUser(null);
       setUserDropdownOpen(false);
       setCurrentTab('home');
@@ -170,25 +224,25 @@ export default function Navbar({
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-
+          
           {/* Logo Branding */}
-          <div
-            className="flex items-center gap-3 cursor-pointer"
+          <div 
+            className="flex items-center gap-3 cursor-pointer" 
             onClick={() => setCurrentTab('home')}
             id="nav-logo"
           >
             <div className={`h-12 w-12 rounded-xl flex items-center justify-center overflow-hidden border shadow-inner ${
               theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800/80'
             }`}>
-              <img
-                src={logoImg}
+              <img 
+                src={logoImg} 
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   if (target.src !== '/logo.png') {
                     target.src = '/logo.png';
                   }
                 }}
-                alt="MADECC Group Logo"
+                alt="MADECC Group Logo" 
                 className="h-full w-full object-contain"
                 referrerPolicy="no-referrer"
               />
@@ -218,8 +272,8 @@ export default function Navbar({
                     setMenuOpen(false);
                   }}
                   className={`px-4 py-2 rounded-md font-sans text-sm font-medium transition-colors ${
-                    currentTab === item.id
-                      ? 'text-amber-400 bg-slate-800/60'
+                    currentTab === item.id 
+                      ? 'text-amber-400 bg-slate-800/60' 
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
                   }`}
                   id={`nav-link-${item.id}`}
@@ -256,13 +310,13 @@ export default function Navbar({
 
             {/* Auth section */}
             <div className={`border-l pl-6 flex items-center gap-3 ${theme === 'light' ? 'border-slate-200' : 'border-slate-800'}`}>
-
+              
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
                 className={`p-2 rounded-lg transition-colors ${
-                  theme === 'light'
-                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500'
+                  theme === 'light' 
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500' 
                     : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400'
                 }`}
                 aria-label="Toggle visual theme"
@@ -279,8 +333,8 @@ export default function Navbar({
               <button
                 onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
                 className={`p-2 rounded-lg transition-colors text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer select-none ${
-                  theme === 'light'
-                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500 border border-slate-200'
+                  theme === 'light' 
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500 border border-slate-200' 
                     : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400 border border-slate-800'
                 }`}
                 aria-label="Toggle Language"
@@ -315,7 +369,7 @@ export default function Navbar({
                           Role: {dbUser.role}
                         </span>
                       </div>
-
+                      
                       <div className="py-1 border-b border-slate-700/50">
                         {(dbUser.role === 'admin' || dbUser.role === 'staff' || dbUser.role === 'social_media_reviewer') && (
                           <button
@@ -393,8 +447,8 @@ export default function Navbar({
                 setMenuOpen(false);
               }}
               className={`w-full text-left px-4 py-3 rounded-md font-sans text-base font-medium block ${
-                currentTab === item.id
-                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500'
+                currentTab === item.id 
+                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500' 
                   : 'text-slate-300 hover:text-white hover:bg-slate-900'
               }`}
             >
@@ -409,8 +463,8 @@ export default function Navbar({
                 setMenuOpen(false);
               }}
               className={`w-full text-left px-4 py-3 rounded-md font-sans text-base font-medium flex items-center gap-2 ${
-                currentTab === 'admin'
-                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500'
+                currentTab === 'admin' 
+                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500' 
                   : 'text-slate-300 hover:text-white hover:bg-slate-900'
               }`}
             >
@@ -471,7 +525,7 @@ export default function Navbar({
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-in zoom-in-95 duration-200" id="signin-modal">
             {/* Close Button */}
-            <button
+            <button 
               onClick={() => setLoginModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
               aria-label="Close dialog"
@@ -630,3 +684,4 @@ export default function Navbar({
     </nav>
   );
 }
+

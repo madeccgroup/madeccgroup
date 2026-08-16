@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Users,
-  Key,
-  ShieldCheck,
-  UserPlus,
-  FileText,
-  Lock,
-  Unlock,
-  CheckCircle,
-  AlertTriangle,
-  Building2,
-  Briefcase,
-  Award,
-  DollarSign,
-  RefreshCw,
-  Plus,
-  Search,
-  Eye,
-  Copy,
-  Clock,
-  ShieldAlert,
-  FileCheck,
-  Bell,
-  Sparkles,
-  Check,
+import { 
+  Users, 
+  Key, 
+  ShieldCheck, 
+  UserPlus, 
+  FileText, 
+  Lock, 
+  Unlock, 
+  CheckCircle, 
+  AlertTriangle, 
+  Building2, 
+  Briefcase, 
+  Award, 
+  DollarSign, 
+  RefreshCw, 
+  Plus, 
+  Search, 
+  Eye, 
+  Copy, 
+  Clock, 
+  ShieldAlert, 
+  FileCheck, 
+  Bell, 
+  Sparkles, 
+  Check, 
   Calendar,
   Layers,
   MapPin,
@@ -956,8 +956,8 @@ export default function StaffManagementHub({ currentUser, userRole = 'admin' }: 
               onClick={handleUndo}
               disabled={historyStack.length === 0}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-colors ${
-                historyStack.length > 0
-                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/40 cursor-pointer'
+                historyStack.length > 0 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/40 cursor-pointer' 
                   : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
               }`}
               title="Undo last staff action"
@@ -969,8 +969,8 @@ export default function StaffManagementHub({ currentUser, userRole = 'admin' }: 
               onClick={handleRedo}
               disabled={redoStack.length === 0}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-colors ${
-                redoStack.length > 0
-                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/40 cursor-pointer'
+                redoStack.length > 0 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/40 cursor-pointer' 
                   : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
               }`}
               title="Redo undone action"
@@ -1349,7 +1349,7 @@ export default function StaffManagementHub({ currentUser, userRole = 'admin' }: 
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {accessKeys
-                      .filter(k =>
+                      .filter(k => 
                         (filterStatus === 'ALL' || k.status === filterStatus) &&
                         (k.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          k.employeeNumber?.toLowerCase().includes(searchQuery.toLowerCase()))

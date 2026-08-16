@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Building2,
-  Search,
-  MapPin,
-  TrendingUp,
-  Download,
-  Calculator,
-  FileText,
-  Phone,
-  MessageSquare,
-  Info,
-  ShieldCheck,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-  ArrowRight,
-  Layers,
-  HelpCircle,
-  Clock,
-  DollarSign,
-  BarChart3,
+import { 
+  Building2, 
+  Search, 
+  MapPin, 
+  TrendingUp, 
+  Download, 
+  Calculator, 
+  FileText, 
+  Phone, 
+  MessageSquare, 
+  Info, 
+  ShieldCheck, 
+  CheckCircle2, 
+  ChevronDown, 
+  ChevronUp, 
+  Sparkles, 
+  ArrowRight, 
+  Layers, 
+  HelpCircle, 
+  Clock, 
+  DollarSign, 
+  BarChart3, 
   RefreshCw,
   Hammer,
   Truck,
@@ -34,9 +34,9 @@ interface ConstructionCostGuideProps {
   showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
-export const ConstructionCostGuide: React.FC<ConstructionCostGuideProps> = ({
+export const ConstructionCostGuide: React.FC<ConstructionCostGuideProps> = ({ 
   onNavigateToTab,
-  showToast
+  showToast 
 }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -78,8 +78,8 @@ export const ConstructionCostGuide: React.FC<ConstructionCostGuideProps> = ({
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      items = items.filter(i =>
-        i.name.toLowerCase().includes(q) ||
+      items = items.filter(i => 
+        i.name.toLowerCase().includes(q) || 
         i.itemCode.toLowerCase().includes(q) ||
         (i.specifications && i.specifications.toLowerCase().includes(q))
       );
@@ -106,7 +106,7 @@ export const ConstructionCostGuide: React.FC<ConstructionCostGuideProps> = ({
     if (!data) return;
     try {
       const doc = new jsPDF();
-
+      
       // Header Banner
       doc.setFillColor(15, 23, 42); // Dark Navy
       doc.rect(0, 0, 210, 30, 'F');
@@ -189,13 +189,13 @@ export const ConstructionCostGuide: React.FC<ConstructionCostGuideProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
-
+      
       {/* 1. HERO HEADER */}
       <div className="bg-slate-900 text-white border-b border-slate-800 py-12 lg:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
         <div className="max-w-6xl mx-auto relative z-10">
-
+          
           {/* Metadata Badges Bar */}
           <div className="flex flex-wrap items-center gap-2 mb-4 text-xs font-semibold">
             <span className="px-3 py-1 bg-amber-500 text-slate-950 rounded-full font-bold flex items-center gap-1.5">

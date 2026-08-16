@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Leaf,
-  ShieldCheck,
-  Users,
-  TrendingUp,
-  Building2,
-  FileText,
-  Download,
-  CheckCircle2,
-  Award,
-  Heart,
+import { 
+  Leaf, 
+  ShieldCheck, 
+  Users, 
+  TrendingUp, 
+  Building2, 
+  FileText, 
+  Download, 
+  CheckCircle2, 
+  Award, 
+  Heart, 
   ArrowRight,
   Globe2,
   HardHat,
@@ -159,18 +159,18 @@ export const Sustainability: React.FC<SustainabilityProps> = ({ onNavigateToTab 
 
   return (
     <div className="bg-slate-950 text-slate-100 min-h-screen">
-
+      
       {/* HERO BANNER */}
       <section className="relative py-24 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-b border-slate-800/80 overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:16px_16px]" />
-
+        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono tracking-wider uppercase mb-6">
               <Leaf className="w-4 h-4 text-emerald-400" />
               <span>ESG & Environmental Responsibility</span>
             </div>
-
+            
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-6">
               Building Responsibly. <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-500 to-emerald-400">
@@ -313,8 +313,8 @@ export const Sustainability: React.FC<SustainabilityProps> = ({ onNavigateToTab 
             {initiatives.map((init) => (
               <div key={init.id} className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden group hover:border-slate-700 transition-all flex flex-col">
                 <div className="h-48 overflow-hidden relative">
-                  <img
-                    src={init.image || 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b2?auto=format&fit=crop&w=800&q=80'}
+                  <img 
+                    src={init.image || 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b2?auto=format&fit=crop&w=800&q=80'} 
                     alt={init.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -355,8 +355,8 @@ export const Sustainability: React.FC<SustainabilityProps> = ({ onNavigateToTab 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {socialProjects.map((proj) => (
             <div key={proj.id} className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row gap-6 items-center">
-              <img
-                src={proj.image || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80'}
+              <img 
+                src={proj.image || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80'} 
                 alt={proj.title}
                 className="w-full md:w-48 h-40 object-cover rounded-xl shrink-0"
               />

@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { getCsrfHeaders } from '../lib/csrf.ts';
 import { useLanguage } from '../lib/LanguageContext.tsx';
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Star,
-  CheckCircle,
-  Quote,
-  ShieldCheck,
-  Truck,
-  Cpu,
+import { 
+  ArrowRight, 
+  ChevronLeft, 
+  ChevronRight, 
+  Star, 
+  CheckCircle, 
+  Quote, 
+  ShieldCheck, 
+  Truck, 
+  Cpu, 
   Hammer,
   ChevronDown,
   ChevronUp,
@@ -52,7 +52,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
   const [approvedReviews, setApprovedReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   // Carousel State
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
@@ -81,7 +81,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
     // Fetch home data from backend APIs with robust individual handling
     const fetchHomeData = async () => {
       setLoading(true);
-
+      
       // 1. Fetch Banners
       try {
         const bannersRes = await fetch('/api/banners');
@@ -168,7 +168,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
       const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/reviews', {
         method: 'POST',
-        headers: {
+        headers: { 
           'Content-Type': 'application/json',
           ...csrfHeaders
         },
@@ -225,7 +225,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
 
   return (
     <div className="font-sans text-slate-200 bg-[#0A0A0B] min-h-screen">
-
+      
       {/* ==========================================
           HERO BANNER CAROUSEL SECTION
           ========================================== */}
@@ -241,7 +241,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
               }`}
             >
               {/* Cover Image is ALWAYS rendered as the base background */}
-              <img
+              <img 
                 src={getOptimizedImageUrl(banner.imageUrl, 1600, 80)}
                 alt={banner.title}
                 className="absolute inset-0 w-full h-full object-cover transition-all duration-700"
@@ -286,7 +286,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
                 })()
               )}
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/75 to-transparent animate-in fade-in duration-500" />
-
+              
               <div className="absolute inset-0 flex items-center">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                   <div className="max-w-2xl text-white space-y-6">
@@ -389,7 +389,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
           ========================================== */}
       <section className="py-24 bg-[#0A0A0B]" id="services-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+          
           <div className="max-w-3xl mx-auto text-center space-y-4 mb-16">
             <span className="text-xs font-bold text-amber-500 uppercase tracking-widest font-mono">Expert Engineering Modules</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Our Professional Capabilities</h2>
@@ -403,8 +403,8 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
               <div
                 key={service.id}
                 className={`bg-slate-900/50 rounded-xl border p-6 transition-all duration-300 shadow-sm ${
-                  expandedServiceId === service.id
-                    ? 'border-amber-500 ring-2 ring-amber-500/10 bg-slate-900/80'
+                  expandedServiceId === service.id 
+                    ? 'border-amber-500 ring-2 ring-amber-500/10 bg-slate-900/80' 
                     : 'border-slate-800/80 hover:border-slate-750 hover:bg-slate-900/70'
                 }`}
                 id={`service-card-${service.id}`}
@@ -461,7 +461,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
           ========================================== */}
       <section className="py-24 bg-[#0E0E10]/40 border-y border-slate-800/60" id="featured-projects">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+          
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-16">
             <div className="space-y-3">
               <span className="text-xs font-bold text-amber-500 uppercase tracking-widest font-mono">Structural Landmark Case-studies</span>
@@ -483,8 +483,8 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {featuredProjects.map((project) => (
-                <div
-                  key={project.id}
+                <div 
+                  key={project.id} 
                   className="bg-slate-900/50 border border-slate-800/85 rounded-xl overflow-hidden shadow-sm hover:border-slate-700/80 hover:bg-slate-900 transition-all flex flex-col h-full cursor-pointer group"
                   onClick={() => handleViewProject(project.id)}
                   id={`featured-project-${project.id}`}
@@ -542,9 +542,9 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
           ========================================== */}
       <section className="py-24 bg-[#0A0A0B]" id="testimonials-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+          
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
-
+            
             {/* Reviews list */}
             <div className="lg:col-span-7 space-y-8">
               <div className="space-y-3">
@@ -556,22 +556,22 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
               </div>
 
               {approvedReviews.length > 0 ? (
-                <div
+                <div 
                   className="relative group/carousel overflow-hidden bg-slate-950/40 border border-slate-850 rounded-2xl p-2 md:p-4"
                   onMouseEnter={() => setIsHoveringReviews(true)}
                   onMouseLeave={() => setIsHoveringReviews(false)}
                 >
                   {/* Sliding Window */}
                   <div className="overflow-hidden relative w-full">
-                    <div
+                    <div 
                       className="flex transition-transform duration-500 ease-in-out"
                       style={{ transform: `translateX(-${currentReviewIndex * 100}%)` }}
                     >
                       {approvedReviews.map((review) => (
-                        <div
-                          key={review.id}
+                        <div 
+                          key={review.id} 
                           className="w-full shrink-0 px-4 py-8 relative"
-                          itemScope
+                          itemScope 
                           itemType="https://schema.org/Review"
                         >
                           {/* Rich SEO Microdata */}
@@ -580,15 +580,15 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
                             <meta itemProp="ratingValue" content={String(review.rating)} />
                             <meta itemProp="bestRating" content="5" />
                           </div>
-
+                          
                           <Quote className="absolute right-6 top-4 w-12 h-12 text-slate-800/20 pointer-events-none" />
-
+                          
                           {/* Stars */}
                           <div className="flex gap-1 text-amber-500 mb-5">
                             {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4.5 h-4.5 ${i < review.rating ? 'fill-current' : 'text-slate-700'}`}
+                              <Star 
+                                key={i} 
+                                className={`w-4.5 h-4.5 ${i < review.rating ? 'fill-current' : 'text-slate-700'}`} 
                               />
                             ))}
                           </div>
@@ -610,7 +610,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
                                 </span>
                               )}
                             </div>
-
+                            
                             <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 select-none">
                               <CheckCircle className="w-3.5 h-3.5" /> Verified Handover
                             </span>
@@ -791,7 +791,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
           ========================================== */}
       <section className="py-24 bg-[#0A0A0C] border-t border-slate-900" id="seo-faq-section">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
+          
           <div className="text-center space-y-4 mb-16">
             <span className="text-xs font-bold text-amber-500 uppercase tracking-widest font-mono">Expert Answers & Support</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Frequently Asked Questions</h2>
@@ -829,7 +829,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
             ].map((faq, idx) => {
               const isExpanded = expandedFaqIndex === idx;
               return (
-                <div
+                <div 
                   key={idx}
                   className="bg-slate-900/40 border border-slate-850 rounded-xl overflow-hidden transition-all duration-300"
                   id={`faq-item-${idx}`}
@@ -848,7 +848,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
                       <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
                     )}
                   </button>
-
+                  
                   {isExpanded && (
                     <div className="px-5 pb-5 pt-1 text-xs text-slate-400 border-t border-slate-850/60 bg-slate-950/20 leading-relaxed font-sans animate-in fade-in slide-in-from-top-2 duration-200">
                       {faq.a}
@@ -864,7 +864,7 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
             <p className="text-xs text-slate-300">
               Have a custom project or technical engineering inquiry not listed here?
             </p>
-            <button
+            <button 
               onClick={() => setCurrentTab('contact')}
               className="mt-3 inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold uppercase tracking-wider py-2.5 px-6 rounded-lg transition-all"
             >

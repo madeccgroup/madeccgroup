@@ -276,7 +276,7 @@ export async function generateBoqPdf(boq: any, options: ExportPdfOptions = {}): 
 
   const curr = boq?.currency || 'XAF';
   drawSummaryLine('SECTIONS MEASURED SUBTOTAL:', `${Number(boq?.subtotal || 0).toLocaleString()} ${curr}`, true);
-
+  
   if (Number(boq?.overheadAmount || 0) > 0) {
     drawSummaryLine(`Overhead & Site Logistics (${boq?.overheadPercent || 0}%):`, `+${Number(boq.overheadAmount).toLocaleString()} ${curr}`);
   }
@@ -382,3 +382,4 @@ export async function generateBoqPdf(boq: any, options: ExportPdfOptions = {}): 
 
   return { pdf: doc, filename };
 }
+

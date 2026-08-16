@@ -902,7 +902,7 @@ _Prepared by ${preparedBy} (Civil Engineering Dept)_`;
       {/* TOP HEADER & TOOLBAR */}
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-
+          
           {/* BRAND & TITLE */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
@@ -1072,7 +1072,7 @@ _Prepared by ${preparedBy} (Civil Engineering Dept)_`;
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-
+        
         {/* DISCLAIMER & ENGINEERING VALIDATION BANNER */}
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 sm:p-4 text-amber-300 text-xs flex items-start gap-3">
           <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
@@ -1087,7 +1087,7 @@ _Prepared by ${preparedBy} (Civil Engineering Dept)_`;
         {/* MODE 1: CALCULATOR STUDIO */}
         {mode === 'calculator' && (
           <div className="space-y-6">
-
+            
             {/* PROJECT METADATA CARD */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
@@ -1341,7 +1341,7 @@ _Prepared by ${preparedBy} (Civil Engineering Dept)_`;
 
             {/* INTERACTIVE LABOUR SECTIONS & ITEMS TABLE */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl space-y-0">
-
+              
               <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-900 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Layers className="w-5 h-5 text-amber-400" />
@@ -1362,7 +1362,7 @@ _Prepared by ${preparedBy} (Civil Engineering Dept)_`;
               <div className="divide-y divide-slate-800">
                 {sections.map((sec, secIdx) => (
                   <div key={sec.id || secIdx} className="p-4 sm:p-6 space-y-4 bg-slate-950/40">
-
+                    
                     {/* SECTION HEADER BAR */}
                     <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
                       <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -1560,7 +1560,7 @@ _Prepared by ${preparedBy} (Civil Engineering Dept)_`;
         {/* MODE 2: DASHBOARD & METRICS */}
         {mode === 'dashboard' && (
           <div className="space-y-6">
-
+            
             {/* STATS CARDS GRID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2">
@@ -1594,7 +1594,7 @@ _Prepared by ${preparedBy} (Civil Engineering Dept)_`;
 
             {/* RECHARTS VISUALIZATIONS */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+              
               {/* CATEGORY COST ALLOCATION BAR CHART */}
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
                 <h3 className="font-extrabold text-white text-sm flex items-center gap-2">

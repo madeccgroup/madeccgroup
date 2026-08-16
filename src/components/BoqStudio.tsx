@@ -1,33 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  FileSpreadsheet,
-  Plus,
-  Trash2,
-  Save,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Download,
-  Send,
-  Copy,
-  RefreshCw,
-  Search,
-  Filter,
-  Edit3,
-  Eye,
-  FileText,
-  Building2,
-  User,
-  MapPin,
-  DollarSign,
-  ArrowLeft,
-  ChevronDown,
-  ChevronUp,
-  ShieldCheck,
-  Lock,
-  Printer,
-  Layers,
-  Calculator,
+import { 
+  FileSpreadsheet, 
+  Plus, 
+  Trash2, 
+  Save, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle, 
+  Download, 
+  Send, 
+  Copy, 
+  RefreshCw, 
+  Search, 
+  Filter, 
+  Edit3, 
+  Eye, 
+  FileText, 
+  Building2, 
+  User, 
+  MapPin, 
+  DollarSign, 
+  ArrowLeft, 
+  ChevronDown, 
+  ChevronUp, 
+  ShieldCheck, 
+  Lock, 
+  Printer, 
+  Layers, 
+  Calculator, 
   Info,
   Calendar,
   Sparkles,
@@ -283,7 +283,7 @@ export const COMPREHENSIVE_UNITS: BoqUnitItem[] = [
   { code: 'cm', name: 'Centimetre', category: 'Length' },
   { code: 'm', name: 'Metre', category: 'Length', isDefault: true },
   { code: 'km', name: 'Kilometre', category: 'Length' },
-
+  
   // Area
   { code: 'mm²', name: 'Square millimetre', category: 'Area' },
   { code: 'cm²', name: 'Square centimetre', category: 'Area' },
@@ -506,7 +506,7 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null);
   const [selectedItemForDimension, setSelectedItemForDimension] = useState<{ secIdx: number; itemIdx: number } | null>(null);
   const [selectedItemForRateBreakdown, setSelectedItemForRateBreakdown] = useState<{ secIdx: number; itemIdx: number } | null>(null);
-
+  
   // Revisions State
   const [selectedRevisionCompare, setSelectedRevisionCompare] = useState<{ revA: string; revB: string }>({ revA: 'REV-00', revB: 'REV-01' });
   const [showSaveRevisionModal, setShowSaveRevisionModal] = useState<boolean>(false);
@@ -691,7 +691,7 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
   const handleStartCreate = () => {
     const year = new Date().getFullYear();
     const nextSeq = String(boqList.length + 1).padStart(4, '0');
-
+    
     const defaultSections: BoqSection[] = PREDEFINED_SECTIONS_TEMPLATES.map((tmpl, idx) => {
       const secId = `sec-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
       return {
@@ -1445,7 +1445,7 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
   const handleUpdateDimensionLine = (field: string, val: any, index: number) => {
     if (selectedItemForDimension === null) return;
     const { secIdx, itemIdx } = selectedItemForDimension;
-
+    
     const sectionsCopy = [...(currentBoq.sections || [])];
     const item = sectionsCopy[secIdx].items[itemIdx];
     const sheet = item.dimensionSheet || {
@@ -1547,7 +1547,7 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
       {/* TOP HEADER & SYSTEM WORKFLOW NAVIGATION */}
       <header className="bg-slate-950 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-xl">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-
+          
           {/* Brand & Active BOQ Reference */}
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
@@ -1665,7 +1665,7 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
       {viewMode === 'editor' && (
         <div className="bg-slate-950/70 border-b border-slate-800 px-4 py-2 overflow-x-auto">
           <div className="max-w-7xl mx-auto flex items-center space-x-2 min-w-max">
-
+            
             <button
               onClick={() => setEditorStage('STAGE1_SETUP')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1.5 transition ${
@@ -1813,8 +1813,8 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
                     ) : (
                       boqList
                         .filter(b => activeStatusFilter === 'ALL' || b.status === activeStatusFilter)
-                        .filter(b =>
-                          !searchQuery ||
+                        .filter(b => 
+                          !searchQuery || 
                           b.boqReference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           b.projectName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           b.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1868,7 +1868,7 @@ export default function BoqStudio({ showToast, currentUser }: BoqStudioProps) {
         {/* ------------------------------------------------------------- */}
         {viewMode === 'qs_dashboard' && (
           <div className="space-y-6">
-
+            
             {/* KPI Executive Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">

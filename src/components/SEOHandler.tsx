@@ -100,7 +100,7 @@ const TAB_META: Record<string, { title: string; description: string; keywords: s
 
 /**
  * High-fidelity SEO handler that dynamically updates document title,
- * meta tags, Open Graph properties, Twitter cards, and appends
+ * meta tags, Open Graph properties, Twitter cards, and appends 
  * rich structured JSON-LD schemas as the user navigates.
  */
 export default function SEOHandler({ currentTab, selectedProjectId }: SEOHandlerProps) {

@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import {
-  FileText,
-  Search,
-  Filter,
-  RefreshCw,
-  Eye,
-  CheckCircle2,
+import { 
+  FileText, 
+  Search, 
+  Filter, 
+  RefreshCw, 
+  Eye, 
+  CheckCircle2, 
   ShieldCheck,
-  Clock,
-  AlertCircle,
-  UserCheck,
-  ArrowRight,
-  Send,
-  Building2,
-  MapPin,
-  Phone,
-  Mail,
-  MessageSquare,
-  Download,
-  Plus,
-  Check,
+  Clock, 
+  AlertCircle, 
+  UserCheck, 
+  ArrowRight, 
+  Send, 
+  Building2, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  MessageSquare, 
+  Download, 
+  Plus, 
+  Check, 
   X,
   TrendingUp,
   FileSpreadsheet
@@ -235,7 +235,7 @@ export const AdminQuoteRequests: React.FC = () => {
 
   return (
     <div className="space-y-6">
-
+      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
@@ -387,7 +387,7 @@ export const AdminQuoteRequests: React.FC = () => {
       {selectedRequest && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 relative shadow-2xl border border-slate-200">
-
+            
             <button
               onClick={() => setSelectedRequest(null)}
               className="absolute right-6 top-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center"
@@ -409,7 +409,7 @@ export const AdminQuoteRequests: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs sm:text-sm">
-
+              
               {/* Client Profile */}
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <h3 className="font-extrabold text-slate-900 uppercase tracking-wider text-xs border-b pb-2">
@@ -420,7 +420,7 @@ export const AdminQuoteRequests: React.FC = () => {
                 <div><strong className="text-slate-500">Email:</strong> {selectedRequest.clientEmail}</div>
                 <div><strong className="text-slate-500">Phone:</strong> {selectedRequest.clientPhone}</div>
                 <div><strong className="text-slate-500">Preferred Mode:</strong> {selectedRequest.preferredContactMethod} ({selectedRequest.preferredContactTime})</div>
-
+                
                 {selectedRequest.whatsappNumber && (
                   <div className="pt-2">
                     <a

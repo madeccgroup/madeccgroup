@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import {
-  Building2,
-  Truck,
-  HardHat,
-  ShieldCheck,
-  Upload,
-  CheckCircle2,
-  AlertCircle,
-  FileText,
-  Send,
-  Lock,
+import { 
+  Building2, 
+  Truck, 
+  HardHat, 
+  ShieldCheck, 
+  Upload, 
+  CheckCircle2, 
+  AlertCircle, 
+  FileText, 
+  Send, 
+  Lock, 
   Info,
   Clock,
   Sparkles,
@@ -261,7 +261,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
   return (
     <div className="bg-slate-950 text-slate-100 min-h-screen">
-
+      
       {/* HERO BANNER */}
       <section className="relative py-20 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -287,7 +287,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
       {/* MAIN REGISTRATION FORM AREA */}
       <section className="py-12 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-
+        
         {submittedRef ? (
           <div className="p-10 rounded-3xl bg-slate-900 border border-emerald-500/40 text-center max-w-2xl mx-auto shadow-2xl">
             <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-4">
@@ -297,7 +297,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
             <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest block mb-1">
               Application Successfully Submitted
             </span>
-
+            
             <h2 className="text-2xl font-bold text-white mb-2">
               Registration Received
             </h2>
@@ -322,7 +322,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
           </div>
         ) : (
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl">
-
+            
             {/* TAB SWITCHER */}
             <div className="grid grid-cols-2 gap-3 p-1.5 rounded-2xl bg-slate-950 border border-slate-800 mb-8">
               <button
@@ -362,7 +362,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
             {/* SUPPLIER FORM */}
             {activeTab === 'supplier' && (
               <form onSubmit={handleSupplierSubmit} className="space-y-6">
-
+                
                 <h3 className="text-lg font-bold text-white border-b border-slate-800 pb-3 flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-amber-500" />
                   <span>1. Company Identification & Category</span>
@@ -371,8 +371,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Company Registered Name *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={supCompany}
                       onChange={(e) => setSupCompany(e.target.value)}
@@ -383,8 +383,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Tax / Registration No (RCCM / NIU) *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={supRegNo}
                       onChange={(e) => setSupRegNo(e.target.value)}
@@ -449,8 +449,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Headquarters City</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       value={supCity}
                       onChange={(e) => setSupCity(e.target.value)}
                       placeholder="e.g. Douala"
@@ -460,8 +460,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Years in Business</label>
-                    <input
-                      type="number"
+                    <input 
+                      type="number" 
                       min={1}
                       value={supYears}
                       onChange={(e) => setSupYears(Number(e.target.value))}
@@ -478,8 +478,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Contact Person Name *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={supContact}
                       onChange={(e) => setSupContact(e.target.value)}
@@ -490,8 +490,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Position / Role</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       value={supPosition}
                       onChange={(e) => setSupPosition(e.target.value)}
                       placeholder="e.g. Sales Manager"
@@ -501,8 +501,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Email Address *</label>
-                    <input
-                      type="email"
+                    <input 
+                      type="email" 
                       required
                       value={supEmail}
                       onChange={(e) => setSupEmail(e.target.value)}
@@ -513,8 +513,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Phone Number *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={supPhone}
                       onChange={(e) => setSupPhone(e.target.value)}
@@ -525,8 +525,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">WhatsApp Line</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       value={supWhatsapp}
                       onChange={(e) => setSupWhatsapp(e.target.value)}
                       placeholder="+237 600 00 00 00"
@@ -542,9 +542,9 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
                     <label className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium cursor-pointer flex items-center gap-2">
                       <Upload className="w-4 h-4 text-amber-400" />
                       <span>{uploading ? 'Uploading...' : 'Upload Document'}</span>
-                      <input
-                        type="file"
-                        className="hidden"
+                      <input 
+                        type="file" 
+                        className="hidden" 
                         onChange={(e) => handleFileUpload(e, 'Compliance Document')}
                       />
                     </label>
@@ -564,7 +564,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                 {/* DECLARATION */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3">
-                  <input
+                  <input 
                     type="checkbox"
                     id="supDec"
                     checked={supDeclaration}
@@ -599,7 +599,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
             {/* SUBCONTRACTOR FORM */}
             {activeTab === 'subcontractor' && (
               <form onSubmit={handleSubcontractorSubmit} className="space-y-6">
-
+                
                 <h3 className="text-lg font-bold text-white border-b border-slate-800 pb-3 flex items-center gap-2">
                   <HardHat className="w-5 h-5 text-amber-500" />
                   <span>1. Technical Trade & Operational Profile</span>
@@ -608,8 +608,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Subcontractor Enterprise Name *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={subCompany}
                       onChange={(e) => setSubCompany(e.target.value)}
@@ -633,8 +633,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Years in Construction Trade</label>
-                    <input
-                      type="number"
+                    <input 
+                      type="number" 
                       min={1}
                       value={subYears}
                       onChange={(e) => setSubYears(Number(e.target.value))}
@@ -644,8 +644,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Permanent Skilled Workforce Size</label>
-                    <input
-                      type="number"
+                    <input 
+                      type="number" 
                       min={1}
                       value={subWorkforce}
                       onChange={(e) => setSubWorkforce(Number(e.target.value))}
@@ -684,8 +684,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Primary Contact Name *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={subContact}
                       onChange={(e) => setSubContact(e.target.value)}
@@ -696,8 +696,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Email Address *</label>
-                    <input
-                      type="email"
+                    <input 
+                      type="email" 
                       required
                       value={subEmail}
                       onChange={(e) => setSubEmail(e.target.value)}
@@ -708,8 +708,8 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Phone Number *</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       value={subPhone}
                       onChange={(e) => setSubPhone(e.target.value)}
@@ -721,7 +721,7 @@ export const SuppliersSubcontractors: React.FC<Props> = ({ onNavigateToTab }) =>
 
                 {/* DECLARATION */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3">
-                  <input
+                  <input 
                     type="checkbox"
                     id="subDec"
                     checked={subDeclaration}

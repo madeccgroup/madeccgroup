@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => {
       setToasts((prev) => [...prev, { id, message, type }]);
     }, 0);
-
+    
     // Automatically dismiss after 4 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -68,7 +68,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               ) : (
                 <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
               )}
-
+              
               <div className="flex-grow space-y-1">
                 <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                   {toast.type === 'success' ? 'Operation Success' : 'Operation Error'}

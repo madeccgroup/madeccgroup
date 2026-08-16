@@ -1,24 +1,23 @@
-﻿import { trackCalculatorStart, trackCalculatorComplete, trackBudgetRange } from '../services/analytics';
 import React, { useState, useEffect } from 'react';
-import {
-  Calculator,
-  Building2,
-  MapPin,
-  Layers,
-  Sliders,
-  CheckCircle2,
-  FileText,
-  Download,
-  Phone,
-  MessageSquare,
-  Send,
-  Info,
-  AlertTriangle,
-  ChevronRight,
-  ChevronLeft,
-  Sparkles,
-  Check,
-  RefreshCw,
+import { 
+  Calculator, 
+  Building2, 
+  MapPin, 
+  Layers, 
+  Sliders, 
+  CheckCircle2, 
+  FileText, 
+  Download, 
+  Phone, 
+  MessageSquare, 
+  Send, 
+  Info, 
+  AlertTriangle, 
+  ChevronRight, 
+  ChevronLeft, 
+  Sparkles, 
+  Check, 
+  RefreshCw, 
   HelpCircle,
   Home,
   ShieldCheck,
@@ -35,9 +34,9 @@ interface ProjectBudgetCalculatorProps {
   showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
-export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = ({
+export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = ({ 
   onNavigateToTab,
-  showToast
+  showToast 
 }) => {
   // Mode selection
   const [mode, setMode] = useState<'quick' | 'detailed'>('quick');
@@ -47,7 +46,7 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
   const [projectType, setProjectType] = useState<string>('Residential House');
   const [customProjectType, setCustomProjectType] = useState<string>('');
   const [region, setRegion] = useState<string>('Centre');
-  const [location, setLocation] = useState<string>('YaoundÃ©');
+  const [location, setLocation] = useState<string>('Yaoundé');
   const [unitSystem, setUnitSystem] = useState<'m2' | 'ft2'>('m2');
   const [rawAreaInput, setRawAreaInput] = useState<string>('180');
   const [numberOfFloors, setNumberOfFloors] = useState<number>(1);
@@ -111,8 +110,8 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
   }, []);
 
   // Area conversion helper
-  const areaInM2 = unitSystem === 'm2'
-    ? parseFloat(rawAreaInput) || 0
+  const areaInM2 = unitSystem === 'm2' 
+    ? parseFloat(rawAreaInput) || 0 
     : (parseFloat(rawAreaInput) || 0) * 0.092903;
 
   const handleSelectAllScopes = () => setSelectedScopes(ALL_SCOPES);
@@ -245,7 +244,7 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
       doc.setFontSize(10);
       doc.text(`Project Type: ${calculationResult.projectType}`, 14, 46);
       doc.text(`Location: ${calculationResult.location} (${calculationResult.region || 'Cameroon'})`, 14, 52);
-      doc.text(`Total Floor Area: ${calculationResult.totalFloorAreaM2} mÂ² (${calculationResult.numberOfFloors} Storeys)`, 14, 58);
+      doc.text(`Total Floor Area: ${calculationResult.totalFloorAreaM2} m² (${calculationResult.numberOfFloors} Storeys)`, 14, 58);
       doc.text(`Construction Standard: ${calculationResult.constructionStandard}`, 14, 64);
 
       // Budget Box
@@ -260,12 +259,12 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
       doc.setFontSize(18);
       doc.setFont('Helvetica', 'bold');
       doc.setTextColor(217, 119, 6);
-      doc.text(`XAF ${calculationResult.estimatedBudgetMin.toLocaleString()} â€“ XAF ${calculationResult.estimatedBudgetMax.toLocaleString()}`, 20, 92);
+      doc.text(`XAF ${calculationResult.estimatedBudgetMin.toLocaleString()} – XAF ${calculationResult.estimatedBudgetMax.toLocaleString()}`, 20, 92);
 
       doc.setFontSize(10);
       doc.setFont('Helvetica', 'normal');
       doc.setTextColor(71, 85, 105);
-      doc.text(`Expected Total: XAF ${calculationResult.estimatedBudgetExpected.toLocaleString()} (~XAF ${calculationResult.costPerM2.toLocaleString()} / mÂ²)`, 20, 99);
+      doc.text(`Expected Total: XAF ${calculationResult.estimatedBudgetExpected.toLocaleString()} (~XAF ${calculationResult.costPerM2.toLocaleString()} / m²)`, 20, 99);
 
       // Category Breakdown Table
       doc.setFont('Helvetica', 'bold');
@@ -321,7 +320,7 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
     const text = `Hello MADECC Group, I generated a Project Budget Estimate on your website:
 Ref: ${calculationResult.estimateReference}
 Type: ${calculationResult.projectType}
-Area: ${calculationResult.totalFloorAreaM2} mÂ²
+Area: ${calculationResult.totalFloorAreaM2} m²
 Location: ${calculationResult.location}
 Expected Budget: XAF ${calculationResult.estimatedBudgetExpected.toLocaleString()}
 I would like to discuss this project and request a formal BOQ.`;
@@ -349,8 +348,8 @@ I would like to discuss this project and request a formal BOQ.`;
             <button
               onClick={() => { setMode('quick'); if (currentStep !== 99) setCurrentStep(1); }}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                mode === 'quick'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                mode === 'quick' 
+                  ? 'bg-amber-500 text-slate-950 shadow-sm' 
                   : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -359,8 +358,8 @@ I would like to discuss this project and request a formal BOQ.`;
             <button
               onClick={() => { setMode('detailed'); if (currentStep !== 99) setCurrentStep(1); }}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                mode === 'detailed'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                mode === 'detailed' 
+                  ? 'bg-amber-500 text-slate-950 shadow-sm' 
                   : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -372,7 +371,7 @@ I would like to discuss this project and request a formal BOQ.`;
 
       {/* Main Container */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-
+        
         {/* Preliminary Notice Disclaimer Card */}
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 mb-6 backdrop-blur-sm flex items-start gap-3 shadow-sm">
           <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -384,7 +383,7 @@ I would like to discuss this project and request a formal BOQ.`;
         {/* WORKFLOW STEPS OR RESULTS */}
         {currentStep !== 99 ? (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
-
+            
             {/* Step Indicator Header */}
             <div className="bg-slate-50 border-b border-slate-200 p-4 sm:px-8 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -409,7 +408,7 @@ I would like to discuss this project and request a formal BOQ.`;
 
               {/* Progress Bar */}
               <div className="hidden sm:block w-36 bg-slate-200 h-2 rounded-full overflow-hidden">
-                <div
+                <div 
                   className="bg-amber-500 h-full transition-all duration-300"
                   style={{ width: `${(currentStep / (mode === 'quick' ? 5 : 7)) * 100}%` }}
                 />
@@ -417,7 +416,7 @@ I would like to discuss this project and request a formal BOQ.`;
             </div>
 
             <div className="p-6 sm:p-8">
-
+              
               {/* STEP 1: PROJECT TYPE */}
               {currentStep === 1 && (
                 <div className="space-y-6">
@@ -490,7 +489,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         value={region}
                         onChange={(e) => {
                           setRegion(e.target.value);
-                          if (e.target.value === 'Centre') setLocation('YaoundÃ©');
+                          if (e.target.value === 'Centre') setLocation('Yaoundé');
                           else if (e.target.value === 'Littoral') setLocation('Douala');
                           else if (e.target.value === 'North') setLocation('Garoua');
                           else if (e.target.value === 'West') setLocation('Bafoussam');
@@ -498,7 +497,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         }}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       >
-                        <option value="Centre">Centre Region (YaoundÃ©)</option>
+                        <option value="Centre">Centre Region (Yaoundé)</option>
                         <option value="Littoral">Littoral Region (Douala, Kribi link)</option>
                         <option value="South">South Region (Kribi, Ebolowa)</option>
                         <option value="West">West Region (Bafoussam, Dschang)</option>
@@ -506,7 +505,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         <option value="South-West">South-West Region (Limbe, Buea)</option>
                         <option value="North">North Region (Garoua)</option>
                         <option value="Far North">Far North Region (Maroua)</option>
-                        <option value="Adamawa">Adamawa Region (NgaoundÃ©rÃ©)</option>
+                        <option value="Adamawa">Adamawa Region (Ngaoundéré)</option>
                         <option value="East">East Region (Bertoua)</option>
                       </select>
                     </div>
@@ -517,7 +516,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         type="text"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. YaoundÃ© (Odza), Douala (Bonamoussadi), Kribi"
+                        placeholder="e.g. Yaoundé (Odza), Douala (Bonamoussadi), Kribi"
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       />
                     </div>
@@ -530,7 +529,7 @@ I would like to discuss this project and request a formal BOQ.`;
                       <div className="text-xs font-bold text-slate-800">Regional Factor Applied</div>
                       <div className="text-xs text-slate-600 mt-0.5">
                         {region === 'Littoral' && 'Douala benefits from sea port proximity for cement, steel, and imported tiles.'}
-                        {region === 'Centre' && 'YaoundÃ© reflects standard national baseline pricing for central quarry aggregates and materials.'}
+                        {region === 'Centre' && 'Yaoundé reflects standard national baseline pricing for central quarry aggregates and materials.'}
                         {region === 'North' || region === 'Far North' ? 'Northern regions include long-haul heavy transport adjustments for steel and cement.' : 'Local material transport and quarry distances automatically factored into unit rates.'}
                       </div>
                     </div>
@@ -556,14 +555,14 @@ I would like to discuss this project and request a formal BOQ.`;
                             onClick={() => setUnitSystem('m2')}
                             className={`px-2 py-0.5 rounded ${unitSystem === 'm2' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-600'}`}
                           >
-                            Square Meters (mÂ²)
+                            Square Meters (m²)
                           </button>
                           <button
                             type="button"
                             onClick={() => setUnitSystem('ft2')}
                             className={`px-2 py-0.5 rounded ${unitSystem === 'ft2' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-600'}`}
                           >
-                            Square Feet (ftÂ²)
+                            Square Feet (ft²)
                           </button>
                         </div>
                       </div>
@@ -578,13 +577,13 @@ I would like to discuss this project and request a formal BOQ.`;
                           className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-lg font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                          {unitSystem === 'm2' ? 'mÂ²' : 'ftÂ²'}
+                          {unitSystem === 'm2' ? 'm²' : 'ft²'}
                         </span>
                       </div>
 
                       {unitSystem === 'ft2' && (
                         <div className="text-[11px] text-slate-500 mt-1">
-                          Equivalent to <span className="font-bold text-slate-800">{areaInM2.toFixed(1)} mÂ²</span>
+                          Equivalent to <span className="font-bold text-slate-800">{areaInM2.toFixed(1)} m²</span>
                         </div>
                       )}
                     </div>
@@ -671,29 +670,29 @@ I would like to discuss this project and request a formal BOQ.`;
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
-                      {
-                        key: 'Economy',
-                        title: 'Economy Package',
+                      { 
+                        key: 'Economy', 
+                        title: 'Economy Package', 
                         multiplier: '0.85x',
-                        desc: 'Functional construction, standard concrete blocks, basic ceramic floor tiles, durable steel doors, basic paint.'
+                        desc: 'Functional construction, standard concrete blocks, basic ceramic floor tiles, durable steel doors, basic paint.' 
                       },
-                      {
-                        key: 'Standard',
-                        title: 'Standard Package (Recommended)',
+                      { 
+                        key: 'Standard', 
+                        title: 'Standard Package (Recommended)', 
                         multiplier: '1.00x',
-                        desc: 'Vibrated hollow concrete blocks, high-grade porcelain floor tiles, aluminium sliding windows, flush interior doors.'
+                        desc: 'Vibrated hollow concrete blocks, high-grade porcelain floor tiles, aluminium sliding windows, flush interior doors.' 
                       },
-                      {
-                        key: 'Premium',
-                        title: 'Premium Package',
+                      { 
+                        key: 'Premium', 
+                        title: 'Premium Package', 
                         multiplier: '1.28x',
-                        desc: 'Heavy structural design, imported glazed porcelain, acoustic double-glazed windows, solid hardwood doors.'
+                        desc: 'Heavy structural design, imported glazed porcelain, acoustic double-glazed windows, solid hardwood doors.' 
                       },
-                      {
-                        key: 'Luxury',
-                        title: 'Luxury Custom Package',
+                      { 
+                        key: 'Luxury', 
+                        title: 'Luxury Custom Package', 
                         multiplier: '1.65x',
-                        desc: 'Bespoke architectural finishes, marble & granite, smart home wiring, luxury European sanitaryware.'
+                        desc: 'Bespoke architectural finishes, marble & granite, smart home wiring, luxury European sanitaryware.' 
                       },
                     ].map(std => {
                       const isSelected = constructionStandard === std.key;
@@ -702,8 +701,8 @@ I would like to discuss this project and request a formal BOQ.`;
                           key={std.key}
                           onClick={() => setConstructionStandard(std.key as any)}
                           className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                            isSelected
-                              ? 'border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20'
+                            isSelected 
+                              ? 'border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20' 
                               : 'border-slate-200 bg-white hover:border-slate-300'
                           }`}
                         >
@@ -792,7 +791,7 @@ I would like to discuss this project and request a formal BOQ.`;
                     </div>
                     <div className="flex justify-between border-b border-slate-200 pb-2">
                       <span className="text-slate-500">Total Built Area:</span>
-                      <span className="font-bold text-slate-900">{areaInM2.toFixed(1)} mÂ² ({numberOfFloors} Floors)</span>
+                      <span className="font-bold text-slate-900">{areaInM2.toFixed(1)} m² ({numberOfFloors} Floors)</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-200 pb-2">
                       <span className="text-slate-500">Construction Standard:</span>
@@ -854,7 +853,7 @@ I would like to discuss this project and request a formal BOQ.`;
         ) : (
           /* ================= RESULTS DISPLAY STEP ================= */
           <div className="space-y-8 pb-12">
-
+            
             {/* Top Results Card */}
             <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-800 relative overflow-hidden">
               <div className="absolute right-0 top-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
@@ -889,10 +888,10 @@ I would like to discuss this project and request a formal BOQ.`;
                     Estimated Total Budget Range (FCFA / XAF)
                   </div>
                   <div className="text-3xl sm:text-5xl font-black text-amber-400 tracking-tight mb-2">
-                    XAF {calculationResult.estimatedBudgetMin?.toLocaleString()} â€“ XAF {calculationResult.estimatedBudgetMax?.toLocaleString()}
+                    XAF {calculationResult.estimatedBudgetMin?.toLocaleString()} – XAF {calculationResult.estimatedBudgetMax?.toLocaleString()}
                   </div>
                   <div className="text-sm text-slate-300 font-medium">
-                    Expected Total: <span className="text-white font-bold">XAF {calculationResult.estimatedBudgetExpected?.toLocaleString()}</span> &bull; Rate per mÂ²: <span className="text-amber-300 font-bold">XAF {calculationResult.costPerM2?.toLocaleString()} / mÂ²</span>
+                    Expected Total: <span className="text-white font-bold">XAF {calculationResult.estimatedBudgetExpected?.toLocaleString()}</span> &bull; Rate per m²: <span className="text-amber-300 font-bold">XAF {calculationResult.costPerM2?.toLocaleString()} / m²</span>
                   </div>
                 </div>
 
@@ -908,7 +907,7 @@ I would like to discuss this project and request a formal BOQ.`;
                   </div>
                   <div>
                     <div className="text-slate-400">Built Floor Area</div>
-                    <div className="font-bold text-white mt-0.5">{calculationResult.totalFloorAreaM2} mÂ²</div>
+                    <div className="font-bold text-white mt-0.5">{calculationResult.totalFloorAreaM2} m²</div>
                   </div>
                   <div>
                     <div className="text-slate-400">Quality Standard</div>
@@ -972,7 +971,7 @@ I would like to discuss this project and request a formal BOQ.`;
                         <td className="py-3 px-4 text-slate-600 font-bold">{item.percentage}%</td>
                         <td className="py-3 px-4">
                           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div
+                            <div 
                               className="bg-amber-500 h-full rounded-full"
                               style={{ width: `${Math.min(100, item.percentage * 3)}%` }}
                             />
@@ -1112,4 +1111,3 @@ I would like to discuss this project and request a formal BOQ.`;
     </div>
   );
 };
-

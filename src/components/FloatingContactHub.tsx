@@ -1,4 +1,3 @@
-﻿import { trackWhatsAppClick, trackPhoneClick, trackEmailClick } from '../services/analytics';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, 
@@ -351,4 +350,3 @@ export default function FloatingContactHub() {
     </div>
   );
 }
-

@@ -1,16 +1,15 @@
-﻿import { trackBidStart, trackBidSubmit, trackFormError } from '../services/analytics';
 import React, { useState } from 'react';
-import {
-  Calendar,
-  Clock,
-  User,
-  Mail,
-  Phone,
-  MessageSquare,
-  Building2,
-  MapPin,
-  CheckCircle2,
-  Send,
+import { 
+  Calendar, 
+  Clock, 
+  User, 
+  Mail, 
+  Phone, 
+  MessageSquare, 
+  Building2, 
+  MapPin, 
+  CheckCircle2, 
+  Send, 
   ArrowLeft,
   Sparkles,
   ShieldCheck
@@ -30,7 +29,7 @@ const CONSULTATION_TYPES = [
 
 const MEETING_MODES = [
   'Virtual Video Meeting (Google Meet / Zoom)',
-  'In-Person at MADECC YaoundÃ© Office',
+  'In-Person at MADECC Yaoundé Office',
   'On-Site Meeting at Project Location'
 ];
 
@@ -45,7 +44,7 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
     meetingMode: MEETING_MODES[0],
     preferredDate: '',
     preferredTime: '10:00 AM',
-    projectLocation: 'YaoundÃ©',
+    projectLocation: 'Yaoundé',
     notes: ''
   });
 
@@ -77,9 +76,9 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-left text-slate-700 space-y-1">
             <div className="font-bold text-slate-900 mb-1">Session Details:</div>
-            <div>â€¢ Type: {formData.consultationType}</div>
-            <div>â€¢ Mode: {formData.meetingMode}</div>
-            <div>â€¢ Contact: {formData.clientPhone} ({formData.clientEmail})</div>
+            <div>• Type: {formData.consultationType}</div>
+            <div>• Mode: {formData.meetingMode}</div>
+            <div>• Contact: {formData.clientPhone} ({formData.clientEmail})</div>
           </div>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -104,7 +103,7 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
-
+      
       {/* Header */}
       <div className="bg-slate-900 text-white py-12 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
         <div className="max-w-3xl mx-auto text-center space-y-3">
@@ -122,7 +121,7 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xl space-y-6">
-
+          
           <div className="space-y-4 text-xs sm:text-sm">
             <div>
               <label className="block font-bold text-slate-800 mb-1">Consultation Objective</label>
@@ -245,4 +244,3 @@ export const ScheduleConsultation: React.FC<ScheduleConsultationProps> = ({ onNa
     </div>
   );
 };
-

@@ -2,11 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { adminAuth } from '../lib/firebase-admin.ts';
 import { DecodedIdToken } from 'firebase-admin/auth';
 import { db } from '../db/index.ts';
-import { users } from '../db/schema.ts';
+import { users, reviewerCredentials } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
+import { verifyReviewerToken } from '../lib/reviewerAuth.ts';
 
 export interface AuthRequest extends Request {
-  user?: DecodedIdToken;
+  user?: DecodedIdToken | any;
   dbUser?: {
     id: number;
     uid: string;
@@ -108,19 +109,24 @@ export const requireAuth = async (
   res: Response,
   next: NextFunction
 ) => {
+  let token: string | null = null;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split('Bearer ')[1];
+  } else if ((req as any).cookies?.madecc_reviewer_session) {
+    token = (req as any).cookies.madecc_reviewer_session;
   }
 
-  const token = authHeader.split('Bearer ')[1];
-
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+  
   if (
-    token === 'ADMIN_BYPASS:Adminmadeccgroup' ||
-    token === 'Adminmadeccgroup' ||
-    token === 'ADMIN_BYPASS:MADECC_Group_admin' ||
-    token === 'ADMIN_BYPASS:MADECC Group admin' ||
-    token === 'MADECC_Group_admin' ||
+    token === 'ADMIN_BYPASS:Adminmadeccgroup' || 
+    token === 'Adminmadeccgroup' || 
+    token === 'ADMIN_BYPASS:MADECC_Group_admin' || 
+    token === 'ADMIN_BYPASS:MADECC Group admin' || 
+    token === 'MADECC_Group_admin' || 
     token === 'MADECC Group admin'
   ) {
     try {
@@ -139,6 +145,44 @@ export const requireAuth = async (
     } catch (dbErr) {
       console.error('Error fetching/creating bypass admin user:', dbErr);
       return res.status(500).json({ error: 'Internal database error during admin login' });
+    }
+  }
+
+  // Check if this is a dedicated non-Firebase Meta Reviewer Session Token
+  if (token.startsWith('META_REVIEWER_SESSION:')) {
+    const verified = verifyReviewerToken(token);
+    if (!verified.valid || !verified.payload) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid or expired reviewer session' });
+    }
+
+    try {
+      // Validate reviewer status in Neon PostgreSQL
+      const reviewerCreds = await db
+        .select()
+        .from(reviewerCredentials)
+        .where(eq(reviewerCredentials.email, verified.payload.email.toLowerCase()))
+        .limit(1);
+
+      if (reviewerCreds.length === 0 || !reviewerCreds[0].isActive) {
+        return res.status(403).json({ error: 'Reviewer account is inactive or suspended' });
+      }
+
+      const dbUser = await getOrCreateUser(
+        verified.payload.uid,
+        verified.payload.email,
+        verified.payload.name || 'Meta App Review Tester'
+      );
+
+      req.user = {
+        uid: verified.payload.uid,
+        email: verified.payload.email,
+        name: verified.payload.name || 'Meta App Review Tester',
+      } as any;
+      req.dbUser = dbUser;
+      return next();
+    } catch (dbErr) {
+      console.error('Error verifying reviewer in database:', dbErr);
+      return res.status(500).json({ error: 'Database verification error during reviewer auth' });
     }
   }
 

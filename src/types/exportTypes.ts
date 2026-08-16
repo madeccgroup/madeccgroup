@@ -1,4 +1,4 @@
-export type ExportModuleType =
+export type ExportModuleType = 
   | 'civil_works'
   | 'articles_of_association'
   | 'blueprints'

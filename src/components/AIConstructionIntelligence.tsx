@@ -1,33 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import {
-  LayoutDashboard,
-  Building2,
-  Sparkles,
-  Calculator,
-  FileText,
-  DollarSign,
-  Calendar,
-  TrendingUp,
-  ShoppingCart,
-  Layers,
-  Box,
-  ShieldAlert,
-  Share2,
-  Download,
-  Plus,
-  Trash2,
-  Edit3,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  FileDown,
-  Send,
-  RefreshCw,
-  Search,
-  Lock,
-  Unlock,
-  Printer,
-  ArrowRight,
+import { 
+  LayoutDashboard, 
+  Building2, 
+  Sparkles, 
+  Calculator, 
+  FileText, 
+  DollarSign, 
+  Calendar, 
+  TrendingUp, 
+  ShoppingCart, 
+  Layers, 
+  Box, 
+  ShieldAlert, 
+  Share2, 
+  Download, 
+  Plus, 
+  Trash2, 
+  Edit3, 
+  CheckCircle2, 
+  Clock, 
+  AlertTriangle, 
+  FileDown, 
+  Send, 
+  RefreshCw, 
+  Search, 
+  Lock, 
+  Unlock, 
+  Printer, 
+  ArrowRight, 
   ChevronRight,
   Upload,
   BarChart3,
@@ -1644,7 +1644,7 @@ export default function AIConstructionIntelligence({
 
   return (
     <div className="space-y-6 text-slate-200 font-sans" id="ai-construction-intelligence-module">
-
+      
       {/* Official Enterprise Header */}
       <EngineeringHeader
         title="MADECC AI CONSTRUCTION INTELLIGENCE PLATFORM"
@@ -5293,7 +5293,7 @@ export default function AIConstructionIntelligence({
               {/* Form Inputs */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
                 <h4 className="font-extrabold text-xs text-white uppercase tracking-wider text-amber-500">Structural Element Dimensions</h4>
-
+                
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Element Type</label>

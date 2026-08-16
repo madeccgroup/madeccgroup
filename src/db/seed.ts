@@ -1,12 +1,12 @@
 import { db } from './index.ts';
-import {
-  categories,
-  services,
-  projects,
-  projectProgress,
-  heroBanners,
-  blogPosts,
-  reviews,
+import { 
+  categories, 
+  services, 
+  projects, 
+  projectProgress, 
+  heroBanners, 
+  blogPosts, 
+  reviews, 
   galleryItems,
   users,
   signedContracts,
@@ -1044,33 +1044,33 @@ export async function seedDatabase() {
       console.log('Database already has data. Running Cameroon localization on existing records...');
       try {
         await db.execute(sql`
-          UPDATE projects
-          SET title = 'MADECC Eco-HQ Tower',
-              location = 'Rue Joss, Bonanjo, Douala, Cameroon',
+          UPDATE projects 
+          SET title = 'MADECC Eco-HQ Tower', 
+              location = 'Rue Joss, Bonanjo, Douala, Cameroon', 
               budget = '14700000000',
               description = 'A cutting-edge 6-story commercial office tower in Douala featuring green facades, solar roofs, and zero-carbon building design adapted for tropical climates.'
           WHERE title LIKE '%Eco-HQ%' OR location LIKE '%London%';
         `);
         await db.execute(sql`
-          UPDATE projects
-          SET title = 'Kribi Beachfront Luxury Estates',
-              location = 'Kribi, South Region, Cameroon',
+          UPDATE projects 
+          SET title = 'Kribi Beachfront Luxury Estates', 
+              location = 'Kribi, South Region, Cameroon', 
               budget = '8500000000',
               description = 'A collection of twelve premium custom-built net-zero smart homes nestled near the gorgeous sandy beaches of Kribi.'
           WHERE title LIKE '%Oakridge%' OR title LIKE '%Surrey%' OR location LIKE '%Surrey%';
         `);
         await db.execute(sql`
-          UPDATE projects
-          SET title = 'The Sanaga Bridge Corridor',
-              location = 'Eda, Littoral Region, Cameroon',
+          UPDATE projects 
+          SET title = 'The Sanaga Bridge Corridor', 
+              location = 'Eda, Littoral Region, Cameroon', 
               budget = '43200000000',
               description = 'A vital civil infrastructure expansion spanning 2.4 kilometers of double-lane structural freeway and reinforced arch bridge across the Sanaga River.'
           WHERE title LIKE '%Viaduct%' OR title LIKE '%Devon%' OR location LIKE '%Devon%';
         `);
         await db.execute(sql`
-          UPDATE projects
-          SET title = 'Douala Port Logistics Terminal',
-              location = 'Douala Port Area, Cameroon',
+          UPDATE projects 
+          SET title = 'Douala Port Logistics Terminal', 
+              location = 'Douala Port Area, Cameroon', 
               budget = '22800000000',
               description = 'Massive, highly-efficient industrial shipping terminal and distribution warehouse designed for autonomous logistics in Central Africa.'
           WHERE title LIKE '%Logistics Terminal%' OR location LIKE '%Manchester%';
@@ -1078,22 +1078,22 @@ export async function seedDatabase() {
 
         // Update services
         await db.execute(sql`
-          UPDATE services
+          UPDATE services 
           SET price_range = '30,000,000 - 6,000,000,000 FCFA'
           WHERE name = 'General Contracting';
         `);
         await db.execute(sql`
-          UPDATE services
+          UPDATE services 
           SET price_range = '3,000,000 - 300,000,000 FCFA'
           WHERE name = 'Architectural & Interior Design';
         `);
         await db.execute(sql`
-          UPDATE services
+          UPDATE services 
           SET price_range = '300,000,000 - 30,000,000,000 FCFA'
           WHERE name = 'Civil Infrastructure Planning';
         `);
         await db.execute(sql`
-          UPDATE services
+          UPDATE services 
           SET price_range = '60,000,000 - 12,000,000,000 FCFA'
           WHERE name = 'Green & Sustainable Building';
         `);

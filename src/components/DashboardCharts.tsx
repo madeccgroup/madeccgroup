@@ -53,7 +53,7 @@ export default function DashboardCharts({
   // 1. Process Booking / Consultation Trends (Grouped by Month/Year)
   const bookingTrendsData = useMemo(() => {
     const monthlyCounts: Record<string, number> = {};
-
+    
     // Seed last 6 months with 0s to make sure there is always a clean trend line
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
@@ -127,7 +127,7 @@ export default function DashboardCharts({
   // 4. Process Engagement Trends (Contacts vs Subscribers over time)
   const engagementData = useMemo(() => {
     const dailyEngagement: Record<string, { Inquiries: number; Subscribers: number }> = {};
-
+    
     // Seed last 7 days
     const now = new Date();
     for (let i = 6; i >= 0; i--) {
@@ -181,8 +181,8 @@ export default function DashboardCharts({
       });
     }
 
-    const conversionRate = dbAnalytics
-      ? dbAnalytics.bookingApprovalRate
+    const conversionRate = dbAnalytics 
+      ? dbAnalytics.bookingApprovalRate 
       : (appointments.length > 0
         ? ((appointments.filter(a => a.status === 'confirmed' || a.status === 'completed').length / appointments.length) * 100).toFixed(1)
         : '0.0');
@@ -200,7 +200,7 @@ export default function DashboardCharts({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-
+      
       {/* Dynamic Key metrics summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
@@ -254,7 +254,7 @@ export default function DashboardCharts({
 
       {/* Grid of charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
+        
         {/* 1. Project Booking trends (Area Chart) */}
         <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">

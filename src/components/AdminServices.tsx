@@ -1,32 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Layers,
-  Plus,
-  Search,
-  Filter,
-  RefreshCw,
-  Edit,
-  Trash2,
-  Copy,
-  Eye,
-  Star,
-  ArrowUp,
-  ArrowDown,
-  CheckCircle2,
-  Clock,
-  Archive,
-  Sparkles,
-  Upload,
-  X,
-  Check,
-  AlertCircle,
-  FileText,
-  Image as ImageIcon,
-  Globe,
-  ListOrdered,
-  HelpCircle,
-  ArrowRight,
-  ShieldCheck,
+import { 
+  Layers, 
+  Plus, 
+  Search, 
+  Filter, 
+  RefreshCw, 
+  Edit, 
+  Trash2, 
+  Copy, 
+  Eye, 
+  Star, 
+  ArrowUp, 
+  ArrowDown, 
+  CheckCircle2, 
+  Clock, 
+  Archive, 
+  Sparkles, 
+  Upload, 
+  X, 
+  Check, 
+  AlertCircle, 
+  FileText, 
+  Image as ImageIcon, 
+  Globe, 
+  ListOrdered, 
+  HelpCircle, 
+  ArrowRight, 
+  ShieldCheck, 
   Building2,
   ChevronDown,
   ChevronUp
@@ -48,7 +48,7 @@ export interface ServiceCMS {
   coverImage: string;
   gallery: string[];
   supportingDocuments: { title: string; url: string; fileType: string }[];
-
+  
   // SEO
   seoTitle: string;
   metaDescription: string;
@@ -142,7 +142,7 @@ export const AdminServices: React.FC = () => {
 
   // Filtered Services List
   const filteredServices = services.filter(s => {
-    const matchesSearch =
+    const matchesSearch = 
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.serviceCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -150,8 +150,8 @@ export const AdminServices: React.FC = () => {
 
     const matchesCategory = categoryFilter === 'ALL' || s.category === categoryFilter;
     const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter;
-    const matchesFeatured = featuredFilter === 'ALL' ||
-      (featuredFilter === 'YES' && s.featured) ||
+    const matchesFeatured = featuredFilter === 'ALL' || 
+      (featuredFilter === 'YES' && s.featured) || 
       (featuredFilter === 'NO' && !s.featured);
 
     return matchesSearch && matchesCategory && matchesStatus && matchesFeatured;
@@ -173,7 +173,7 @@ export const AdminServices: React.FC = () => {
   };
 
   const handleToggleSelect = (id: number) => {
-    setSelectedIds(prev =>
+    setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
@@ -386,7 +386,7 @@ export const AdminServices: React.FC = () => {
 
   return (
     <div className="space-y-6 text-slate-800">
-
+      
       {/* Top Banner Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
         <div>
@@ -688,7 +688,7 @@ export const AdminServices: React.FC = () => {
       {isEditorOpen && editingService && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 my-8 overflow-hidden">
-
+            
             {/* Modal Header */}
             <div className="p-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
               <div>
@@ -733,7 +733,7 @@ export const AdminServices: React.FC = () => {
 
             {/* Form Content Body */}
             <form onSubmit={handleSaveService} className="p-6 flex-1 overflow-y-auto space-y-6 text-xs text-slate-800">
-
+              
               {/* TAB 1: BASIC INFORMATION */}
               {editorTab === 'basic' && (
                 <div className="space-y-4">

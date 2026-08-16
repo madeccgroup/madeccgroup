@@ -1450,3 +1450,28 @@ export const socialPublishingJobs = pgTable('social_media_publishing_jobs', {
   startedAt: timestamp('started_at').defaultNow().notNull(),
   completedAt: timestamp('completed_at'),
 });
+
+// Dedicated Non-Firebase Meta Reviewer Credentials Table (Server-Side Neon PostgreSQL)
+export const reviewerCredentials = pgTable('reviewer_credentials', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  displayName: text('display_name').notNull().default('Meta App Review Tester'),
+  role: text('role').notNull().default('social_media_reviewer'),
+  isActive: boolean('is_active').notNull().default(true),
+  lastLoginAt: timestamp('last_login_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+
+
+
+
+
+
+
+
+
+
+

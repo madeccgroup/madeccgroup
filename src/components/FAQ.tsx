@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Search,
-  HelpCircle,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Check,
-  ArrowRight,
-  MessageSquare,
-  FileText,
-  Download,
-  Send,
-  Sparkles,
+import { 
+  Search, 
+  HelpCircle, 
+  ChevronDown, 
+  ChevronUp, 
+  Copy, 
+  Check, 
+  ArrowRight, 
+  MessageSquare, 
+  FileText, 
+  Download, 
+  Send, 
+  Sparkles, 
   X,
   Phone,
   Mail,
@@ -186,8 +186,8 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
   const filteredFaqs = faqs.filter(faq => {
     const matchesCategory = selectedCategory === 'All' || faq.categoryName === selectedCategory;
     const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = !query ||
-      faq.question.toLowerCase().includes(query) ||
+    const matchesSearch = !query || 
+      faq.question.toLowerCase().includes(query) || 
       faq.answer.toLowerCase().includes(query) ||
       (faq.tags && faq.tags.some(t => t.toLowerCase().includes(query)));
     return matchesCategory && matchesSearch;
@@ -195,7 +195,7 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
 
   return (
     <div className="bg-slate-950 text-slate-100 min-h-screen">
-
+      
       {/* HEADER SECTION */}
       <section className="relative py-20 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -215,7 +215,7 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto relative">
             <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input
+            <input 
               type="text"
               placeholder="Search by topic, keyword (e.g. BOQ, Quote, Regional coverage, Materials)..."
               value={searchQuery}
@@ -223,7 +223,7 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500 shadow-xl transition-all"
             />
             {searchQuery && (
-              <button
+              <button 
                 onClick={() => setSearchQuery('')}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
               >
@@ -236,7 +236,7 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
 
       {/* MAIN CONTENT AREA */}
       <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+        
         {/* Category Filters Bar */}
         <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-8">
           {categories.map((cat) => (
@@ -303,11 +303,11 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
             {filteredFaqs.map((faq) => {
               const isOpen = openIds.includes(faq.id);
               return (
-                <div
-                  key={faq.id}
+                <div 
+                  key={faq.id} 
                   className={`rounded-2xl border transition-all overflow-hidden ${
-                    isOpen
-                      ? 'bg-slate-900/90 border-amber-500/40 shadow-lg'
+                    isOpen 
+                      ? 'bg-slate-900/90 border-amber-500/40 shadow-lg' 
                       : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
                   }`}
                 >
@@ -459,8 +459,8 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
 
                 <div>
                   <label className="block text-xs font-mono text-slate-300 mb-1">Full Name *</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     required
                     value={askName}
                     onChange={(e) => setAskName(e.target.value)}
@@ -472,8 +472,8 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Email *</label>
-                    <input
-                      type="email"
+                    <input 
+                      type="email" 
                       required
                       value={askEmail}
                       onChange={(e) => setAskEmail(e.target.value)}
@@ -483,8 +483,8 @@ export const FAQ: React.FC<FAQProps> = ({ onNavigateToTab }) => {
                   </div>
                   <div>
                     <label className="block text-xs font-mono text-slate-300 mb-1">Phone / WhatsApp</label>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       value={askPhone}
                       onChange={(e) => setAskPhone(e.target.value)}
                       placeholder="+237 670 00 00 00"
