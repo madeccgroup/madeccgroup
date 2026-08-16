@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
 // @ts-ignore
 import logoImg from '../assets/images/madecc_logo_1783370981722.jpg';
-import { 
-  auth, 
-  googleAuthProvider 
+import {
+  auth,
+  googleAuthProvider
 } from '../lib/firebase.ts';
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { signInWithPopup, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useTheme } from '../lib/ThemeContext.tsx';
 import { useLanguage } from '../lib/LanguageContext.tsx';
-import { 
-  HardHat, 
-  Menu, 
-  X, 
-  User as UserIcon, 
-  LogOut, 
-  Key, 
-  ChevronDown, 
+import {
+  HardHat,
+  Menu,
+  X,
+  User as UserIcon,
+  LogOut,
+  Key,
+  ChevronDown,
   ShieldCheck,
   AlertCircle,
   Sun,
-  Moon
+  Moon,
+  Mail,
+  Lock,
+  Megaphone
 } from 'lucide-react';
 import { User } from '../types.ts';
 
@@ -31,21 +34,24 @@ interface NavbarProps {
   loadingAuth: boolean;
 }
 
-export default function Navbar({ 
-  currentTab, 
-  setCurrentTab, 
-  dbUser, 
-  setDbUser, 
-  loadingAuth 
+export default function Navbar({
+  currentTab,
+  setCurrentTab,
+  dbUser,
+  setDbUser,
+  loadingAuth
 }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginTab, setLoginTab] = useState<'admin_key' | 'email_login'>('email_login');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const [adminSecretKey, setAdminSecretKey] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
 
   const handleAdminSecretLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +65,7 @@ export default function Navbar({
     setLoginError(null);
     try {
       sessionStorage.setItem('admin_token', key);
-      
+
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${key}`
@@ -73,6 +79,7 @@ export default function Navbar({
         setDbUser(data.user);
         setLoginModalOpen(false);
         setAdminSecretKey('');
+        setCurrentTab('admin');
       } else {
         throw new Error('No user data returned.');
       }
@@ -80,6 +87,53 @@ export default function Navbar({
       console.error('Admin key login failed:', error);
       setLoginError(error?.message || 'Access Denied. Please verify the admin secret key.');
       sessionStorage.removeItem('admin_token');
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = emailInput.trim();
+    const password = passwordInput;
+    if (!email || !password) {
+      setLoginError('Please enter your email and password.');
+      return;
+    }
+
+    setSigningIn(true);
+    setLoginError(null);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const token = await userCredential.user.getIdToken();
+
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Authenticated with Firebase, but could not sync profile with backend database.');
+      }
+      const data = await response.json();
+      if (data.user) {
+        setDbUser(data.user);
+        setLoginModalOpen(false);
+        setEmailInput('');
+        setPasswordInput('');
+        if (data.user.role === 'admin' || data.user.role === 'staff' || data.user.role === 'social_media_reviewer') {
+          setCurrentTab('admin');
+        }
+      }
+    } catch (error: any) {
+      console.error('Email password login failed:', error);
+      let errMsg = error?.message || 'Authentication failed.';
+      if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/wrong-password' || error?.code === 'auth/user-not-found') {
+        errMsg = 'Invalid email address or password. Please verify your credentials or contact administrator.';
+      } else if (error?.code === 'auth/user-disabled') {
+        errMsg = 'This account has been disabled by the administrator.';
+      }
+      setLoginError(errMsg);
     } finally {
       setSigningIn(false);
     }
@@ -99,11 +153,13 @@ export default function Navbar({
 
   const menuItems = [
     { id: 'home', label: t('nav_home') },
-    { id: 'about', label: t('nav_about') },
+    { id: 'services', label: 'Services' },
     { id: 'projects', label: t('nav_projects') },
-    { id: 'blog', label: t('nav_blog') },
+    { id: 'request-a-quote', label: 'Request a Quote' },
+    { id: 'budget-calculator', label: 'Budget Calculator' },
+    { id: 'construction-cost-guide', label: 'Cost Guide' },
+    { id: 'about', label: t('nav_about') },
     { id: 'contact', label: t('nav_contact') },
-    { id: 'booking', label: t('nav_booking') },
   ];
 
   return (
@@ -114,25 +170,25 @@ export default function Navbar({
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          
+
           {/* Logo Branding */}
-          <div 
-            className="flex items-center gap-3 cursor-pointer" 
+          <div
+            className="flex items-center gap-3 cursor-pointer"
             onClick={() => setCurrentTab('home')}
             id="nav-logo"
           >
             <div className={`h-12 w-12 rounded-xl flex items-center justify-center overflow-hidden border shadow-inner ${
               theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800/80'
             }`}>
-              <img 
-                src={logoImg} 
+              <img
+                src={logoImg}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   if (target.src !== '/logo.png') {
                     target.src = '/logo.png';
                   }
                 }}
-                alt="MADECC Group Logo" 
+                alt="MADECC Group Logo"
                 className="h-full w-full object-contain"
                 referrerPolicy="no-referrer"
               />
@@ -162,8 +218,8 @@ export default function Navbar({
                     setMenuOpen(false);
                   }}
                   className={`px-4 py-2 rounded-md font-sans text-sm font-medium transition-colors ${
-                    currentTab === item.id 
-                      ? 'text-amber-400 bg-slate-800/60' 
+                    currentTab === item.id
+                      ? 'text-amber-400 bg-slate-800/60'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
                   }`}
                   id={`nav-link-${item.id}`}
@@ -172,8 +228,8 @@ export default function Navbar({
                 </button>
               ))}
 
-              {/* Admin Button (Visible if admin/staff) */}
-              {dbUser && (dbUser.role === 'admin' || dbUser.role === 'staff') && (
+              {/* Admin or Reviewer Studio Button */}
+              {dbUser && (dbUser.role === 'admin' || dbUser.role === 'staff' || dbUser.role === 'social_media_reviewer') && (
                 <button
                   onClick={() => setCurrentTab('admin')}
                   className={`px-4 py-2 rounded-md font-sans text-sm font-medium transition-colors flex items-center gap-1.5 ${
@@ -183,21 +239,30 @@ export default function Navbar({
                   }`}
                   id="nav-link-admin"
                 >
-                  <ShieldCheck className="w-4 h-4 text-amber-500" />
-                  {t('nav_admin')}
+                  {dbUser.role === 'social_media_reviewer' ? (
+                    <>
+                      <Megaphone className="w-4 h-4 text-amber-500" />
+                      <span>Social Media Studio</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-amber-500" />
+                      <span>{t('nav_admin')}</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
 
             {/* Auth section */}
             <div className={`border-l pl-6 flex items-center gap-3 ${theme === 'light' ? 'border-slate-200' : 'border-slate-800'}`}>
-              
+
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
                 className={`p-2 rounded-lg transition-colors ${
-                  theme === 'light' 
-                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500' 
+                  theme === 'light'
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500'
                     : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400'
                 }`}
                 aria-label="Toggle visual theme"
@@ -214,8 +279,8 @@ export default function Navbar({
               <button
                 onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
                 className={`p-2 rounded-lg transition-colors text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer select-none ${
-                  theme === 'light' 
-                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500 border border-slate-200' 
+                  theme === 'light'
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500 border border-slate-200'
                     : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400 border border-slate-800'
                 }`}
                 aria-label="Toggle Language"
@@ -235,22 +300,45 @@ export default function Navbar({
                     id="user-menu-btn"
                   >
                     <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center font-bold text-slate-900 text-xs">
-                      {dbUser.name[0].toUpperCase()}
+                      {dbUser.name[0]?.toUpperCase() || 'U'}
                     </div>
-                    <span className="font-medium max-w-[100px] truncate">{dbUser.name}</span>
+                    <span className="font-medium max-w-[120px] truncate">{dbUser.name}</span>
                     <ChevronDown className="w-4 h-4 text-slate-400" />
                   </button>
 
                   {userDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="absolute right-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                       <div className="px-4 py-3 bg-slate-900 border-b border-slate-700">
                         <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Signed in as</span>
                         <span className="block font-medium text-sm text-white truncate">{dbUser.email}</span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide bg-amber-500/10 text-amber-400 mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide bg-amber-500/10 text-amber-400 mt-1">
                           Role: {dbUser.role}
                         </span>
                       </div>
-                      
+
+                      <div className="py-1 border-b border-slate-700/50">
+                        {(dbUser.role === 'admin' || dbUser.role === 'staff' || dbUser.role === 'social_media_reviewer') && (
+                          <button
+                            onClick={() => {
+                              setCurrentTab('admin');
+                              setUserDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 hover:text-white text-left transition-colors"
+                          >
+                            {dbUser.role === 'social_media_reviewer' ? (
+                              <>
+                                <Megaphone className="w-4 h-4 text-amber-400" />
+                                Open Social Media Studio
+                              </>
+                            ) : (
+                              <>
+                                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                                Admin Dashboard
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
 
                       <div className="py-1">
                         <button
@@ -305,8 +393,8 @@ export default function Navbar({
                 setMenuOpen(false);
               }}
               className={`w-full text-left px-4 py-3 rounded-md font-sans text-base font-medium block ${
-                currentTab === item.id 
-                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500' 
+                currentTab === item.id
+                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500'
                   : 'text-slate-300 hover:text-white hover:bg-slate-900'
               }`}
             >
@@ -314,20 +402,29 @@ export default function Navbar({
             </button>
           ))}
 
-          {dbUser && (dbUser.role === 'admin' || dbUser.role === 'staff') && (
+          {dbUser && (dbUser.role === 'admin' || dbUser.role === 'staff' || dbUser.role === 'social_media_reviewer') && (
             <button
               onClick={() => {
                 setCurrentTab('admin');
                 setMenuOpen(false);
               }}
               className={`w-full text-left px-4 py-3 rounded-md font-sans text-base font-medium flex items-center gap-2 ${
-                currentTab === 'admin' 
-                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500' 
+                currentTab === 'admin'
+                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500'
                   : 'text-slate-300 hover:text-white hover:bg-slate-900'
               }`}
             >
-              <ShieldCheck className="w-5 h-5 text-amber-500" />
-              Admin Dashboard
+              {dbUser.role === 'social_media_reviewer' ? (
+                <>
+                  <Megaphone className="w-5 h-5 text-amber-500" />
+                  Social Media Studio
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-5 h-5 text-amber-500" />
+                  Admin Dashboard
+                </>
+              )}
             </button>
           )}
 
@@ -336,14 +433,13 @@ export default function Navbar({
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center font-bold text-slate-900">
-                    {dbUser.name[0].toUpperCase()}
+                    {dbUser.name[0]?.toUpperCase() || 'U'}
                   </div>
                   <div>
                     <span className="block text-sm font-semibold">{dbUser.name}</span>
                     <span className="block text-xs text-slate-400 truncate">{dbUser.email}</span>
                   </div>
                 </div>
-
 
                 <button
                   onClick={handleLogout}
@@ -363,7 +459,7 @@ export default function Navbar({
                 className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 shadow"
               >
                 <Key className="w-4 h-4" />
-                Admin Sign In
+                Sign In
               </button>
             )}
           </div>
@@ -375,7 +471,7 @@ export default function Navbar({
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-in zoom-in-95 duration-200" id="signin-modal">
             {/* Close Button */}
-            <button 
+            <button
               onClick={() => setLoginModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
               aria-label="Close dialog"
@@ -384,56 +480,150 @@ export default function Navbar({
             </button>
 
             {/* Header */}
-            <div className="text-center space-y-2 mb-6">
+            <div className="text-center space-y-2 mb-4">
               <div className="bg-amber-500/10 text-amber-500 p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto shadow-inner">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-extrabold tracking-tight text-white font-sans">MADECC Group Access</h3>
-              <p className="text-xs text-slate-400">Enter your admin secret key to authenticate.</p>
+              <h3 className="text-xl font-extrabold tracking-tight text-white font-sans">MADECC Group Portal</h3>
+              <p className="text-xs text-slate-400">Authenticate for Admin, Staff, or Meta App Review access</p>
+            </div>
+
+            {/* Login Tab Switcher */}
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginTab('email_login');
+                  setLoginError(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  loginTab === 'email_login'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Email & Password
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginTab('admin_key');
+                  setLoginError(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  loginTab === 'admin_key'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Key className="w-3.5 h-3.5" />
+                Admin Secret Key
+              </button>
             </div>
 
             {/* Error Message */}
             {loginError && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-200 rounded-xl text-xs space-y-1.5 flex gap-3 items-start animate-in slide-in-from-top-2 duration-200" id="signin-error-banner">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div className="mb-4 p-3.5 bg-red-500/10 border border-red-500/20 text-red-200 rounded-xl text-xs space-y-1 flex gap-2.5 items-start animate-in slide-in-from-top-2 duration-200" id="signin-error-banner">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold uppercase tracking-wider text-[10px] text-red-400">Authentication Warning</p>
+                  <p className="font-bold uppercase tracking-wider text-[10px] text-red-400">Authentication Error</p>
                   <p className="leading-relaxed">{loginError}</p>
                 </div>
               </div>
             )}
 
-            {/* Actions */}
-            <form onSubmit={handleAdminSecretLogin} className="space-y-4 text-left">
-              <div className="space-y-1.5">
-                <label htmlFor="navbar-admin-secret-key" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Admin Secret Key
-                </label>
-                <input
-                  id="navbar-admin-secret-key"
-                  type="password"
-                  required
-                  value={adminSecretKey}
-                  onChange={(e) => setAdminSecretKey(e.target.value)}
-                  placeholder="Enter Secret Key"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
-                />
-              </div>
+            {/* Tab 1: Email & Password (Meta Reviewer & Staff) */}
+            {loginTab === 'email_login' && (
+              <form onSubmit={handleEmailPasswordLogin} className="space-y-3.5 text-left">
+                <div className="space-y-1">
+                  <label htmlFor="navbar-reviewer-email" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="navbar-reviewer-email"
+                      type="email"
+                      required
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="e.g. meta-reviewer@madeccgroup.online"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                    />
+                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                  </div>
+                </div>
 
-              <button
-                type="submit"
-                disabled={signingIn}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-amber-500/15 disabled:opacity-50"
-                id="modal-admin-signin-btn"
-              >
-                {signingIn ? (
-                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Key className="w-4.5 h-4.5" />
-                )}
-                Authenticate Access
-              </button>
-            </form>
+                <div className="space-y-1">
+                  <label htmlFor="navbar-reviewer-password" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="navbar-reviewer-password"
+                      type="password"
+                      required
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      placeholder="Enter account password"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                    />
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={signingIn}
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-amber-500/15 disabled:opacity-50 mt-2"
+                  id="modal-email-signin-btn"
+                >
+                  {signingIn ? (
+                    <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Key className="w-4 h-4" />
+                  )}
+                  Sign In to Dashboard
+                </button>
+              </form>
+            )}
+
+            {/* Tab 2: Admin Master Secret Key */}
+            {loginTab === 'admin_key' && (
+              <form onSubmit={handleAdminSecretLogin} className="space-y-3.5 text-left">
+                <div className="space-y-1">
+                  <label htmlFor="navbar-admin-secret-key" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Admin Master Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="navbar-admin-secret-key"
+                      type="password"
+                      required
+                      value={adminSecretKey}
+                      onChange={(e) => setAdminSecretKey(e.target.value)}
+                      placeholder="Enter Admin Secret Key"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                    />
+                    <Key className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={signingIn}
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-amber-500/15 disabled:opacity-50 mt-2"
+                  id="modal-admin-signin-btn"
+                >
+                  {signingIn ? (
+                    <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4" />
+                  )}
+                  Authenticate Admin
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

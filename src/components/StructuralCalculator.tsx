@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAuthToken } from '../lib/firebase';
+import { formatCurrency } from '../lib/utils.ts';
 import { EngineeringHeader } from './EngineeringHeader';
 import {
   generateStructuralPdf,
@@ -75,6 +76,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
   const [location, setLocation] = useState<string>('Bonanjo Financial District, Douala');
   const [preparedBy, setPreparedBy] = useState<string>('Eng. Paulin Nguema, PE (ONIGC No. 2489)');
   const [revisionNumber, setRevisionNumber] = useState<string>('REV-01');
+  const [currency, setCurrency] = useState<string>('XAF');
 
   // AI Drawing Recognition & Status
   const [aiConfidence, setAiConfidence] = useState<number>(96.8);
@@ -510,6 +512,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
         reviewerName,
         reviewerTitle,
         aiConfidence,
+        currency,
         reportFormat: selectedReportFormat,
         orientation: reportOrientation,
         aiAnalysisStatus: analysisStatus,
@@ -550,6 +553,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
         approvalStatus,
         reviewerName,
         reviewerTitle,
+        currency,
         reportFormat: selectedReportFormat
       };
 
@@ -580,6 +584,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
         preparedBy,
         revisionNumber,
         approvalStatus,
+        currency,
         reportFormat: selectedReportFormat
       };
 
@@ -1233,7 +1238,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
                   <th className="py-2.5">Specs / Dimensions</th>
                   <th className="py-2.5">Concrete (m³)</th>
                   <th className="py-2.5">Rebar (kg)</th>
-                  <th className="py-2.5">Total Cost (XAF)</th>
+                  <th className="py-2.5">Total Cost ({currency})</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -1242,28 +1247,28 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
                   <td className="py-2.5 text-slate-300">{calcResults.footings.count} pcs @ 1.8x1.8x0.5m</td>
                   <td className="py-2.5">{calcResults.footings.concreteVol} m³</td>
                   <td className="py-2.5">{calcResults.footings.rebarKg.toLocaleString()} kg</td>
-                  <td className="py-2.5 text-amber-300">{Math.round(calcResults.footings.concreteVol * 110000 + calcResults.footings.rebarKg * 750).toLocaleString()} XAF</td>
+                  <td className="py-2.5 text-amber-300">{formatCurrency(Math.round(calcResults.footings.concreteVol * 110000 + calcResults.footings.rebarKg * 750), currency)}</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 font-bold text-amber-400">RC Columns</td>
                   <td className="py-2.5 text-slate-300">{calcResults.columns.count} pcs @ 300x300mm</td>
                   <td className="py-2.5">{calcResults.columns.concreteVol} m³</td>
                   <td className="py-2.5">{calcResults.columns.rebarKg.toLocaleString()} kg</td>
-                  <td className="py-2.5 text-amber-300">{Math.round(calcResults.columns.concreteVol * 110000 + calcResults.columns.rebarKg * 750).toLocaleString()} XAF</td>
+                  <td className="py-2.5 text-amber-300">{formatCurrency(Math.round(calcResults.columns.concreteVol * 110000 + calcResults.columns.rebarKg * 750), currency)}</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 font-bold text-amber-400">Floor Beams</td>
                   <td className="py-2.5 text-slate-300">{calcResults.beams.lengthM} m @ 250x500mm</td>
                   <td className="py-2.5">{calcResults.beams.concreteVol} m³</td>
                   <td className="py-2.5">{calcResults.beams.rebarKg.toLocaleString()} kg</td>
-                  <td className="py-2.5 text-amber-300">{Math.round(calcResults.beams.concreteVol * 110000 + calcResults.beams.rebarKg * 750).toLocaleString()} XAF</td>
+                  <td className="py-2.5 text-amber-300">{formatCurrency(Math.round(calcResults.beams.concreteVol * 110000 + calcResults.beams.rebarKg * 750), currency)}</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 font-bold text-amber-400">Solid RC Slabs</td>
                   <td className="py-2.5 text-slate-300">{calcResults.slabs.areaM2} m² @ h=160mm</td>
                   <td className="py-2.5">{calcResults.slabs.concreteVol} m³</td>
                   <td className="py-2.5">{calcResults.slabs.rebarKg.toLocaleString()} kg</td>
-                  <td className="py-2.5 text-amber-300">{Math.round(calcResults.slabs.concreteVol * 110000 + calcResults.slabs.rebarKg * 750).toLocaleString()} XAF</td>
+                  <td className="py-2.5 text-amber-300">{formatCurrency(Math.round(calcResults.slabs.concreteVol * 110000 + calcResults.slabs.rebarKg * 750), currency)}</td>
                 </tr>
               </tbody>
             </table>
@@ -1361,7 +1366,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
           </div>
 
           <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl space-y-4">
-            <h3 className="text-xs font-black text-amber-500 uppercase tracking-wider">Cost Distribution (XAF)</h3>
+            <h3 className="text-xs font-black text-amber-500 uppercase tracking-wider">Cost Distribution ({currency})</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -1370,7 +1375,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => [`${value.toLocaleString()} XAF`, 'Cost']} />
+                  <Tooltip formatter={(value: number) => [formatCurrency(value, currency), 'Cost']} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -1492,7 +1497,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
                     <div className="bg-amber-50/60 p-3 rounded-lg border border-amber-200 space-y-1 font-mono">
                       <p><strong>Total Concrete:</strong> {calcResults.totals.totalConcreteVol} m³</p>
                       <p><strong>Total Rebar Steel:</strong> {calcResults.totals.totalRebarTonnes} Tonnes</p>
-                      <p><strong>Structural Cost:</strong> {calcResults.totals.totalEstimatedCostXAF.toLocaleString()} XAF</p>
+                      <p><strong>Structural Cost:</strong> {formatCurrency(calcResults.totals.totalEstimatedCostXAF, currency)}</p>
                     </div>
 
                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1 font-mono text-[11px]">
@@ -1559,7 +1564,7 @@ export function StructuralCalculator({ showToast, currentUser }: StructuralCalcu
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-500 uppercase block font-bold">Total Cost</span>
-                      <p className="font-mono font-bold text-amber-700 text-sm">{calcResults.totals.totalEstimatedCostXAF.toLocaleString()} XAF</p>
+                      <p className="font-mono font-bold text-amber-700 text-sm">{formatCurrency(calcResults.totals.totalEstimatedCostXAF, currency)}</p>
                     </div>
                   </div>
                 </div>

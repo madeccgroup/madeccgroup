@@ -44,6 +44,7 @@ export interface StructuralExportMeta {
   orientation?: 'landscape' | 'portrait';
   aiAnalysisStatus?: 'idle' | 'scanning' | 'completed' | 'failed';
   aiAnalysisError?: string | null;
+  currency?: string;
 }
 
 // Generate Default Standard Reinforcement Schedule if not provided
@@ -575,18 +576,19 @@ export async function generateStructuralPdf(
     doc.text('DIMENSIONS & SPECS', margin + qCols[0] + qCols[1] + 2, y + 4);
     doc.text('CONCRETE (m³)', margin + qCols[0] + qCols[1] + qCols[2] + 2, y + 4);
     doc.text('REBAR (kg)', margin + qCols[0] + qCols[1] + qCols[2] + qCols[3] + 2, y + 4);
-    doc.text('UNIT RATE (XAF)', margin + qCols[0] + qCols[1] + qCols[2] + qCols[3] + qCols[4] + 2, y + 4);
-    doc.text('ESTIMATED COST (XAF)', margin + qCols[0] + qCols[1] + qCols[2] + qCols[3] + qCols[4] + qCols[5] + 2, y + 4);
+    const currCode = projectMeta.currency || 'XAF';
+    doc.text(`UNIT RATE (${currCode})`, margin + qCols[0] + qCols[1] + qCols[2] + qCols[3] + qCols[4] + 2, y + 4);
+    doc.text(`ESTIMATED COST (${currCode})`, margin + qCols[0] + qCols[1] + qCols[2] + qCols[3] + qCols[4] + qCols[5] + 2, y + 4);
     y += 6;
 
     const boqRows = [
-      ['ITEM 1.1', 'Reinforced Concrete Pad Footings', `${calcResults?.footings?.count || 20} pcs @ 1.8x1.8x0.5m (C25/30)`, `${calcResults?.footings?.concreteVol || 32.4}`, `${calcResults?.footings?.rebarKg || 2754}`, '110,000 / m³', `${Math.round((calcResults?.footings?.concreteVol || 32.4) * 110000 + (calcResults?.footings?.rebarKg || 2754) * 750).toLocaleString()} XAF`],
-      ['ITEM 1.2', 'RC Columns (Ground + Upper Floors)', `${calcResults?.columns?.count || 60} pcs @ 300x300mm x 3.0m`, `${calcResults?.columns?.concreteVol || 16.2}`, `${calcResults?.columns?.rebarKg || 2511}`, '110,000 / m³', `${Math.round((calcResults?.columns?.concreteVol || 16.2) * 110000 + (calcResults?.columns?.rebarKg || 2511) * 750).toLocaleString()} XAF`],
-      ['ITEM 1.3', 'Plinth & Ground Beams', `${calcResults?.plinthBeams?.lengthM || 125} m @ 250x450mm`, `${calcResults?.plinthBeams?.concreteVol || 14.0}`, `${calcResults?.plinthBeams?.rebarKg || 1540}`, '110,000 / m³', `${Math.round((calcResults?.plinthBeams?.concreteVol || 14.0) * 110000 + (calcResults?.plinthBeams?.rebarKg || 1540) * 750).toLocaleString()} XAF`],
-      ['ITEM 1.4', 'Superstructure Floor Beams', `${calcResults?.beams?.lengthM || 420} m @ 250x500mm`, `${calcResults?.beams?.concreteVol || 52.5}`, `${calcResults?.beams?.rebarKg || 7088}`, '110,000 / m³', `${Math.round((calcResults?.beams?.concreteVol || 52.5) * 110000 + (calcResults?.beams?.rebarKg || 7088) * 750).toLocaleString()} XAF`],
-      ['ITEM 1.5', 'Cast-in-Place Solid RC Slabs', `${calcResults?.slabs?.areaM2 || 957} m² @ h=160mm`, `${calcResults?.slabs?.concreteVol || 153.1}`, `${calcResults?.slabs?.rebarKg || 13779}`, '110,000 / m³', `${Math.round((calcResults?.slabs?.concreteVol || 153.1) * 110000 + (calcResults?.slabs?.rebarKg || 13779) * 750).toLocaleString()} XAF`],
-      ['ITEM 1.6', 'Hollow Masonry Concrete Block Walls', `${calcResults?.walls?.blocksCount || 18000} pcs 20x20x40cm blocks`, '-', '-', '650 / block', `${Math.round((calcResults?.walls?.blocksCount || 18000) * 650).toLocaleString()} XAF`],
-      ['ITEM 1.7', 'Timber Roof Truss & Aluminum Roofing', `${calcResults?.roofs?.roofingSheetsM2 || 388} m² prepainted 0.55mm`, '-', '-', '12,500 / m²', `${Math.round((calcResults?.roofs?.roofingSheetsM2 || 388) * 12500).toLocaleString()} XAF`]
+      ['ITEM 1.1', 'Reinforced Concrete Pad Footings', `${calcResults?.footings?.count || 20} pcs @ 1.8x1.8x0.5m (C25/30)`, `${calcResults?.footings?.concreteVol || 32.4}`, `${calcResults?.footings?.rebarKg || 2754}`, '110,000 / m³', `${Math.round((calcResults?.footings?.concreteVol || 32.4) * 110000 + (calcResults?.footings?.rebarKg || 2754) * 750).toLocaleString()} ${currCode}`],
+      ['ITEM 1.2', 'RC Columns (Ground + Upper Floors)', `${calcResults?.columns?.count || 60} pcs @ 300x300mm x 3.0m`, `${calcResults?.columns?.concreteVol || 16.2}`, `${calcResults?.columns?.rebarKg || 2511}`, '110,000 / m³', `${Math.round((calcResults?.columns?.concreteVol || 16.2) * 110000 + (calcResults?.columns?.rebarKg || 2511) * 750).toLocaleString()} ${currCode}`],
+      ['ITEM 1.3', 'Plinth & Ground Beams', `${calcResults?.plinthBeams?.lengthM || 125} m @ 250x450mm`, `${calcResults?.plinthBeams?.concreteVol || 14.0}`, `${calcResults?.plinthBeams?.rebarKg || 1540}`, '110,000 / m³', `${Math.round((calcResults?.plinthBeams?.concreteVol || 14.0) * 110000 + (calcResults?.plinthBeams?.rebarKg || 1540) * 750).toLocaleString()} ${currCode}`],
+      ['ITEM 1.4', 'Superstructure Floor Beams', `${calcResults?.beams?.lengthM || 420} m @ 250x500mm`, `${calcResults?.beams?.concreteVol || 52.5}`, `${calcResults?.beams?.rebarKg || 7088}`, '110,000 / m³', `${Math.round((calcResults?.beams?.concreteVol || 52.5) * 110000 + (calcResults?.beams?.rebarKg || 7088) * 750).toLocaleString()} ${currCode}`],
+      ['ITEM 1.5', 'Cast-in-Place Solid RC Slabs', `${calcResults?.slabs?.areaM2 || 957} m² @ h=160mm`, `${calcResults?.slabs?.concreteVol || 153.1}`, `${calcResults?.slabs?.rebarKg || 13779}`, '110,000 / m³', `${Math.round((calcResults?.slabs?.concreteVol || 153.1) * 110000 + (calcResults?.slabs?.rebarKg || 13779) * 750).toLocaleString()} ${currCode}`],
+      ['ITEM 1.6', 'Hollow Masonry Concrete Block Walls', `${calcResults?.walls?.blocksCount || 18000} pcs 20x20x40cm blocks`, '-', '-', '650 / block', `${Math.round((calcResults?.walls?.blocksCount || 18000) * 650).toLocaleString()} ${currCode}`],
+      ['ITEM 1.7', 'Timber Roof Truss & Aluminum Roofing', `${calcResults?.roofs?.roofingSheetsM2 || 388} m² prepainted 0.55mm`, '-', '-', '12,500 / m²', `${Math.round((calcResults?.roofs?.roofingSheetsM2 || 388) * 12500).toLocaleString()} ${currCode}`]
     ];
 
     doc.setFont('helvetica', 'normal');
@@ -617,7 +619,7 @@ export async function generateStructuralPdf(
     doc.text(`TOTAL REBAR STEEL: ${totals.totalRebarTonnes} Tonnes (${Number(totals.totalRebarKg).toLocaleString()} kg)`, margin + 90, y + 6.5);
     doc.text(`STRUCTURAL WEIGHT: ${totals.totalStructuralWeightTonnes} Tonnes`, margin + 200, y + 6.5);
     doc.setTextColor(180, 83, 9);
-    doc.text(`ESTIMATED COST: ${Number(totals.totalEstimatedCostXAF).toLocaleString()} XAF`, margin + 295, y + 6.5);
+    doc.text(`ESTIMATED COST: ${Number(totals.totalEstimatedCostXAF).toLocaleString()} ${projectMeta.currency || 'XAF'}`, margin + 295, y + 6.5);
 
     drawFooter(2, 3);
 
@@ -822,7 +824,7 @@ export async function generateStructuralPdf(
     doc.text(`Total Roof Truss Timber: ${totals.timberVolM3} m³`, margin + 85, y);
     y += 5;
     doc.text(`Total Structural Weight: ${totals.totalStructuralWeightTonnes} Tonnes (${Number(totals.grandTotalBuildingWeightKN).toLocaleString()} kN)`, margin + 2, y);
-    doc.text(`Total Structural Works Cost: ${Number(totals.totalEstimatedCostXAF).toLocaleString()} XAF`, margin + 85, y);
+    doc.text(`Total Structural Works Cost: ${Number(totals.totalEstimatedCostXAF).toLocaleString()} ${projectMeta.currency || 'XAF'}`, margin + 85, y);
 
     y += 9;
 
@@ -1007,7 +1009,7 @@ export async function generateStructuralDocx(
     new Paragraph({ children: [new TextRun({ text: 'Total Concrete Masonry Blocks: ', bold: true }), new TextRun(`${Number(totals.totalBlocksCount).toLocaleString()} pcs`)] }),
     new Paragraph({ children: [new TextRun({ text: 'Total Roof Timber Volume: ', bold: true }), new TextRun(`${totals.timberVolM3} m³`)] }),
     new Paragraph({ children: [new TextRun({ text: 'Total Building Structural Weight: ', bold: true }), new TextRun(`${totals.totalStructuralWeightTonnes} Tonnes (${Number(totals.grandTotalBuildingWeightKN).toLocaleString()} kN)`)] }),
-    new Paragraph({ children: [new TextRun({ text: 'Total Structural Cost Estimate: ', bold: true }), new TextRun(`${Number(totals.totalEstimatedCostXAF).toLocaleString()} XAF`)] }),
+    new Paragraph({ children: [new TextRun({ text: 'Total Structural Cost Estimate: ', bold: true }), new TextRun(`${Number(totals.totalEstimatedCostXAF).toLocaleString()} ${projectMeta.currency || 'XAF'}`)] }),
     new Paragraph({ text: '', spacing: { after: 200 } }),
 
     // Load Combinations
@@ -1143,7 +1145,7 @@ export function generateStructuralCsv(
   rows.push(['Masonry Concrete Blocks (pcs)', String(totals.totalBlocksCount || 0)]);
   rows.push(['Roof Timber Volume (m3)', String(totals.timberVolM3 || 0)]);
   rows.push(['Total Structural Weight (Tonnes)', String(totals.totalStructuralWeightTonnes || 0)]);
-  rows.push(['Total Structural Cost Estimate (XAF)', String(totals.totalEstimatedCostXAF || 0)]);
+  rows.push([`Total Structural Cost Estimate (${projectMeta.currency || 'XAF'})`, String(totals.totalEstimatedCostXAF || 0)]);
   rows.push([]);
 
   rows.push(['LOAD COMBINATIONS & GEOTECHNICAL CHECK']);

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  FolderKanban, 
-  MapPin, 
-  Banknote, 
-  Calendar, 
-  CheckCircle2, 
-  Clock, 
-  ChevronLeft, 
+import {
+  FolderKanban,
+  MapPin,
+  Banknote,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  ChevronLeft,
   SlidersHorizontal,
   Target,
   Video,
@@ -15,16 +15,16 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { Project, Category, ProjectProgress, GalleryItem } from '../types.ts';
-import { getOptimizedImageUrl } from '../lib/utils.ts';
+import { getOptimizedImageUrl, formatCurrency } from '../lib/utils.ts';
 import { ProjectListSkeleton } from './Skeleton.tsx';
-import { 
-  PortfolioHero, 
-  BeforeAfterGallery, 
-  CompanyTimeline, 
-  FAQSection, 
-  CompanyStats, 
-  TestimonialsAndPartners, 
-  AdSenseReadinessBlock 
+import {
+  PortfolioHero,
+  BeforeAfterGallery,
+  CompanyTimeline,
+  FAQSection,
+  CompanyStats,
+  TestimonialsAndPartners,
+  AdSenseReadinessBlock
 } from './PortfolioAddons.tsx';
 
 interface ProjectsProps {
@@ -37,16 +37,16 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [loadingProjects, setLoadingProjects] = useState(true);
-  
+
   // Tab selector: 'landmark' (standard contracts/projects) vs 'updates' (galleryItems)
   const [activeSubTab, setActiveSubTab] = useState<'landmark' | 'updates'>('landmark');
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [selectedGalleryCategory, setSelectedGalleryCategory] = useState<string | null>(null);
-  
+
   // Active Project Detail states
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [loadingProjectDetail, setLoadingProjectDetail] = useState(false);
-  
+
   // Fetch full lists of projects, categories, and gallery items
   useEffect(() => {
     const fetchData = async () => {
@@ -110,14 +110,14 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
   if (selectedProjectId && activeProject) {
     // Calculate total average progress from milestones
     const progressList = activeProject.progress || [];
-    const avgProgress = progressList.length > 0 
+    const avgProgress = progressList.length > 0
       ? Math.round(progressList.reduce((acc, curr) => acc + curr.percentage, 0) / progressList.length)
       : 0;
 
     return (
       <div className="font-sans text-slate-200 bg-[#0A0A0B] min-h-screen py-12" id="project-detail-view">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           {/* Back to Portfolio button */}
           <button
             onClick={() => setSelectedProjectId(null)}
@@ -146,7 +146,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                   </div>
                 </div>
               </div>
-              
+
               {/* Right Column Skeleton */}
               <div className="lg:col-span-6 space-y-6">
                 <div className="space-y-3">
@@ -155,7 +155,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                   <div className="h-4 bg-slate-900/80 rounded w-full" />
                   <div className="h-4 bg-slate-900/80 rounded w-11/12" />
                 </div>
-                
+
                 <div className="pt-6 border-t border-slate-800 space-y-4">
                   <div className="h-5 bg-slate-900 rounded w-1/3" />
                   <div className="space-y-3">
@@ -168,7 +168,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-              
+
               {/* Column Left: Visual Specs & Details */}
               <div className="lg:col-span-6 space-y-8">
                 <div className="relative h-96 bg-slate-950 rounded-2xl overflow-hidden shadow-md border border-slate-800">
@@ -205,9 +205,9 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                     <div className="pt-6 border-t border-slate-800">
                       <span className="block text-[10px] text-slate-500 uppercase font-mono mb-2">Project Video Briefing</span>
                       <div className="rounded-xl overflow-hidden border border-slate-800 bg-black aspect-video relative">
-                        <video 
-                          src={activeProject.videoUrl} 
-                          controls 
+                        <video
+                          src={activeProject.videoUrl}
+                          controls
                           className="w-full h-full object-contain"
                           preload="metadata"
                         />
@@ -229,7 +229,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                       <div>
                         <span className="block text-[10px] text-slate-500 uppercase font-mono">Value Budget</span>
                         <span className="block font-bold text-white">
-                          {activeProject.budget ? `£${Number(activeProject.budget).toLocaleString()}` : 'TBA'}
+                          {activeProject.budget ? formatCurrency(activeProject.budget, (activeProject as any).currency || 'XAF') : 'TBA'}
                         </span>
                       </div>
                     </div>
@@ -255,7 +255,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
 
               {/* Column Right: Interactive Progress Milestone Timeline */}
               <div className="lg:col-span-6 space-y-8">
-                
+
                 {/* Aggregate Progress Card */}
                 <div className="bg-slate-900/80 text-white rounded-2xl p-8 border border-slate-800 shadow-md space-y-4">
                   <div className="flex justify-between items-center">
@@ -267,7 +267,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                   </div>
 
                   <div className="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-850">
-                    <div 
+                    <div
                       className="bg-amber-500 h-full rounded-full transition-all duration-1000"
                       style={{ width: `${avgProgress}%` }}
                     />
@@ -284,7 +284,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                     <div className="relative pl-6 border-l-2 border-slate-800 space-y-8 ml-3 py-2">
                       {progressList.map((step) => (
                         <div key={step.id} className="relative" id={`milestone-step-${step.id}`}>
-                          
+
                           {/* Circle marker pin */}
                           <div className={`absolute -left-[33px] top-0.5 w-4 h-4 rounded-full border-2 ${
                             step.status === 'completed' ? 'bg-emerald-500 border-emerald-500' :
@@ -313,10 +313,10 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
 
                             <span className="block text-[10px] text-slate-500 font-mono tracking-wide">{formatDate(step.date)}</span>
                             <p className="text-xs text-slate-400 leading-relaxed pt-1">{step.description}</p>
-                            
+
                             {/* Inner milestone progress sub-bar */}
                             <div className="w-full bg-slate-950 rounded-full h-1.5 mt-2 overflow-hidden border border-slate-900">
-                              <div 
+                              <div
                                 className={`h-full rounded-full ${
                                   step.status === 'completed' ? 'bg-emerald-500' :
                                   step.status === 'active' ? 'bg-amber-500' :
@@ -350,13 +350,13 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
   // Otherwise, render full filterable Projects Portfolio Grid list
   return (
     <div className="font-sans text-slate-200 bg-[#0A0A0B] min-h-screen">
-      
+
       {/* Portfolio Header */}
       <PortfolioHero />
 
       {/* Portfolio Browser Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        
+
         {/* Custom Portfolio Section Switcher */}
         <div className="flex border border-slate-850 p-1.5 rounded-xl bg-slate-950 max-w-lg mx-auto mb-12 gap-1.5">
           <button
@@ -391,8 +391,8 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
               <button
                 onClick={() => setSelectedCategory(null)}
                 className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  selectedCategory === null 
-                    ? 'bg-amber-500 text-slate-950 shadow' 
+                  selectedCategory === null
+                    ? 'bg-amber-500 text-slate-950 shadow'
                     : 'bg-slate-900 text-slate-400 hover:bg-slate-850 hover:text-white border border-slate-800'
                 }`}
               >
@@ -403,8 +403,8 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    selectedCategory === cat.id 
-                      ? 'bg-amber-500 text-slate-950 shadow' 
+                    selectedCategory === cat.id
+                      ? 'bg-amber-500 text-slate-950 shadow'
                       : 'bg-slate-900 text-slate-400 hover:bg-slate-850 hover:text-white border border-slate-800'
                   }`}
                 >
@@ -458,7 +458,7 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                         <div>
                           <span className="block text-[9px] text-slate-500 uppercase tracking-wider font-mono">Contract Budget</span>
                           <span className="block font-bold text-white">
-                            {project.budget ? `£${Number(project.budget).toLocaleString()}` : 'TBA'}
+                            {project.budget ? formatCurrency(project.budget, (project as any).currency || 'XAF') : 'TBA'}
                           </span>
                         </div>
                         <span className="text-amber-500 font-bold inline-flex items-center gap-1 group-hover:text-amber-400 transition-colors">
@@ -485,8 +485,8 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
               <button
                 onClick={() => setSelectedGalleryCategory(null)}
                 className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  selectedGalleryCategory === null 
-                    ? 'bg-amber-500 text-slate-950 shadow' 
+                  selectedGalleryCategory === null
+                    ? 'bg-amber-500 text-slate-950 shadow'
                     : 'bg-slate-900 text-slate-400 hover:bg-slate-850 hover:text-white border border-slate-800'
                 }`}
               >
@@ -497,8 +497,8 @@ export default function Projects({ selectedProjectId, setSelectedProjectId }: Pr
                   key={catName}
                   onClick={() => setSelectedGalleryCategory(catName)}
                   className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    selectedGalleryCategory === catName 
-                      ? 'bg-amber-500 text-slate-950 shadow' 
+                    selectedGalleryCategory === catName
+                      ? 'bg-amber-500 text-slate-950 shadow'
                       : 'bg-slate-900 text-slate-400 hover:bg-slate-850 hover:text-white border border-slate-800'
                   }`}
                 >

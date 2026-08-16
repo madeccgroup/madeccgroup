@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from './Toast.tsx';
-import { 
-  auth, 
+import {
+  auth,
   googleAuthProvider,
   getAuthToken
 } from '../lib/firebase.ts';
 import { signInWithPopup } from 'firebase/auth';
-import { 
-  Building2, 
-  Plus, 
-  Trash2, 
-  Edit, 
-  CheckCircle, 
-  XCircle, 
-  Star, 
-  Calendar, 
-  Mail, 
-  FileText, 
-  ShieldCheck, 
-  User as UserIcon, 
-  Eye, 
-  UserCheck, 
-  Key, 
-  Award, 
+import {
+  Building2,
+  Plus,
+  Trash2,
+  Edit,
+  CheckCircle,
+  XCircle,
+  Star,
+  Calendar,
+  Mail,
+  FileText,
+  ShieldCheck,
+  User as UserIcon,
+  Eye,
+  UserCheck,
+  Key,
+  Award,
   Image as ImageIcon,
   BookOpen,
   History,
@@ -38,19 +38,45 @@ import {
   Database,
   Code,
   Sparkles,
-  Calculator
+  Calculator,
+  FileSpreadsheet,
+  Megaphone,
+  Share2,
+  Layers,
+  LayoutDashboard,
+  BarChart3,
+  Briefcase,
+  Globe,
+  Users,
+  DollarSign,
+  Shield,
+  Settings,
+  ChevronDown,
+  ChevronRight,
+  Search,
+  Bell,
+  Command,
+  PlusCircle,
+  Wrench,
+  FolderKanban,
+  Activity,
+  X,
+  LogOut,
+  Menu,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
-import { 
-  User, 
-  Project, 
-  Category, 
-  Review, 
-  BlogPost, 
-  Appointment, 
-  ContactMessage, 
-  NewsletterSubscriber, 
-  AuditLog, 
-  HeroBanner, 
+import {
+  User,
+  Project,
+  Category,
+  Review,
+  BlogPost,
+  Appointment,
+  ContactMessage,
+  NewsletterSubscriber,
+  AuditLog,
+  HeroBanner,
   CompanyDocument,
   ProjectProgress,
   GalleryItem,
@@ -70,6 +96,16 @@ import StructuralCalculator from './StructuralCalculator.tsx';
 import LabourCalculator from './LabourCalculator.tsx';
 import DrawingTakeoffStudio from './DrawingTakeoffStudio.tsx';
 import AIConstructionIntelligence from './AIConstructionIntelligence.tsx';
+import EnterpriseErpHub from './EnterpriseErpHub.tsx';
+import StaffManagementHub from './StaffManagementHub.tsx';
+import SocialMediaStudio from './SocialMediaStudio.tsx';
+import { AdminQuoteRequests } from './AdminQuoteRequests.tsx';
+import { AdminServices } from './AdminServices.tsx';
+import { AdminSustainability } from './AdminSustainability.tsx';
+import { AdminFaq } from './AdminFaq.tsx';
+import { AdminSuppliers } from './AdminSuppliers.tsx';
+import { AdminTenders } from './AdminTenders.tsx';
+
 import { getOptimizedImageUrl, getYouTubeEmbedUrl, ensureAbsoluteUrl } from '../lib/utils.ts';
 
 const safeConfirm = (message: string): boolean => {
@@ -101,11 +137,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     try {
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => 
+        ...rows.map(row =>
           row.map(cell => {
             const escaped = String(cell || '').replace(/"/g, '""');
-            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"') 
-              ? `"${escaped}"` 
+            return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"')
+              ? `"${escaped}"`
               : escaped;
           }).join(',')
         )
@@ -126,8 +162,50 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   };
 
   // Navigation internal to admin
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio' | 'structural-calculator' | 'labour-calculator'>('analytics');
+  const [activeAdminTab, setActiveAdminTab] = useState<'command-center' | 'analytics' | 'services-cms' | 'sustainability-cms' | 'faq-cms' | 'suppliers-cms' | 'tenders-cms' | 'quote-requests' | 'projects' | 'reviews' | 'blogs' | 'appointments' | 'contacts' | 'banners' | 'documents' | 'gallery' | 'audit' | 'team' | 'legal-contracts' | 'receipts' | 'cv-generator' | 'letter-generator' | 'doc-history' | 'db-architecture' | 'proposal-studio' | 'lesson-studio' | 'syllabus-upload' | 'extended-lesson-architect' | 'boq-studio' | 'structural-calculator' | 'labour-calculator' | 'drawing-studio' | 'enterprise-erp' | 'ai-construction-intelligence' | 'staff-access' | 'social-studio'>('command-center');
   const [activeSyllabus, setActiveSyllabus] = useState<any | null>(null);
+
+  // Enterprise Navigation & Header UI State
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showQuickActionModal, setShowQuickActionModal] = useState(false);
+  const [commandSearch, setCommandSearch] = useState('');
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  // Expanded navigation groups state
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    'command-center-group': true,
+    'analytics-group': true,
+    'projects-group': true,
+    'qs-group': true,
+    'ai-group': true,
+    'crm-group': true,
+    'docs-group': true,
+    'cms-group': true,
+    'marketing-group': true,
+    'hr-group': true,
+    'minesec-group': true,
+    'finance-group': true,
+    'system-group': true,
+    'admin-group': true
+  });
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  // Keyboard shortcut listener for Command Palette (Cmd/Ctrl + K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Live analytics state from backend
   const [dbAnalytics, setDbAnalytics] = useState<{
@@ -381,26 +459,38 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
       const headers = { 'Authorization': `Bearer ${token}` };
 
-      const safeFetch = async (url: string, options?: any) => {
-        try {
-          const res = await fetch(url, options);
-          return res;
-        } catch (e) {
-          console.error(`Failed to fetch endpoint ${url}:`, e);
-          return { ok: false, json: async () => null } as any;
+      const safeFetch = async (url: string, options?: any, retries = 2) => {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+          try {
+            const res = await fetch(url, options);
+            if (res.ok) return res;
+            if (attempt < retries && (res.status === 502 || res.status === 503 || res.status === 504)) {
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
+            return res;
+          } catch (e) {
+            if (attempt < retries) {
+              await new Promise(r => setTimeout(r, 300));
+              continue;
+            }
+            console.warn(`[AdminFetch] Endpoint ${url} fallback triggered:`, e);
+            return { ok: false, json: async () => [] } as any;
+          }
         }
+        return { ok: false, json: async () => [] } as any;
       };
 
       const [
-        projRes, 
-        catRes, 
-        revRes, 
-        blogRes, 
-        apptRes, 
-        contRes, 
-        subsRes, 
-        banRes, 
-        docRes, 
+        projRes,
+        catRes,
+        revRes,
+        blogRes,
+        apptRes,
+        contRes,
+        subsRes,
+        banRes,
+        docRes,
         auditRes,
         galRes,
         teamRes,
@@ -469,7 +559,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         if (res.ok) {
           const data = await res.json();
           const newBackupTime = data.lastBackupTime;
-          
+
           setLastBackupTime((prev) => {
             if (prev && prev !== newBackupTime) {
               // A new backup has executed! Show a toast alert outside of the state updater function
@@ -591,10 +681,10 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
       if (key !== 'Adminmadeccgroup' && key !== 'MADECC Group admin') {
         throw new Error('Invalid Admin Secret Key. Please try again.');
       }
-      
+
       // Store custom admin token in sessionStorage
       sessionStorage.setItem('admin_token', key);
-      
+
       // Verify with backend
       const response = await fetch('/api/auth/me', {
         headers: { 'Authorization': `Bearer ${key}` }
@@ -1393,7 +1483,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         videoUrl: ensureAbsoluteUrl(galVideoUrl) || null,
         category: galCategory.trim() || 'General Engineering'
       };
-      
+
       const url = galEditId ? `/api/gallery/${galEditId}` : '/api/gallery';
       const method = galEditId ? 'PUT' : 'POST';
 
@@ -1453,10 +1543,10 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
   const handleRegenerateToken = async (id: number, type: 'contract' | 'receipt') => {
     try {
       const headers = await getAuthHeaders();
-      const url = type === 'contract' 
-        ? `/api/contracts/${id}/regenerate-token` 
+      const url = type === 'contract'
+        ? `/api/contracts/${id}/regenerate-token`
         : `/api/receipts/${id}/regenerate-token`;
-        
+
       const response = await fetch(url, {
         method: 'POST',
         headers
@@ -1515,96 +1605,728 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
     );
   });
 
-  return (
-    <div className="font-sans text-slate-800 bg-slate-900 min-h-screen text-slate-300 flex flex-col md:flex-row" id="admin-panel-root">
-      
-      {/* ==========================================
-          LEFT RAIL / CONTROL BAR
-          ========================================== */}
-      <div className="md:w-64 bg-slate-950 border-r border-slate-800 py-8 px-4 flex flex-col justify-between shrink-0">
-        <div className="space-y-8">
-          <div className="px-2">
-            <span className="text-[10px] font-mono tracking-widest text-amber-500 uppercase font-bold block">Internal Control Pod</span>
-            <h2 className="text-white font-extrabold text-lg mt-0.5">MADECC ADMIN</h2>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-mono text-slate-400">Authenticated: {dbUser.role.toUpperCase()}</span>
-            </div>
-          </div>
+  // Definition of 14 Enterprise Information Architecture Groups
+  const ADMIN_NAV_GROUPS = [
+    {
+      id: 'command-center-group',
+      title: '🏠 COMMAND CENTER',
+      icon: LayoutDashboard,
+      items: [
+        { id: 'command-center', label: 'Dashboard Overview', icon: LayoutDashboard },
+        { id: 'analytics', label: 'Executive Analytics', icon: TrendingUp },
+        { id: 'contacts', label: 'Notifications & Alerts', icon: Mail, badgeKey: 'unreadInquiries' },
+        { id: 'reviews', label: 'Approval Center', icon: Star, badgeKey: 'pendingReviews' },
+        { id: 'audit', label: 'Activity Feed', icon: History }
+      ]
+    },
+    {
+      id: 'analytics-group',
+      title: '📊 ANALYTICS & REPORTING',
+      icon: BarChart3,
+      items: [
+        { id: 'analytics', label: 'Dashboard Analytics', icon: TrendingUp },
+        { id: 'projects', label: 'Project Analytics', icon: Building2 },
+        { id: 'quote-requests', label: 'Sales & Leads Analytics', icon: FileSpreadsheet, badgeKey: 'pendingQuotes' },
+        { id: 'banners', label: 'Website Analytics', icon: Sliders },
+        { id: 'social-studio', label: 'SEO & Social Analytics', icon: Megaphone }
+      ]
+    },
+    {
+      id: 'projects-group',
+      title: '🏗️ PROJECTS & OPERATIONS',
+      icon: Building2,
+      items: [
+        { id: 'projects', label: 'Manage Projects', icon: Building2 },
+        { id: 'gallery', label: 'Portfolio Updates', icon: Video },
+        { id: 'appointments', label: 'Consultations Queue', icon: Calendar, badgeKey: 'pendingAppointments' },
+        { id: 'enterprise-erp', label: 'Site / Project Operations (ERP)', icon: Building2 }
+      ]
+    },
+    {
+      id: 'qs-group',
+      title: '📐 ENGINEERING & QUANTITY SURVEYING',
+      icon: Calculator,
+      items: [
+        { id: 'boq-studio', label: 'Enterprise QS & BOQ Studio', icon: FileSpreadsheet },
+        { id: 'drawing-studio', label: 'Quantity Take-Off (CAD)', icon: Layers },
+        { id: 'structural-calculator', label: 'Structural Loads & Weights', icon: Calculator },
+        { id: 'labour-calculator', label: 'Labour Calculator', icon: Calculator }
+      ]
+    },
+    {
+      id: 'ai-group',
+      title: '🤖 AI CONSTRUCTION PLATFORM',
+      icon: Sparkles,
+      items: [
+        { id: 'ai-construction-intelligence', label: 'AI Construction Platform', icon: Sparkles }
+      ]
+    },
+    {
+      id: 'crm-group',
+      title: '💼 BUSINESS DEVELOPMENT & CRM',
+      icon: Briefcase,
+      items: [
+        { id: 'quote-requests', label: 'Quote Requests & Leads', icon: FileSpreadsheet, badgeKey: 'pendingQuotes' },
+        { id: 'contacts', label: 'Inquiries / Contacts', icon: Mail, badgeKey: 'unreadInquiries' },
+        { id: 'tenders-cms', label: 'Tenders & Opportunities CMS', icon: FileSpreadsheet },
+        { id: 'suppliers-cms', label: 'Suppliers & Vendors CMS', icon: Building2 },
+        { id: 'appointments', label: 'Consultations Queue', icon: Calendar, badgeKey: 'pendingAppointments' }
+      ]
+    },
+    {
+      id: 'docs-group',
+      title: '📄 DOCUMENTS & COMMERCIAL',
+      icon: FileText,
+      items: [
+        { id: 'documents', label: 'Company Documents', icon: FileText },
+        { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
+        { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
+        { id: 'receipts', label: 'Receipt Generator', icon: Receipt },
+        { id: 'doc-history', label: 'Receipt & Contract History', icon: ShieldCheck },
+        { id: 'cv-generator', label: 'CV Builder', icon: Award },
+        { id: 'letter-generator', label: 'Application Letters', icon: FileText }
+      ]
+    },
+    {
+      id: 'cms-group',
+      title: '🌐 WEBSITE & CONTENT CMS',
+      icon: Globe,
+      items: [
+        { id: 'services-cms', label: 'Services CMS Management', icon: Layers },
+        { id: 'sustainability-cms', label: 'Sustainability & ESG CMS', icon: Layers },
+        { id: 'faq-cms', label: 'FAQ / Help Centre CMS', icon: FileText },
+        { id: 'blogs', label: 'Manage Blogs', icon: BookOpen },
+        { id: 'reviews', label: 'Approve Reviews', icon: Star, badgeKey: 'pendingReviews' },
+        { id: 'banners', label: 'Home Hero Sliders', icon: Sliders },
+        { id: 'gallery', label: 'Projects & Portfolio Content', icon: Video }
+      ]
+    },
+    {
+      id: 'marketing-group',
+      title: '📣 MARKETING & SOCIAL MEDIA',
+      icon: Megaphone,
+      items: [
+        { id: 'social-studio', label: 'SEO & Social Media Publisher', icon: Megaphone }
+      ]
+    },
+    {
+      id: 'hr-group',
+      title: '👥 PEOPLE & HR',
+      icon: Users,
+      items: [
+        { id: 'staff-access', label: 'Staff Access & HR Management', icon: Key },
+        { id: 'team', label: 'Team Management', icon: UserIcon }
+      ]
+    },
+    {
+      id: 'minesec-group',
+      title: '🎓 EDUCATION & MINESEC',
+      icon: GraduationCap,
+      items: [
+        { id: 'lesson-studio', label: 'MINESEC Lesson Prep', icon: GraduationCap },
+        { id: 'syllabus-upload', label: 'Syllabus Manager', icon: BookOpen },
+        { id: 'extended-lesson-architect', label: 'Extended Lesson Architect', icon: Sparkles }
+      ]
+    },
+    {
+      id: 'finance-group',
+      title: '💰 FINANCE & TRANSACTIONS',
+      icon: DollarSign,
+      items: [
+        { id: 'doc-history', label: 'Receipt & Contract History', icon: ShieldCheck },
+        { id: 'enterprise-erp', label: 'ERP Financial Statements', icon: Building2 }
+      ]
+    },
+    {
+      id: 'system-group',
+      title: '🗃️ DATA, SECURITY & SYSTEM',
+      icon: Shield,
+      items: [
+        { id: 'audit', label: 'Database Audit Logs', icon: History },
+        { id: 'db-architecture', label: 'DB & API Documentation', icon: Database }
+      ]
+    },
+    {
+      id: 'admin-group',
+      title: '⚙️ ADMINISTRATION & CONFIGURATION',
+      icon: Settings,
+      items: [
+        { id: 'staff-access', label: 'Roles & Staff Permissions', icon: Key },
+        { id: 'db-architecture', label: 'API Diagnostics & System Config', icon: Database }
+      ]
+    }
+  ];
 
-          <nav className="space-y-1">
-            {[
-              { id: 'ai-construction-intelligence', label: '★ AI Construction Platform', icon: Sparkles },
-              { id: 'analytics', label: 'Dashboard Analytics', icon: TrendingUp },
-              { id: 'projects', label: 'Manage Projects', icon: Building2 },
-              { id: 'reviews', label: 'Approve Reviews', icon: Star },
-              { id: 'blogs', label: 'Manage Blogs', icon: BookOpen },
-              { id: 'appointments', label: 'Consultations Queue', icon: Calendar },
-              { id: 'contacts', label: 'Inquiries/Contacts', icon: Mail },
-              { id: 'banners', label: 'Home Hero Sliders', icon: Sliders },
-              { id: 'documents', label: 'Company Documents', icon: FileText },
-              { id: 'legal-contracts', label: 'Contract Generator', icon: Scale },
-              { id: 'proposal-studio', label: 'Proposal Manager', icon: FileText },
-              { id: 'structural-calculator', label: 'Structural Loads & Weights', icon: Calculator },
-              { id: 'labour-calculator', label: 'Labour Calculator', icon: Calculator },
-              { id: 'lesson-studio', label: 'MINESEC Lesson Prep', icon: GraduationCap },
-              { id: 'syllabus-upload', label: 'Syllabus Manager', icon: BookOpen },
-              { id: 'extended-lesson-architect', label: 'Extended Lesson Architect', icon: Sparkles },
-              { id: 'receipts', label: 'Receipt Generator', icon: Receipt },
-              { id: 'cv-generator', label: 'CV Builder', icon: Award },
-              { id: 'letter-generator', label: 'Application Letters', icon: FileText },
-              { id: 'doc-history', label: 'Receipt & Contract History', icon: ShieldCheck },
-              { id: 'gallery', label: 'Portfolio Updates', icon: Video },
-              { id: 'team', label: 'Team Management', icon: UserIcon },
-              { id: 'audit', label: 'Database Audit Logs', icon: History },
-              { id: 'db-architecture', label: 'DB & API Documentation', icon: Database }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveAdminTab(tab.id as any);
-                    setSelectedProjectForMilestones(null);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors text-left ${
-                    activeAdminTab === tab.id 
-                      ? 'bg-amber-500 text-slate-950 shadow shadow-amber-500/10' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                  }`}
-                >
-                  <Icon className="w-4.5 h-4.5 shrink-0" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+  const getBadgeCount = (badgeKey?: string) => {
+    if (!badgeKey) return 0;
+    if (badgeKey === 'pendingAppointments') return appointments.filter(a => a.status === 'pending').length;
+    if (badgeKey === 'unreadInquiries') return contacts.filter(c => c.status === 'unread' || c.status === 'new').length;
+    if (badgeKey === 'pendingReviews') return reviews.filter(r => !r.approved).length;
+    if (badgeKey === 'pendingQuotes') return dbAnalytics?.pendingConsultations || 0;
+    return 0;
+  };
+
+  return (
+    <div className="font-sans text-slate-800 bg-slate-900 min-h-screen text-slate-300 flex flex-col" id="admin-panel-root">
+
+      {/* TOP ENTERPRISE HEADER BAR */}
+      <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
+        {/* Mobile Menu & Collapse Toggle */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="hidden md:flex p-2 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition-colors"
+            title={sidebarCollapsed ? "Expand Navigation Sidebar" : "Collapse Sidebar"}
+          >
+            {sidebarCollapsed ? <Maximize2 className="w-4 h-4 text-amber-500" /> : <Minimize2 className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black tracking-widest text-white uppercase font-mono hidden sm:inline-block">MADECC GROUP</span>
+            <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-mono font-bold">ENTERPRISE ADMIN</span>
+          </div>
         </div>
 
-        <div className="pt-8 border-t border-slate-800 px-2 space-y-3">
-          <div className="text-[10px] text-slate-500">
-            <span className="block font-bold">User Email:</span>
-            <span className="block truncate font-mono text-[9px] text-slate-400">{dbUser.email}</span>
-          </div>
+        {/* Global Search / Command Palette Trigger */}
+        <div className="flex-1 max-w-md mx-4 hidden sm:block">
           <button
-            onClick={() => setCurrentTab('home')}
-            className="w-full text-center bg-slate-900 hover:bg-slate-850 text-slate-300 py-2 rounded-lg text-xs font-bold border border-slate-800"
+            onClick={() => setShowCommandPalette(true)}
+            className="w-full bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-400 text-xs px-3.5 py-2 rounded-xl flex items-center justify-between transition-all group"
           >
-            Exit to Public Site
+            <span className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors" />
+              <span>Search actions, projects, BOQs, tools...</span>
+            </span>
+            <kbd className="bg-slate-950 text-slate-400 font-mono text-[10px] px-2 py-0.5 rounded border border-slate-800 flex items-center gap-1">
+              <Command className="w-3 h-3" /> K
+            </kbd>
           </button>
+        </div>
+
+        {/* Header Right Quick Actions & Profile */}
+        <div className="flex items-center gap-2.5">
+          {/* Quick Action Button */}
+          <button
+            onClick={() => setShowQuickActionModal(true)}
+            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow shadow-amber-500/10 transition-all shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span className="hidden md:inline">Quick Action</span>
+          </button>
+
+          {/* Notifications Indicator */}
+          <button
+            onClick={() => setActiveAdminTab('contacts')}
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 rounded-xl relative transition-colors"
+            title="Unread Messages & Inquiries"
+          >
+            <Bell className="w-4 h-4 text-slate-300" />
+            {contacts.filter(c => c.status === 'unread' || c.status === 'new').length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                {contacts.filter(c => c.status === 'unread' || c.status === 'new').length}
+              </span>
+            )}
+          </button>
+
+          {/* User Profile Pill */}
+          <div className="relative">
+            <button
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="flex items-center gap-2 p-1.5 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors"
+            >
+              <div className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center uppercase">
+                {dbUser.name ? dbUser.name.charAt(0) : dbUser.email.charAt(0)}
+              </div>
+              <div className="text-left hidden lg:block pr-1">
+                <span className="text-xs font-bold text-white block leading-tight truncate max-w-[100px]">{dbUser.name || 'Admin'}</span>
+                <span className="text-[9px] text-amber-500 font-mono block uppercase">{dbUser.role}</span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+
+            {/* Profile Dropdown */}
+            {profileDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-2 border-b border-slate-800 mb-1">
+                  <span className="text-xs font-bold text-white block">{dbUser.name || 'Enterprise Admin'}</span>
+                  <span className="text-[10px] text-slate-400 font-mono block truncate">{dbUser.email}</span>
+                  <span className="text-[9px] text-emerald-400 font-mono font-bold mt-1 inline-block bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    Authenticated Role: {dbUser.role.toUpperCase()}
+                  </span>
+                </div>
+                <button
+                  onClick={() => { setActiveAdminTab('staff-access'); setProfileDropdownOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-900 rounded-xl flex items-center gap-2 transition-colors"
+                >
+                  <Key className="w-4 h-4 text-amber-500" /> Staff & Security Access
+                </button>
+                <button
+                  onClick={() => { setActiveAdminTab('audit'); setProfileDropdownOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-slate-300 hover:bg-slate-900 rounded-xl flex items-center gap-2 transition-colors"
+                >
+                  <History className="w-4 h-4 text-sky-400" /> Security Audit Logs
+                </button>
+                <button
+                  onClick={() => setCurrentTab('home')}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10 rounded-xl flex items-center gap-2 transition-colors mt-1 border-t border-slate-900"
+                >
+                  <LogOut className="w-4 h-4 text-red-400" /> Exit to Public Site
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ==========================================
-          RIGHT PANEL CONTENT AREA
-          ========================================== */}
-      <div className="flex-grow p-8 md:p-12 overflow-y-auto max-h-screen">
-        
+      {/* BODY CONTENT WRAPPER */}
+      <div className="flex-grow flex flex-col md:flex-row overflow-hidden relative">
+
+        {/* ENTERPRISE SIDEBAR NAVIGATION */}
+        <aside
+          className={`${
+            sidebarCollapsed ? 'md:w-20' : 'md:w-72'
+          } ${
+            mobileMenuOpen ? 'block' : 'hidden md:block'
+          } bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 overflow-y-auto max-h-[calc(100vh-57px)] transition-all duration-300 z-20`}
+        >
+          <div className="p-3 space-y-4">
+
+            {/* Sidebar Branding Header */}
+            {!sidebarCollapsed && (
+              <div className="px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-2xl mb-2">
+                <span className="text-[10px] font-mono tracking-widest text-amber-500 uppercase font-bold block">NAVIGATION PORTAL</span>
+                <span className="text-white font-extrabold text-sm block">MADECC ADMIN</span>
+                <span className="text-[10px] text-slate-400 font-mono block">14 Collapsible Enterprise Modules</span>
+              </div>
+            )}
+
+            {/* Collapsible Groups Nav */}
+            <nav className="space-y-2">
+              {ADMIN_NAV_GROUPS.map((group) => {
+                const GroupIcon = group.icon;
+                const isOpen = !!openGroups[group.id];
+                const hasActiveItem = group.items.some(item => item.id === activeAdminTab);
+
+                if (sidebarCollapsed) {
+                  return (
+                    <div key={group.id} className="relative group/collapsed flex flex-col items-center">
+                      <button
+                        onClick={() => toggleGroup(group.id)}
+                        className={`p-3 rounded-xl transition-all ${
+                          hasActiveItem
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                        }`}
+                        title={group.title}
+                      >
+                        <GroupIcon className="w-5 h-5" />
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={group.id} className="rounded-2xl border border-slate-800/60 overflow-hidden bg-slate-950/40">
+                    {/* Group Header Button */}
+                    <button
+                      onClick={() => toggleGroup(group.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors text-left ${
+                        hasActiveItem
+                          ? 'bg-slate-900 text-amber-400 font-extrabold'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <GroupIcon className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span className="truncate">{group.title}</span>
+                      </span>
+                      {isOpen ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      )}
+                    </button>
+
+                    {/* Group Sub-Items */}
+                    {isOpen && (
+                      <div className="px-1.5 py-1 space-y-0.5 border-t border-slate-900/80 bg-slate-950/80">
+                        {group.items.map((subItem) => {
+                          const SubIcon = subItem.icon;
+                          const isActive = activeAdminTab === subItem.id;
+                          const count = getBadgeCount(subItem.badgeKey);
+
+                          return (
+                            <button
+                              key={`${group.id}-${subItem.id}`}
+                              onClick={() => {
+                                setActiveAdminTab(subItem.id as any);
+                                setSelectedProjectForMilestones(null);
+                                setMobileMenuOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left ${
+                                isActive
+                                  ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/10'
+                                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
+                              }`}
+                            >
+                              <span className="flex items-center gap-2 truncate">
+                                <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-slate-950' : 'text-slate-500'}`} />
+                                <span className="truncate">{subItem.label}</span>
+                              </span>
+                              {count > 0 && (
+                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                                  isActive ? 'bg-slate-950 text-amber-400' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                }`}>
+                                  {count}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="p-3 border-t border-slate-800 space-y-2 bg-slate-950">
+            {!sidebarCollapsed && (
+              <div className="text-[10px] text-slate-500 px-2">
+                <span className="block font-bold text-slate-400">Authenticated:</span>
+                <span className="block truncate font-mono text-[9px] text-slate-400">{dbUser.email}</span>
+              </div>
+            )}
+            <button
+              onClick={() => setCurrentTab('home')}
+              className="w-full text-center bg-slate-900 hover:bg-slate-800 text-slate-300 py-2 rounded-xl text-xs font-bold border border-slate-800 flex items-center justify-center gap-2"
+            >
+              <LogOut className="w-3.5 h-3.5 text-amber-500" />
+              {!sidebarCollapsed && <span>Exit to Public Site</span>}
+            </button>
+          </div>
+        </aside>
+
+        {/* MAIN DISPLAY AREA */}
+        <main className="flex-grow p-6 md:p-10 overflow-y-auto max-h-[calc(100vh-57px)] w-full">
+
+          {loadingData && (
+            <div className="flex items-center gap-2 mb-6 bg-slate-800/40 border border-slate-700 p-3 rounded-xl text-xs text-amber-500 font-mono animate-pulse">
+              <span className="w-3 h-3 rounded-full border border-t-amber-500 animate-spin shrink-0" />
+              <span>Syncing database tables in real-time...</span>
+            </div>
+          )}
+
+          {/* COMMAND CENTER EXECUTIVE DASHBOARD VIEW */}
+          {activeAdminTab === 'command-center' && (
+            <div className="space-y-8 animate-in fade-in duration-300" id="command-center-view">
+              {/* Banner */}
+              <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/30 border border-slate-800 p-6 md:p-8 rounded-3xl relative overflow-hidden shadow-2xl">
+                <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-bold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
+                      MADECC Group Executive Operations
+                    </span>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mt-2">
+                      Command Center
+                    </h1>
+                    <p className="text-xs md:text-sm text-slate-400 max-w-2xl mt-1 leading-relaxed">
+                      Real-time executive oversight across engineering projects, commercial BOQs, client consultation queue, social media channels, and system security logs.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2.5">
+                    <button
+                      onClick={() => setActiveAdminTab('boq-studio')}
+                      className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow shadow-amber-500/20 transition-all"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" /> Open BOQ Studio
+                    </button>
+                    <button
+                      onClick={() => setActiveAdminTab('social-studio')}
+                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-850 text-white font-bold text-xs border border-slate-700 rounded-xl flex items-center gap-2 transition-all"
+                    >
+                      <Megaphone className="w-4 h-4 text-amber-400" /> Social Publisher
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metric Cards Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3.5">
+                {[
+                  { label: 'Active Projects', value: projects.length, icon: Building2, color: 'text-amber-400', tab: 'projects' },
+                  { label: 'Pending Quotes', value: dbAnalytics?.pendingConsultations || 0, icon: FileSpreadsheet, color: 'text-sky-400', tab: 'quote-requests' },
+                  { label: 'Consultations', value: appointments.filter(a => a.status === 'pending').length, icon: Calendar, color: 'text-emerald-400', tab: 'appointments' },
+                  { label: 'Active Contracts', value: signedContracts.length, icon: Scale, color: 'text-purple-400', tab: 'legal-contracts' },
+                  { label: 'Pending Reviews', value: reviews.filter(r => !r.approved).length, icon: Star, color: 'text-amber-400', tab: 'reviews' },
+                  { label: 'Client Inquiries', value: contacts.filter(c => c.status === 'unread' || c.status === 'new').length, icon: Mail, color: 'text-cyan-400', tab: 'contacts' },
+                  { label: 'Social Channels', value: 'OAuth Active', icon: Megaphone, color: 'text-emerald-400', tab: 'social-studio' },
+                  { label: 'System Health', value: '98% Nominal', icon: ShieldCheck, color: 'text-emerald-400', tab: 'audit' }
+                ].map((m, idx) => {
+                  const IconComp = m.icon;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveAdminTab(m.tab as any)}
+                      className="bg-slate-950/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 p-4 rounded-2xl text-left transition-all group flex flex-col justify-between shadow-lg"
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">{m.label}</span>
+                        <IconComp className={`w-4 h-4 ${m.color} group-hover:scale-110 transition-transform`} />
+                      </div>
+                      <span className="text-xl font-extrabold text-white tracking-tight font-mono">{m.value}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Two-Column Dashboard Body */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left 2 Cols: Approval Center & Quick Actions */}
+                <div className="lg:col-span-2 space-y-8">
+
+                  {/* Pending Approval Center */}
+                  <div className="bg-slate-950/80 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                      <div>
+                        <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                          <Star className="w-5 h-5 text-amber-500" /> Pending Approval & Moderation Queue
+                        </h2>
+                        <p className="text-xs text-slate-400">Consultations, client feedback, and lead submissions awaiting admin review.</p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
+                        {appointments.filter(a => a.status === 'pending').length + reviews.filter(r => !r.approved).length} Pending
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {appointments.filter(a => a.status === 'pending').slice(0, 3).map((appt) => (
+                        <div key={appt.id} className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] bg-sky-500/10 text-sky-400 font-mono font-bold px-2 py-0.5 rounded border border-sky-500/20 uppercase">Consultation</span>
+                              <span className="text-xs font-bold text-white">{appt.clientName}</span>
+                            </div>
+                            <p className="text-xs text-slate-400">{appt.email} • {appt.date} ({appt.timeSlot})</p>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => handleUpdateAppointmentStatus(appt.id, 'confirmed')}
+                              className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded-xl text-xs font-bold border border-emerald-500/30 transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => setActiveAdminTab('appointments')}
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors"
+                            >
+                              Details
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {reviews.filter(r => !r.approved).slice(0, 3).map((rev) => (
+                        <div key={rev.id} className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] bg-amber-500/10 text-amber-400 font-mono font-bold px-2 py-0.5 rounded border border-amber-500/20 uppercase">Review</span>
+                              <span className="text-xs font-bold text-white">{rev.clientName} ({rev.rating}★)</span>
+                            </div>
+                            <p className="text-xs text-slate-400 italic">"{rev.comment}"</p>
+                          </div>
+                          <button
+                            onClick={() => setActiveAdminTab('reviews')}
+                            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-xs font-bold border border-amber-500/30 transition-colors shrink-0"
+                          >
+                            Review
+                          </button>
+                        </div>
+                      ))}
+
+                      {appointments.filter(a => a.status === 'pending').length === 0 && reviews.filter(r => !r.approved).length === 0 && (
+                        <div className="text-center py-8 border border-dashed border-slate-800 rounded-2xl">
+                          <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                          <p className="text-xs text-slate-300 font-bold">All queue items are current and approved!</p>
+                          <p className="text-[11px] text-slate-500">No pending consultations or reviews waiting for moderation.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick Hub Launch Grid */}
+                  <div className="bg-slate-950/80 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
+                    <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                      <Wrench className="w-5 h-5 text-amber-500" /> Enterprise Module Quick Launch
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { title: 'QS & BOQ Studio', desc: 'Civil engineering bill of quantities', tab: 'boq-studio', icon: FileSpreadsheet, color: 'text-amber-400' },
+                        { title: 'AI Construction Platform', desc: 'Blueprint vision takeoff & estimates', tab: 'ai-construction-intelligence', icon: Sparkles, color: 'text-purple-400' },
+                        { title: 'Enterprise ERP Hub', desc: 'Site operations, inventory & equipment', tab: 'enterprise-erp', icon: Building2, color: 'text-emerald-400' },
+                        { title: 'Quote Requests & Leads', desc: 'Commercial proposals & client pipeline', tab: 'quote-requests', icon: FileSpreadsheet, color: 'text-sky-400' },
+                        { title: 'Social Media Studio', desc: 'OAuth 2.0 publisher & scheduler', tab: 'social-studio', icon: Megaphone, color: 'text-pink-400' },
+                        { title: 'Contract Generator', desc: 'Legal contract agreement builder', tab: 'legal-contracts', icon: Scale, color: 'text-indigo-400' }
+                      ].map((hub, idx) => {
+                        const HubIcon = hub.icon;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setActiveAdminTab(hub.tab as any)}
+                            className="p-4 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/40 rounded-2xl text-left transition-all group"
+                          >
+                            <HubIcon className={`w-5 h-5 ${hub.color} mb-2 group-hover:scale-110 transition-transform`} />
+                            <span className="text-xs font-bold text-white block group-hover:text-amber-400 transition-colors">{hub.title}</span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">{hub.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Right Col: Activity Feed & System Health */}
+                <div className="space-y-8">
+
+                  {/* System Health Status Widget */}
+                  <div className="bg-slate-950/80 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
+                    <h2 className="text-sm font-extrabold text-white flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" /> Infrastructure Health
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">ONLINE</span>
+                    </h2>
+
+                    <div className="space-y-3 font-mono text-xs">
+                      <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl flex justify-between items-center">
+                        <span className="text-slate-400">Neon PostgreSQL DB</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Connected
+                        </span>
+                      </div>
+                      <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl flex justify-between items-center">
+                        <span className="text-slate-400">Firebase Auth JWT</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Verified
+                        </span>
+                      </div>
+                      <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl flex justify-between items-center">
+                        <span className="text-slate-400">Social OAuth Encrypted</span>
+                        <span className="text-amber-400 font-bold flex items-center gap-1.5">
+                          AES-256 Active
+                        </span>
+                      </div>
+                      <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl flex justify-between items-center">
+                        <span className="text-slate-400">Last Database Backup</span>
+                        <span className="text-slate-300 font-bold">
+                          {lastBackupTime ? new Date(lastBackupTime).toLocaleTimeString() : 'Auto Scheduled'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Audit Log Activity Feed */}
+                  <div className="bg-slate-950/80 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                      <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
+                        <History className="w-4 h-4 text-sky-400" /> Recent Administrative Trail
+                      </h2>
+                      <button
+                        onClick={() => setActiveAdminTab('audit')}
+                        className="text-[10px] text-amber-500 hover:underline font-bold"
+                      >
+                        View All Logs
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {auditLogs.slice(0, 6).map((log) => (
+                        <div key={log.id} className="p-3 bg-slate-900/50 border border-slate-800/80 rounded-xl space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-mono font-bold text-amber-400 uppercase bg-amber-500/10 px-1.5 py-0.5 rounded">
+                              {log.action}
+                            </span>
+                            <span className="text-[9px] text-slate-500 font-mono">
+                              {log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300 font-sans line-clamp-2">{log.details}</p>
+                          <span className="text-[9px] text-slate-500 font-mono block truncate">{log.userEmail || 'System Administrator'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
         {loadingData && (
           <div className="flex items-center gap-2 mb-6 bg-slate-800/40 border border-slate-700 p-3 rounded-lg text-xs text-amber-500 font-mono animate-pulse">
             <span className="w-3 h-3 rounded-full border border-t-amber-500 animate-spin shrink-0" />
             <span>Syncing database tables in real-time...</span>
           </div>
+        )}
+
+        {/* QUOTE REQUESTS & LEADS MANAGEMENT */}
+        {activeAdminTab === 'quote-requests' && (
+          <AdminQuoteRequests />
+        )}
+
+        {/* SERVICES CMS MANAGEMENT */}
+        {activeAdminTab === 'services-cms' && (
+          <AdminServices />
+        )}
+
+        {/* SUSTAINABILITY CMS MANAGEMENT */}
+        {activeAdminTab === 'sustainability-cms' && (
+          <AdminSustainability />
+        )}
+
+        {/* FAQ CMS MANAGEMENT */}
+        {activeAdminTab === 'faq-cms' && (
+          <AdminFaq />
+        )}
+
+        {/* SUPPLIERS & SUBCONTRACTORS CMS MANAGEMENT */}
+        {activeAdminTab === 'suppliers-cms' && (
+          <AdminSuppliers />
+        )}
+
+        {/* TENDERS CMS MANAGEMENT */}
+        {activeAdminTab === 'tenders-cms' && (
+          <AdminTenders />
+        )}
+
+        {/* STAFF ACCESS & HR MANAGEMENT VIEW */}
+        {activeAdminTab === 'staff-access' && (
+          <StaffManagementHub currentUser={dbUser} userRole={dbUser?.role} />
+        )}
+
+        {/* ENTERPRISE CONSTRUCTION ERP HUB */}
+        {activeAdminTab === 'enterprise-erp' && (
+          <EnterpriseErpHub />
+        )}
+
+        {/* AI CONSTRUCTION PLATFORM HUB */}
+        {activeAdminTab === 'ai-construction-intelligence' && (
+          <AIConstructionIntelligence dbUser={dbUser} showToast={showToast} getAuthHeaders={getAuthHeaders} />
+        )}
+
+        {/* SEO & SOCIAL MEDIA PUBLISHER HUB */}
+        {activeAdminTab === 'social-studio' && (
+          <SocialMediaStudio currentUser={dbUser} />
         )}
 
         {/* 1. ANALYTICS DASHBOARD VIEW */}
@@ -1749,7 +2471,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
         {/* 2. CONTRACT PROJECTS & PROGRESS MANAGE VIEW */}
         {activeAdminTab === 'projects' && (
           <div className="space-y-8" id="admin-tab-projects">
-            
+
             {selectedProjectForMilestones ? (
               /* PROGRESS MILESTONE EDITOR FOR SPECIFIC PROJECT */
               <div className="space-y-8">
@@ -1768,7 +2490,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                 {/* Grid layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-                  
+
                   {/* Left Column: Add Milestone Form */}
                   <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2">Add Milestone</h3>
@@ -2096,7 +2818,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                     {/* Media Assets Manager */}
                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 space-y-4">
                       <span className="text-[10px] font-mono uppercase font-bold text-amber-500 tracking-wider block">Media Assets Manager</span>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Cover Image Upload/Link */}
                         <div className="space-y-2">
@@ -2136,11 +2858,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs px-3 py-1.5 rounded cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0">
                                 Browse Image
-                                <input 
-                                  type="file" 
-                                  accept="image/*" 
-                                  className="hidden" 
-                                  onChange={(e) => handleFileUpload(e, 'projImage')} 
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => handleFileUpload(e, 'projImage')}
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -2193,11 +2915,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3 py-1.5 rounded border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0">
                                 Browse Video
-                                <input 
-                                  type="file" 
-                                  accept="video/*" 
-                                  className="hidden" 
-                                  onChange={(e) => handleFileUpload(e, 'projVideo')} 
+                                <input
+                                  type="file"
+                                  accept="video/*"
+                                  className="hidden"
+                                  onChange={(e) => handleFileUpload(e, 'projVideo')}
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -2303,8 +3025,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         <button
                           onClick={() => handleToggleReviewApproval(r.id, r.approved)}
                           className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wide transition-all ${
-                            r.approved 
-                              ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' 
+                            r.approved
+                              ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
                               : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20'
                           }`}
                         >
@@ -2346,7 +3068,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {blogs.map((post) => (
-                <div key={post.id} className="bg-slate-950 border border-slate-800 rounded-xl p-6 space-y-4">
+                <div key={`blog-${post.id}`} className="bg-slate-950 border border-slate-800 rounded-xl p-6 space-y-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
                       <span className="text-[10px] bg-slate-800 text-amber-500 font-bold uppercase tracking-wider px-2 py-0.5 rounded font-mono">{post.category}</span>
@@ -2442,7 +3164,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                     {/* Media Assets Manager */}
                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 space-y-4">
                       <span className="text-[10px] font-mono uppercase font-bold text-amber-500 tracking-wider block">Media Assets Manager</span>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Cover Image Upload/Link */}
                         <div className="space-y-2">
@@ -2482,11 +3204,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs px-3 py-1.5 rounded cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0">
                                 Browse Image
-                                <input 
-                                  type="file" 
-                                  accept="image/*" 
-                                  className="hidden" 
-                                  onChange={(e) => handleFileUpload(e, 'blogImage')} 
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => handleFileUpload(e, 'blogImage')}
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -2539,11 +3261,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded p-1.5">
                               <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3 py-1.5 rounded border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0">
                                 Browse Video
-                                <input 
-                                  type="file" 
-                                  accept="video/*" 
-                                  className="hidden" 
-                                  onChange={(e) => handleFileUpload(e, 'blogVideo')} 
+                                <input
+                                  type="file"
+                                  accept="video/*"
+                                  className="hidden"
+                                  onChange={(e) => handleFileUpload(e, 'blogVideo')}
                                   disabled={uploadingFile}
                                 />
                               </label>
@@ -2909,7 +3631,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             {showBannerModal && (
               <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden">
-                  
+
                   {/* Modal Header */}
                   <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
                     <div>
@@ -2918,8 +3640,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         {bannerEditId ? 'Edit Hero Banner Slide' : 'Add Hero Banner Slide'}
                       </h3>
                     </div>
-                    <button 
-                      onClick={() => { resetBannerForm(); setShowBannerModal(false); }} 
+                    <button
+                      onClick={() => { resetBannerForm(); setShowBannerModal(false); }}
                       className="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-2 rounded-xl"
                       type="button"
                     >
@@ -2930,14 +3652,14 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                   {/* Modal Form */}
                   <form onSubmit={handleSaveBanner} className="flex-1 overflow-y-auto p-8 space-y-6 text-sm">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      
+
                       {/* Left Column: Properties */}
                       <div className="space-y-6">
                         <div className="bg-slate-950/30 border border-slate-800/60 p-5 rounded-xl space-y-4">
                           <h4 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 pb-2">
                             1. Banner Details
                           </h4>
-                          
+
                           <div className="space-y-1">
                             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide">Banner Large Title</label>
                             <input
@@ -2983,9 +3705,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="space-y-1 flex flex-col justify-center">
                               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide mb-2">Publish Status</label>
                               <label className="relative inline-flex items-center cursor-pointer select-none">
-                                <input 
-                                  type="checkbox" 
-                                  className="sr-only peer" 
+                                <input
+                                  type="checkbox"
+                                  className="sr-only peer"
                                   checked={bannerActive}
                                   onChange={(e) => setBannerActive(e.target.checked)}
                                 />
@@ -3002,7 +3724,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
                       {/* Right Column: Visual Media assets */}
                       <div className="space-y-6">
-                        
+
                         {/* Cover Image section */}
                         <div className="bg-slate-950/30 border border-slate-800/60 p-5 rounded-xl space-y-3">
                           <div className="flex justify-between items-center border-b border-slate-800/80 pb-2">
@@ -3063,9 +3785,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <div className="mt-3 space-y-1.5 animate-in fade-in duration-300">
                               <span className="text-[10px] font-mono text-slate-500 uppercase block">Live Image Preview:</span>
                               <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
-                                <img 
-                                  src={bannerImage} 
-                                  alt="Cover Image Preview" 
+                                <img
+                                  src={bannerImage}
+                                  alt="Cover Image Preview"
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
                                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1200';
@@ -3109,7 +3831,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                                 onChange={(e) => setBannerVideoUrl(e.target.value)}
                                 placeholder="YouTube Video URL (e.g. https://youtu.be/EJMGG_f2Ejs)"
                               />
-                              
+
                               {bannerVideoUrl && (() => {
                                 const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
                                 const match = bannerVideoUrl.match(regExp);
@@ -3500,7 +4222,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
             {showGalModal && (
               <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl relative my-auto flex flex-col max-h-[92vh] overflow-hidden">
-                  
+
                   {/* MODAL HEADER (Sticky Top) */}
                   <div className="p-5 sm:p-6 border-b border-slate-800 bg-slate-900/95 flex justify-between items-center shrink-0">
                     <div className="space-y-0.5">
@@ -3615,11 +4337,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-2">
                           <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3.5 py-2 rounded-lg cursor-pointer font-bold border border-slate-700 whitespace-nowrap shrink-0 transition-all">
                             Browse Image
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              className="hidden" 
-                              onChange={(e) => handleFileUpload(e, 'galImage')} 
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, 'galImage')}
                               disabled={uploadingFile}
                             />
                           </label>
@@ -3676,11 +4398,11 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                         <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-2">
                           <label className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs px-3.5 py-2 rounded-lg border border-amber-500/30 cursor-pointer font-bold whitespace-nowrap shrink-0 transition-all">
                             Browse Video
-                            <input 
-                              type="file" 
-                              accept="video/*" 
-                              className="hidden" 
-                              onChange={(e) => handleFileUpload(e, 'galVideo')} 
+                            <input
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, 'galVideo')}
                               disabled={uploadingFile}
                             />
                           </label>
@@ -4097,7 +4819,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           const filteredHistoryItems = allHistoryItems.filter(item => {
             const matchesType = docHistoryType === 'all' || item.type === docHistoryType;
             const term = docHistorySearch.toLowerCase().trim();
-            const matchesSearch = !term || 
+            const matchesSearch = !term ||
               item.refNo.toLowerCase().includes(term) ||
               item.clientName.toLowerCase().includes(term) ||
               item.project.toLowerCase().includes(term) ||
@@ -4110,8 +4832,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           const contractsCount = signedContracts.length;
           const receiptsCount = signedReceipts.length;
           const signedContractsCount = signedContracts.filter(c => !!c.drawnClientSignature || !!c.typedClientSignature).length;
-          const authenticityRate = totalGenerated > 0 
-            ? Math.round(((signedContractsCount + receiptsCount) / totalGenerated) * 100) 
+          const authenticityRate = totalGenerated > 0
+            ? Math.round(((signedContractsCount + receiptsCount) / totalGenerated) * 100)
             : 100;
 
           const totalFinancialFlow = signedReceipts.reduce((sum, r) => {
@@ -4162,9 +4884,9 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                     <span className="text-[10px] text-emerald-400 font-bold">{signedContractsCount} Signed</span>
                   </div>
                   <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-emerald-500 rounded-full" 
-                      style={{ width: `${contractsCount > 0 ? (signedContractsCount / contractsCount) * 100 : 0}%` }} 
+                    <div
+                      className="h-full bg-emerald-500 rounded-full"
+                      style={{ width: `${contractsCount > 0 ? (signedContractsCount / contractsCount) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -4201,8 +4923,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                       key={t}
                       onClick={() => setDocHistoryType(t)}
                       className={`text-[10px] px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all ${
-                        docHistoryType === t 
-                          ? 'bg-amber-500 text-slate-950 shadow-sm' 
+                        docHistoryType === t
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -4247,8 +4969,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             {/* Type */}
                             <td className="p-4 text-center">
                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto border ${
-                                isContract 
-                                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' 
+                                isContract
+                                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
                                   : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
                               }`} title={isContract ? 'Infrastructure Contract' : 'Certified Payment Receipt'}>
                                 <TypeIcon className="w-4 h-4" />
@@ -4280,8 +5002,8 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                             <td className="p-4">
                               <div className="flex items-center gap-1.5 max-w-[190px]">
                                 <span className={`font-mono text-[9.5px] font-bold px-2 py-1 rounded border overflow-hidden truncate select-all flex-1 ${
-                                  item.isSigned 
-                                    ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' 
+                                  item.isSigned
+                                    ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
                                     : 'bg-amber-500/5 border-amber-500/20 text-amber-500'
                                 }`}>
                                   {item.verificationToken}
@@ -4412,6 +5134,12 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
           />
         )}
 
+        {activeAdminTab === 'enterprise-erp' && (
+          <EnterpriseErpHub
+            userRole={dbUser.role}
+          />
+        )}
+
         {activeAdminTab === 'boq-studio' && (
           <BoqStudio
             showToast={showToast}
@@ -4449,6 +5177,12 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               const token = await getAuthToken();
               return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
             }}
+          />
+        )}
+
+        {activeAdminTab === 'social-studio' && (
+          <SocialMediaStudio
+            currentUser={dbUser}
           />
         )}
 
@@ -4497,7 +5231,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
 
               {/* Grid of Schemas */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                
+
                 {/* Users Table Schema */}
                 <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
                   <div className="flex justify-between items-center">
@@ -4728,7 +5462,7 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
               </div>
 
               <div className="space-y-4">
-                
+
                 {/* GET /api/analytics */}
                 <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 space-y-4">
                   <div className="flex items-center gap-3">
@@ -4810,12 +5544,204 @@ export default function Admin({ dbUser, setDbUser, setCurrentTab, setVerificatio
                   </div>
                 </div>
 
+                {/* Social Accounts OAuth API Docs */}
+                <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-black font-mono bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded">OAuth 2.0</span>
+                    <span className="font-mono text-sm text-white font-bold">/api/social/oauth/:provider/start & /callback</span>
+                    <span className="text-xs text-slate-500">Initiates OAuth flow & persists encrypted token credentials into social_media_channels table.</span>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-400 block">Database Table Schema (social_media_channels):</span>
+                    <pre className="bg-slate-950 text-amber-400 p-3 rounded-xl font-mono text-xs border border-slate-900 overflow-x-auto">
+{`TABLE social_media_channels (
+  id SERIAL PRIMARY KEY,
+  provider VARCHAR(50) NOT NULL, -- linkedin, facebook, instagram, twitter, youtube
+  account_name VARCHAR(150),
+  access_token TEXT NOT NULL, -- AES-256-GCM Encrypted
+  refresh_token TEXT, -- AES-256-GCM Encrypted
+  status VARCHAR(20) DEFAULT 'connected',
+  connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  token_expires_at TIMESTAMP
+);`}
+                    </pre>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
         )}
 
+        {/* CAD TAKE-OFF QUANTITY STUDIO VIEW */}
+        {activeAdminTab === 'drawing-studio' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/20 border border-slate-800 p-8 rounded-3xl relative overflow-hidden shadow-2xl">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-bold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
+                Engineering Quantity Surveying
+              </span>
+              <h1 className="text-3xl font-extrabold text-white mt-2 flex items-center gap-3">
+                <Layers className="w-8 h-8 text-amber-500" /> Quantity Take-Off & CAD Studio
+              </h1>
+              <p className="text-sm text-slate-400 mt-1 max-w-2xl">
+                Upload architectural DWG, DXF, or PDF blueprints for automated linear, area, and volumetric material take-off integration with BOQ Studio.
+              </p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/20">
+                <FolderKanban className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Upload Architectural Drawing / Structural PDF</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Select a CAD or PDF blueprint to perform digital scale calibration and auto-calculate concrete volume, rebar tonnage, and wall masonry quantities.
+              </p>
+              <div className="pt-2 flex justify-center gap-3">
+                <button
+                  onClick={() => setActiveAdminTab('boq-studio')}
+                  className="px-5 py-2.5 bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow hover:bg-amber-400 transition-colors"
+                >
+                  Go to BOQ Studio
+                </button>
+                <button
+                  onClick={() => setActiveAdminTab('ai-construction-intelligence')}
+                  className="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl border border-slate-700 hover:bg-slate-800 transition-colors"
+                >
+                  Run AI Blueprint Vision Take-Off
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
       </div>
+
+      {/* ==========================================
+          COMMAND PALETTE OVERLAY (⌘K)
+          ========================================== */}
+      {showCommandPalette && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-start justify-center pt-20 px-4 animate-in fade-in duration-150">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+
+            {/* Search Input Bar */}
+            <div className="p-4 border-b border-slate-800 flex items-center gap-3 bg-slate-900/50">
+              <Search className="w-5 h-5 text-amber-500 shrink-0" />
+              <input
+                type="text"
+                value={commandSearch}
+                onChange={(e) => setCommandSearch(e.target.value)}
+                placeholder="Type a command, module, BOQ tool, or project..."
+                className="w-full bg-transparent text-white font-medium text-sm focus:outline-none placeholder:text-slate-500"
+                autoFocus
+              />
+              <button
+                onClick={() => setShowCommandPalette(false)}
+                className="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-xl"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Results Navigation List */}
+            <div className="p-3 overflow-y-auto space-y-4">
+              {ADMIN_NAV_GROUPS.map((group) => {
+                const filteredItems = group.items.filter(item =>
+                  item.label.toLowerCase().includes(commandSearch.toLowerCase()) ||
+                  group.title.toLowerCase().includes(commandSearch.toLowerCase())
+                );
+
+                if (filteredItems.length === 0) return null;
+
+                return (
+                  <div key={`cmd-${group.id}`} className="space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-amber-500 px-3 uppercase tracking-wider block">
+                      {group.title}
+                    </span>
+                    {filteredItems.map((item) => {
+                      const ItemIcon = item.icon;
+                      return (
+                        <button
+                          key={`cmd-item-${item.id}`}
+                          onClick={() => {
+                            setActiveAdminTab(item.id as any);
+                            setShowCommandPalette(false);
+                            setCommandSearch('');
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-900 transition-colors text-left group"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <ItemIcon className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                            <span>{item.label}</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-500 group-hover:text-amber-500">Jump To →</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-4 py-2.5 border-t border-slate-900 bg-slate-950 flex justify-between items-center text-[10px] text-slate-500 font-mono">
+              <span>Use ↑↓ to navigate • ↵ to select</span>
+              <span>ESC to exit command palette</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          QUICK ACTION MODAL OVERLAY
+          ========================================== */}
+      {showQuickActionModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-[10px] font-mono text-amber-500 font-bold uppercase tracking-wider">EXECUTIVE SHORTCUTS</span>
+                <h3 className="text-lg font-extrabold text-white mt-0.5">Quick Actions Launcher</h3>
+              </div>
+              <button
+                onClick={() => setShowQuickActionModal(false)}
+                className="p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-xl"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { title: 'New BOQ Calculation', desc: 'Open Quantity Surveying Studio', tab: 'boq-studio', icon: FileSpreadsheet, color: 'text-amber-400' },
+                { title: 'Publish Social Post', desc: 'OAuth 2.0 Multi-channel publisher', tab: 'social-studio', icon: Megaphone, color: 'text-pink-400' },
+                { title: 'Add Project Record', desc: 'Manage civil engineering projects', tab: 'projects', icon: Building2, color: 'text-sky-400' },
+                { title: 'Generate Contract', desc: 'Legal agreements & contracts', tab: 'legal-contracts', icon: Scale, color: 'text-indigo-400' },
+                { title: 'Create Proposal', desc: 'Client proposal builder', tab: 'proposal-studio', icon: FileText, color: 'text-purple-400' },
+                { title: 'Generate Receipt', desc: 'Official payment receipt builder', tab: 'receipts', icon: Receipt, color: 'text-emerald-400' },
+                { title: 'Staff Access & Roles', desc: 'User permissions & security', tab: 'staff-access', icon: Key, color: 'text-amber-500' },
+                { title: 'View Audit Trail', desc: 'Database operations security logs', tab: 'audit', icon: History, color: 'text-cyan-400' }
+              ].map((act, idx) => {
+                const ActIcon = act.icon;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setActiveAdminTab(act.tab as any);
+                      setShowQuickActionModal(false);
+                    }}
+                    className="p-3.5 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/40 rounded-2xl text-left transition-all group"
+                  >
+                    <ActIcon className={`w-5 h-5 ${act.color} mb-1.5 group-hover:scale-110 transition-transform`} />
+                    <span className="text-xs font-bold text-white block group-hover:text-amber-400 transition-colors">{act.title}</span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">{act.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

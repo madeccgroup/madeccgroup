@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { getCsrfHeaders } from '../lib/csrf.ts';
-import { 
-  HardHat, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Clock, 
-  Send, 
-  CheckCircle2, 
+import {
+  HardHat,
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Send,
+  CheckCircle2,
   AlertCircle,
   X
 } from 'lucide-react';
@@ -41,7 +41,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
       const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/subscribers', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...csrfHeaders
         },
@@ -81,10 +81,10 @@ export default function Footer({ setCurrentTab }: FooterProps) {
   return (
     <footer className="bg-slate-950 border-t border-slate-800 text-slate-400 font-sans pt-16 pb-8" id="site-footer">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Main Footer grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-          
+
           {/* Column 1: Brand & Bio */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -110,11 +110,14 @@ export default function Footer({ setCurrentTab }: FooterProps) {
             <ul className="space-y-3.5 text-sm">
               {[
                 { label: 'Home Page', id: 'home' },
-                { label: 'About MADECC', id: 'about' },
+                { label: 'Our Services', id: 'services' },
+                { label: 'Request a Quote', id: 'request-a-quote' },
                 { label: 'Projects Portfolio', id: 'projects' },
-                { label: 'Insightful Blog', id: 'blog' },
+                { label: 'Project Budget Calculator', id: 'budget-calculator' },
+                { label: 'Construction Cost Guide', id: 'construction-cost-guide' },
+                { label: 'Schedule Consultation', id: 'schedule-consultation' },
+                { label: 'About MADECC', id: 'about' },
                 { label: 'Contact Office', id: 'contact' },
-                { label: 'Schedule Consultation', id: 'booking' },
               ].map((link) => (
                 <li key={link.id}>
                   <button
@@ -234,22 +237,22 @@ export default function Footer({ setCurrentTab }: FooterProps) {
         <div className="border-t border-slate-800/60 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4" id="footer-bottom-nav">
           <p>© {new Date().getFullYear()} MADECC Group. All rights reserved.</p>
           <div className="flex gap-6">
-            <button 
-              onClick={() => setModalType('privacy')} 
+            <button
+              onClick={() => setModalType('privacy')}
               className="hover:text-amber-500 cursor-pointer transition-colors focus:outline-none"
               id="footer-privacy-btn"
             >
               Privacy Policy
             </button>
-            <button 
-              onClick={() => setModalType('terms')} 
+            <button
+              onClick={() => setModalType('terms')}
               className="hover:text-amber-500 cursor-pointer transition-colors focus:outline-none"
               id="footer-terms-btn"
             >
               Terms of Service
             </button>
-            <button 
-              onClick={() => setModalType('safety')} 
+            <button
+              onClick={() => setModalType('safety')}
               className="hover:text-amber-500 cursor-pointer transition-colors focus:outline-none"
               id="footer-safety-btn"
             >
@@ -271,7 +274,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
                 {modalType === 'terms' && 'Terms of Service & AdSense Disclosures'}
                 {modalType === 'safety' && 'MADECC Quality, Health, Safety & Environment (QHSE)'}
               </h3>
-              <button 
+              <button
                 onClick={() => setModalType(null)}
                 className="text-slate-400 hover:text-white bg-slate-850 hover:bg-slate-800 p-1.5 rounded-lg transition-all"
                 id="close-legal-modal"
@@ -286,10 +289,10 @@ export default function Footer({ setCurrentTab }: FooterProps) {
                 <>
                   <p className="font-semibold text-amber-500 text-sm">Last Updated: February 2026</p>
                   <p>MADECC Group ("we", "our", or "us") is dedicated to protecting your privacy in compliance with standard global rules and the Cameroon Law No. 2010/012 on Cybersecurity and Cybercriminality. This Policy explains how we collect, store, and process your data when you visit our portal.</p>
-                  
+
                   <h4 className="font-bold text-white uppercase text-[10px] tracking-wider font-mono">1. Information We Collect</h4>
                   <p>We only collect personal information that you voluntarily submit to us via our contact form, newsletter subscriptions, custom consultation appointments, and feedback reviews. This includes your Name, Email address, phone number, project details, and any attachments or files you share.</p>
-                  
+
                   <h4 className="font-bold text-white uppercase text-[10px] tracking-wider font-mono">2. How We Use Your Data</h4>
                   <p>Your data is processed solely to handle your construction inquiries, schedule secure on-site evaluations, distribute corporate newsletters, publish authorized client testimonials, and comply with safety inspection logs. We do not sell or trade your information to third-party marketing companies.</p>
 
@@ -302,10 +305,10 @@ export default function Footer({ setCurrentTab }: FooterProps) {
                 <>
                   <p className="font-semibold text-amber-500 text-sm">Last Updated: February 2026</p>
                   <p>By accessing or using the MADECC Group portal, you agree to be bound by these Terms of Service, all applicable laws and regulations in Cameroon, and agree that you are responsible for compliance with any local structural building permits.</p>
-                  
+
                   <h4 className="font-bold text-white uppercase text-[10px] tracking-wider font-mono">1. Use License & Intellectual Property</h4>
                   <p>Permission is granted to temporarily download one copy of materials (architectural briefs, project documents, or media) on our website for personal, non-commercial transitory viewing only. All technical designs, renderings, codebases, and structural blueprints are the exclusive intellectual property of MADECC Group and cannot be copied or redistributed without written consent.</p>
-                  
+
                   <h4 className="font-bold text-white uppercase text-[10px] tracking-wider font-mono">2. Accuracy of Project Estimates</h4>
                   <p>The pricing metrics, service price ranges (e.g., in FCFA), and structural valuations presented on our site are provided for preliminary estimation and information purposes only. Formal legally binding quotes are only established through finalized engineering contracts signed by authorized directors at our Douala offices.</p>
 
@@ -318,10 +321,10 @@ export default function Footer({ setCurrentTab }: FooterProps) {
                 <>
                   <p className="font-semibold text-amber-500 text-sm">MADECC Zero-Harm Corporate Directive</p>
                   <p>At MADECC Group Cameroon, safety is not merely a policy—it is our absolute operational baseline. We are committed to achieving a Zero-Harm workforce environment across all infrastructure, commercial, and residential developments.</p>
-                  
+
                   <h4 className="font-bold text-white uppercase text-[10px] tracking-wider font-mono">1. Protective Gear & Safety Protocols</h4>
                   <p>Every single construction site we operate in Douala, Kribi, and other regions enforces mandatory personal protective equipment (PPE) protocols, including high-visibility vests, impact-certified hard hats, steel-toed boots, and harness guidelines for height work. Structural frames are certified weekly by certified safety officers.</p>
-                  
+
                   <h4 className="font-bold text-white uppercase text-[10px] tracking-wider font-mono">2. Environmental Stewardship</h4>
                   <p>We conform strictly to Cameroon’s Ministry of Environment and Protection of Nature guidelines. This includes proper handling and safe disposal of materials, minimizing chemical runoff, and ensuring that our green and sustainable projects maintain active environmental impact assessments (EIA).</p>
 
@@ -333,7 +336,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
 
             {/* Modal Footer */}
             <div className="p-4 border-t border-slate-850 bg-[#0A0A0C] flex justify-end">
-              <button 
+              <button
                 onClick={() => setModalType(null)}
                 className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-5 py-2 rounded-xl text-xs font-bold transition-all"
                 id="close-legal-modal-footer"

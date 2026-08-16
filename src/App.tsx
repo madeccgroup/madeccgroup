@@ -19,6 +19,12 @@ import Contact from './components/Contact.tsx';
 import Booking from './components/Booking.tsx';
 import Admin from './components/Admin.tsx';
 import VerifyContract from './components/VerifyContract.tsx';
+import { ProjectBudgetCalculator } from './components/ProjectBudgetCalculator.tsx';
+import { ConstructionCostGuide } from './components/ConstructionCostGuide.tsx';
+import { Services } from './components/Services.tsx';
+import { RequestQuote } from './components/RequestQuote.tsx';
+import { ScheduleConsultation } from './components/ScheduleConsultation.tsx';
+import LegalPage from './components/LegalPage.tsx';
 
 import { ThemeProvider, useTheme } from './lib/ThemeContext.tsx';
 import { LanguageProvider } from './lib/LanguageContext.tsx';
@@ -45,23 +51,50 @@ function AppContent({
   setVerificationToken: (t: string) => void;
 }) {
   const { theme } = useTheme();
+  const [preselectedService, setPreselectedService] = useState<string>('');
+
+  const handleNavigateWithState = (tab: string, extraState?: any) => {
+    if (extraState?.selectedService) {
+      setPreselectedService(extraState.selectedService);
+    }
+    setCurrentTab(tab);
+  };
 
   const renderActiveScreen = () => {
     switch (currentTab) {
       case 'home':
         return (
-          <Home 
-            setCurrentTab={setCurrentTab} 
-            setSelectedProjectId={setSelectedProjectId} 
+          <Home
+            setCurrentTab={setCurrentTab}
+            setSelectedProjectId={setSelectedProjectId}
+          />
+        );
+      case 'services':
+        return (
+          <Services
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'request-a-quote':
+        return (
+          <RequestQuote
+            onNavigateToTab={handleNavigateWithState}
+            preselectedService={preselectedService}
+          />
+        );
+      case 'schedule-consultation':
+        return (
+          <ScheduleConsultation
+            onNavigateToTab={handleNavigateWithState}
           />
         );
       case 'about':
         return <About />;
       case 'projects':
         return (
-          <Projects 
-            selectedProjectId={selectedProjectId} 
-            setSelectedProjectId={setSelectedProjectId} 
+          <Projects
+            selectedProjectId={selectedProjectId}
+            setSelectedProjectId={setSelectedProjectId}
           />
         );
       case 'blog':
@@ -69,11 +102,33 @@ function AppContent({
       case 'contact':
         return <Contact />;
       case 'booking':
-        return <Booking />;
+        return (
+          <ScheduleConsultation
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'budget-calculator':
+        return (
+          <ProjectBudgetCalculator
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'construction-cost-guide':
+        return (
+          <ConstructionCostGuide
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'terms':
+        return <LegalPage type="terms" setCurrentTab={setCurrentTab} />;
+      case 'privacy':
+        return <LegalPage type="privacy" setCurrentTab={setCurrentTab} />;
+      case 'safety':
+        return <LegalPage type="safety" setCurrentTab={setCurrentTab} />;
       case 'verify':
         return (
-          <VerifyContract 
-            token={verificationToken} 
+          <VerifyContract
+            token={verificationToken}
             onBackToHome={() => {
               const url = new URL(window.location.href);
               url.searchParams.delete('verify');
@@ -81,23 +136,23 @@ function AppContent({
               window.history.pushState({}, '', url.toString());
               setCurrentTab('home');
               setVerificationToken('');
-            }} 
+            }}
           />
         );
       case 'admin':
         return (
-          <Admin 
-            dbUser={dbUser} 
-            setDbUser={setDbUser} 
-            setCurrentTab={setCurrentTab} 
+          <Admin
+            dbUser={dbUser}
+            setDbUser={setDbUser}
+            setCurrentTab={setCurrentTab}
             setVerificationToken={setVerificationToken}
           />
         );
       default:
         return (
-          <Home 
-            setCurrentTab={setCurrentTab} 
-            setSelectedProjectId={setSelectedProjectId} 
+          <Home
+            setCurrentTab={setCurrentTab}
+            setSelectedProjectId={setSelectedProjectId}
           />
         );
     }
@@ -110,16 +165,16 @@ function AppContent({
         : 'bg-[#0A0A0B] text-slate-200 selection:bg-amber-500 selection:text-slate-950'
     }`}>
       <SEOHandler currentTab={currentTab} selectedProjectId={selectedProjectId} />
-      
+
       {/* Header Navigation Section */}
-      <Navbar 
-        currentTab={currentTab} 
+      <Navbar
+        currentTab={currentTab}
         setCurrentTab={(tab) => {
           setCurrentTab(tab);
           if (tab !== 'projects') setSelectedProjectId(null); // Reset selection
-        }} 
-        dbUser={dbUser} 
-        setDbUser={setDbUser} 
+        }}
+        dbUser={dbUser}
+        setDbUser={setDbUser}
         loadingAuth={loadingAuth}
       />
 
@@ -136,11 +191,11 @@ function AppContent({
       </main>
 
       {/* Footer Navigation section */}
-      <Footer 
+      <Footer
         setCurrentTab={(tab) => {
           setCurrentTab(tab);
           if (tab !== 'projects') setSelectedProjectId(null); // Reset selection
-        }} 
+        }}
       />
 
       {/* Floating Interactive Live Hub widget */}
@@ -154,7 +209,23 @@ function AppContent({
 }
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<string>('home');
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('services')) return 'services';
+    if (path.includes('request-a-quote') || path.includes('request-quote')) return 'request-a-quote';
+    if (path.includes('schedule-consultation') || path.includes('consultation')) return 'schedule-consultation';
+    if (path.includes('construction-cost-guide')) return 'construction-cost-guide';
+    if (path.includes('budget-calculator')) return 'budget-calculator';
+    if (path.includes('terms')) return 'terms';
+    if (path.includes('privacy')) return 'privacy';
+    if (path.includes('safety') || path.includes('qhse')) return 'safety';
+    if (path.includes('about')) return 'about';
+    if (path.includes('projects')) return 'projects';
+    if (path.includes('blog')) return 'blog';
+    if (path.includes('contact')) return 'contact';
+    if (path.includes('booking')) return 'booking';
+    return 'home';
+  });
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [dbUser, setDbUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -247,10 +318,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentTab, selectedProjectId]);
 
-  // Handle instant redirect if admin/staff role is revoked during sandbox toggling
+  // Handle instant redirect if admin/staff/reviewer role is revoked during sandbox toggling
   useEffect(() => {
     if (currentTab === 'admin') {
-      if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff')) {
+      if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff' && dbUser.role !== 'social_media_reviewer')) {
         setCurrentTab('home');
       }
     }

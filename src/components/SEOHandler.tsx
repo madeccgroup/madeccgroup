@@ -42,6 +42,54 @@ const TAB_META: Record<string, { title: string; description: string; keywords: s
     keywords: 'book construction inspection, schedule soil test, engineering consultation, project estimate Cameroon, structural assessment booking, architect interview Douala',
     ogType: 'website'
   },
+  services: {
+    title: 'Civil Engineering & Construction Services | MADECC Group',
+    description: 'Explore comprehensive engineering services: structural design, commercial building, roadworks, geotechnical surveying, and turnkey EPC contracting.',
+    keywords: 'civil engineering services, structural design Douala, EPC contractor Cameroon, road building, geotechnical investigation',
+    ogType: 'website'
+  },
+  'request-a-quote': {
+    title: 'Request a Project Quote & Bill of Quantities | MADECC Group',
+    description: 'Submit your architectural blueprints and project specifications to receive a verified, detailed engineering estimate within 48 hours.',
+    keywords: 'request construction quote, BOQ estimation, building cost Cameroon, civil engineering proposal',
+    ogType: 'website'
+  },
+  'schedule-consultation': {
+    title: 'Schedule an Engineering Consultation | MADECC Group',
+    description: 'Meet with senior structural engineers and quantity surveyors for on-site analysis and architectural planning.',
+    keywords: 'engineering consultation, structural analysis, site inspection Cameroon',
+    ogType: 'website'
+  },
+  'budget-calculator': {
+    title: 'Construction Cost & Budget Calculator | MADECC Group',
+    description: 'Calculate preliminary structural, architectural, and MEP cost estimates in FCFA for residential and commercial developments in Cameroon.',
+    keywords: 'construction cost calculator Cameroon, building budget estimator, cost per square meter Douala',
+    ogType: 'website'
+  },
+  'construction-cost-guide': {
+    title: 'Cameroon Construction Cost Guide 2026 | MADECC Group',
+    description: 'Official benchmarks for material prices, labor rates, and structural foundation costs across Central Africa.',
+    keywords: 'construction cost guide Cameroon, cement prices Douala, steel rates Yaounde, labor cost per day',
+    ogType: 'article'
+  },
+  terms: {
+    title: 'Terms of Service & Usage Agreements | MADECC Group',
+    description: 'Official terms of service, intellectual property guidelines, and contractual policies governing the MADECC Group digital platform.',
+    keywords: 'terms of service, legal notice, MADECC Group terms, engineering contracts FIDIC',
+    ogType: 'article'
+  },
+  privacy: {
+    title: 'Privacy Policy & Cookie Statement | MADECC Group',
+    description: 'MADECC Group data privacy practices in compliance with Cameroon Law No. 2010/012 on Cybersecurity and international privacy frameworks.',
+    keywords: 'privacy policy, cookie policy, data protection, Cameroon cybersecurity law',
+    ogType: 'article'
+  },
+  safety: {
+    title: 'Quality, Health, Safety & Environment (QHSE) Directive | MADECC Group',
+    description: 'Zero-Harm workforce safety policies, PPE standards, and environmental impact controls across all MADECC construction operations.',
+    keywords: 'QHSE policy, construction safety Cameroon, PPE requirements, zero harm',
+    ogType: 'article'
+  },
   admin: {
     title: 'Secure Operations Command Center | MADECC Group Admin',
     description: 'Authorized administrative panel for managing contract progress, audit logs, banner slides, and appointment scheduling.',
@@ -52,7 +100,7 @@ const TAB_META: Record<string, { title: string; description: string; keywords: s
 
 /**
  * High-fidelity SEO handler that dynamically updates document title,
- * meta tags, Open Graph properties, Twitter cards, and appends 
+ * meta tags, Open Graph properties, Twitter cards, and appends
  * rich structured JSON-LD schemas as the user navigates.
  */
 export default function SEOHandler({ currentTab, selectedProjectId }: SEOHandlerProps) {

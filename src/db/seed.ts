@@ -1,12 +1,12 @@
 import { db } from './index.ts';
-import { 
-  categories, 
-  services, 
-  projects, 
-  projectProgress, 
-  heroBanners, 
-  blogPosts, 
-  reviews, 
+import {
+  categories,
+  services,
+  projects,
+  projectProgress,
+  heroBanners,
+  blogPosts,
+  reviews,
   galleryItems,
   users,
   signedContracts,
@@ -211,6 +211,257 @@ export async function seedDatabase() {
           updated_at TIMESTAMP DEFAULT NOW() NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS faq_categories (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT NOT NULL UNIQUE,
+          description TEXT,
+          icon TEXT,
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS faqs (
+          id SERIAL PRIMARY KEY,
+          question TEXT NOT NULL,
+          answer TEXT NOT NULL,
+          category_id INTEGER REFERENCES faq_categories(id) ON DELETE SET NULL,
+          category_name TEXT DEFAULT 'General' NOT NULL,
+          tags JSON,
+          featured BOOLEAN DEFAULT FALSE NOT NULL,
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          helpful_count INTEGER DEFAULT 0 NOT NULL,
+          unhelpful_count INTEGER DEFAULT 0 NOT NULL,
+          status TEXT DEFAULT 'PUBLISHED' NOT NULL,
+          author TEXT DEFAULT 'MADECC Editorial Team',
+          reviewer TEXT,
+          published_at TIMESTAMP DEFAULT NOW(),
+          seo_title TEXT,
+          seo_description TEXT,
+          related_service TEXT,
+          related_page TEXT,
+          created_by TEXT,
+          updated_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS sustainability_content (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          hero_subtitle TEXT,
+          introduction TEXT NOT NULL,
+          environmental_policy TEXT,
+          safety_policy TEXT,
+          local_economic_commitment TEXT,
+          documents JSON,
+          updated_by TEXT,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS sustainability_initiatives (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          category TEXT DEFAULT 'Sustainable Construction' NOT NULL,
+          description TEXT NOT NULL,
+          impact_summary TEXT,
+          image TEXT,
+          documents JSON,
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          status TEXT DEFAULT 'PUBLISHED' NOT NULL,
+          featured BOOLEAN DEFAULT FALSE NOT NULL,
+          created_by TEXT,
+          updated_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS social_impact_projects (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          category TEXT DEFAULT 'Community Participation' NOT NULL,
+          location TEXT NOT NULL,
+          date_completed TEXT,
+          description TEXT NOT NULL,
+          impact_metrics_text TEXT,
+          image TEXT,
+          gallery JSON,
+          documents JSON,
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          status TEXT DEFAULT 'PUBLISHED' NOT NULL,
+          featured BOOLEAN DEFAULT FALSE NOT NULL,
+          created_by TEXT,
+          updated_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS impact_metrics (
+          id SERIAL PRIMARY KEY,
+          label TEXT NOT NULL,
+          value TEXT NOT NULL,
+          category TEXT DEFAULT 'Social Impact' NOT NULL,
+          icon TEXT DEFAULT 'Users',
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          status TEXT DEFAULT 'PUBLISHED' NOT NULL,
+          updated_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        ALTER TABLE impact_metrics ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+
+        CREATE TABLE IF NOT EXISTS supplier_subcontractor_categories (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT DEFAULT 'supplier' NOT NULL,
+          description TEXT,
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS supplier_applications (
+          id SERIAL PRIMARY KEY,
+          application_number TEXT NOT NULL UNIQUE,
+          company_name TEXT NOT NULL,
+          registration_number TEXT NOT NULL,
+          company_type TEXT DEFAULT 'SARL' NOT NULL,
+          country TEXT DEFAULT 'Cameroon' NOT NULL,
+          region TEXT NOT NULL,
+          division TEXT,
+          city TEXT NOT NULL,
+          address TEXT NOT NULL,
+          website TEXT,
+          contact_person TEXT NOT NULL,
+          position TEXT NOT NULL,
+          email TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          whatsapp TEXT,
+          supplier_category TEXT NOT NULL,
+          products TEXT NOT NULL,
+          years_in_business INTEGER DEFAULT 1,
+          service_regions JSON,
+          capacity TEXT,
+          previous_projects TEXT,
+          major_clients TEXT,
+          compliance_documents JSON,
+          declaration_accepted BOOLEAN DEFAULT TRUE NOT NULL,
+          status TEXT DEFAULT 'SUBMITTED' NOT NULL,
+          reviewer_notes TEXT,
+          assigned_reviewer TEXT,
+          assigned_reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS subcontractor_applications (
+          id SERIAL PRIMARY KEY,
+          application_number TEXT NOT NULL UNIQUE,
+          company_name TEXT NOT NULL,
+          trade TEXT NOT NULL,
+          years_in_business INTEGER DEFAULT 1,
+          workforce_size INTEGER DEFAULT 5,
+          equipment_owned TEXT,
+          previous_projects TEXT,
+          geographic_coverage TEXT,
+          safety_record TEXT,
+          certifications TEXT,
+          references_list TEXT,
+          country TEXT DEFAULT 'Cameroon' NOT NULL,
+          region TEXT NOT NULL,
+          city TEXT NOT NULL,
+          address TEXT NOT NULL,
+          contact_person TEXT NOT NULL,
+          position TEXT NOT NULL,
+          email TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          whatsapp TEXT,
+          compliance_documents JSON,
+          declaration_accepted BOOLEAN DEFAULT TRUE NOT NULL,
+          status TEXT DEFAULT 'SUBMITTED' NOT NULL,
+          reviewer_notes TEXT,
+          assigned_reviewer TEXT,
+          assigned_reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS tender_categories (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT,
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS tenders (
+          id SERIAL PRIMARY KEY,
+          tender_number TEXT NOT NULL UNIQUE,
+          title TEXT NOT NULL,
+          slug TEXT NOT NULL UNIQUE,
+          category_id INTEGER REFERENCES tender_categories(id) ON DELETE SET NULL,
+          category_name TEXT DEFAULT 'Construction' NOT NULL,
+          client_project TEXT NOT NULL,
+          location TEXT NOT NULL,
+          description TEXT NOT NULL,
+          scope_of_work TEXT NOT NULL,
+          eligibility TEXT NOT NULL,
+          required_experience TEXT,
+          required_documents TEXT,
+          submission_method TEXT DEFAULT 'Online Submission & Hard Copy at MADECC Douala Head Office' NOT NULL,
+          opening_date TIMESTAMP DEFAULT NOW() NOT NULL,
+          closing_date TIMESTAMP NOT NULL,
+          status TEXT DEFAULT 'OPEN' NOT NULL,
+          contact_instructions TEXT DEFAULT 'For tender clarifications, contact procurement@madeccgroup.com' NOT NULL,
+          attachments JSON,
+          featured BOOLEAN DEFAULT FALSE NOT NULL,
+          display_order INTEGER DEFAULT 1 NOT NULL,
+          seo_title TEXT,
+          seo_description TEXT,
+          created_by TEXT,
+          published_at TIMESTAMP DEFAULT NOW(),
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS tender_submissions (
+          id SERIAL PRIMARY KEY,
+          submission_number TEXT NOT NULL UNIQUE,
+          tender_id INTEGER REFERENCES tenders(id) ON DELETE CASCADE NOT NULL,
+          tender_reference TEXT NOT NULL,
+          company_name TEXT NOT NULL,
+          contact_person TEXT NOT NULL,
+          email TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          expression_of_interest TEXT NOT NULL,
+          supporting_documents JSON,
+          status TEXT DEFAULT 'SUBMITTED' NOT NULL,
+          internal_evaluation_notes TEXT,
+          evaluated_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS cms_activity_logs (
+          id SERIAL PRIMARY KEY,
+          module TEXT NOT NULL,
+          action TEXT NOT NULL,
+          record_id TEXT NOT NULL,
+          record_title TEXT NOT NULL,
+          performed_by TEXT NOT NULL,
+          details TEXT NOT NULL,
+          timestamp TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS cms_content_revisions (
+          id SERIAL PRIMARY KEY,
+          module TEXT NOT NULL,
+          record_id INTEGER NOT NULL,
+          version_number INTEGER DEFAULT 1 NOT NULL,
+          snapshot JSON NOT NULL,
+          created_by TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS construction_projects (
           id SERIAL PRIMARY KEY,
           project_id TEXT NOT NULL UNIQUE,
@@ -347,11 +598,416 @@ export async function seedDatabase() {
           snapshot_data JSON NOT NULL,
           created_at TIMESTAMP DEFAULT NOW() NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS staff_access_keys (
+          id SERIAL PRIMARY KEY,
+          employee_number TEXT NOT NULL UNIQUE,
+          login_key TEXT NOT NULL UNIQUE,
+          temp_password TEXT NOT NULL,
+          email TEXT NOT NULL,
+          username TEXT NOT NULL,
+          full_name TEXT NOT NULL,
+          department TEXT DEFAULT 'Engineering' NOT NULL,
+          position TEXT DEFAULT 'Project Engineer' NOT NULL,
+          assigned_projects JSON,
+          assigned_permissions JSON,
+          status TEXT DEFAULT 'PENDING' NOT NULL,
+          created_by TEXT DEFAULT 'Adminmadeccgroup' NOT NULL,
+          activated_at TIMESTAMP,
+          expires_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS employee_profiles (
+          id SERIAL PRIMARY KEY,
+          employee_number TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL UNIQUE,
+          full_name TEXT NOT NULL,
+          gender TEXT DEFAULT 'Male',
+          dob TEXT,
+          nationality TEXT DEFAULT 'Cameroonian',
+          national_id TEXT,
+          passport_number TEXT,
+          tax_number TEXT,
+          social_security_number TEXT,
+          phone TEXT,
+          address TEXT,
+          emergency_contact TEXT,
+          department TEXT NOT NULL,
+          position TEXT NOT NULL,
+          reporting_manager TEXT DEFAULT 'Adminmadeccgroup',
+          employment_date TEXT,
+          employment_type TEXT DEFAULT 'FULL_TIME',
+          salary_xaf NUMERIC DEFAULT '0',
+          allowances_xaf NUMERIC DEFAULT '0',
+          bank_details TEXT,
+          skills JSON,
+          certifications JSON,
+          engineering_registration TEXT,
+          leave_balance_days INTEGER DEFAULT 24,
+          status TEXT DEFAULT 'ACTIVE',
+          digital_signature_url TEXT,
+          passport_photo_url TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_audit_logs (
+          id SERIAL PRIMARY KEY,
+          admin_user TEXT NOT NULL,
+          target_employee TEXT,
+          action TEXT NOT NULL,
+          details TEXT NOT NULL,
+          ip_address TEXT DEFAULT '127.0.0.1',
+          device_info TEXT DEFAULT 'Enterprise Web Client',
+          module TEXT DEFAULT 'STAFF_MANAGEMENT',
+          previous_value TEXT,
+          new_value TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_announcements (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          department TEXT DEFAULT 'ALL',
+          author TEXT DEFAULT 'Adminmadeccgroup',
+          priority TEXT DEFAULT 'NORMAL',
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_roles (
+          id SERIAL PRIMARY KEY,
+          role_name TEXT NOT NULL UNIQUE,
+          description TEXT,
+          department TEXT DEFAULT 'Engineering',
+          permissions JSON,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_notifications (
+          id SERIAL PRIMARY KEY,
+          employee_number TEXT NOT NULL,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          category TEXT DEFAULT 'SYSTEM',
+          is_read INTEGER DEFAULT 0,
+          action_url TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_login_history (
+          id SERIAL PRIMARY KEY,
+          employee_number TEXT NOT NULL,
+          login_key_used TEXT,
+          ip_address TEXT DEFAULT '127.0.0.1',
+          device_info TEXT DEFAULT 'Enterprise Web Client',
+          status TEXT NOT NULL,
+          failure_reason TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_performance_reviews (
+          id SERIAL PRIMARY KEY,
+          employee_number TEXT NOT NULL,
+          reviewer_name TEXT DEFAULT 'Adminmadeccgroup',
+          review_period TEXT NOT NULL,
+          kpi_score NUMERIC DEFAULT '85.0',
+          quality_rating NUMERIC DEFAULT '90.0',
+          safety_rating NUMERIC DEFAULT '95.0',
+          completed_tasks_count INTEGER DEFAULT 12,
+          comments TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_training_records (
+          id SERIAL PRIMARY KEY,
+          employee_number TEXT NOT NULL,
+          course_title TEXT NOT NULL,
+          institution TEXT DEFAULT 'ONIGC / Eurocode Academy',
+          completion_date TEXT,
+          expiry_date TEXT,
+          certificate_url TEXT,
+          status TEXT DEFAULT 'COMPLETED',
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS cost_library_items (
+          id SERIAL PRIMARY KEY,
+          item_code TEXT NOT NULL,
+          category TEXT NOT NULL,
+          name TEXT NOT NULL,
+          unit TEXT NOT NULL,
+          base_price_xaf NUMERIC DEFAULT '0' NOT NULL,
+          douala_price NUMERIC DEFAULT '0',
+          yaounde_price NUMERIC DEFAULT '0',
+          garoua_price NUMERIC DEFAULT '0',
+          supplier_name TEXT,
+          brand TEXT,
+          specifications TEXT,
+          last_updated TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_by TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS project_budget_estimates (
+          id SERIAL PRIMARY KEY,
+          estimate_reference TEXT NOT NULL UNIQUE,
+          client_name TEXT,
+          client_email TEXT,
+          client_phone TEXT,
+          preferred_contact_method TEXT DEFAULT 'WhatsApp',
+          project_timeline TEXT,
+          project_type TEXT NOT NULL,
+          custom_project_type TEXT,
+          location TEXT NOT NULL,
+          region TEXT,
+          total_floor_area_m2 NUMERIC NOT NULL,
+          number_of_floors INTEGER DEFAULT 1,
+          construction_standard TEXT DEFAULT 'Standard' NOT NULL,
+          building_configuration JSON,
+          selected_scopes JSON,
+          selected_finishes JSON,
+          mode TEXT DEFAULT 'quick',
+          estimated_budget_min NUMERIC NOT NULL,
+          estimated_budget_max NUMERIC NOT NULL,
+          estimated_budget_expected NUMERIC NOT NULL,
+          cost_per_m2 NUMERIC,
+          rate_version TEXT DEFAULT 'MADECC-RATES-2026-08' NOT NULL,
+          rate_snapshot JSON,
+          line_items_breakdown JSON,
+          status TEXT DEFAULT 'CALCULATED' NOT NULL,
+          lead_status TEXT DEFAULT 'NEW',
+          converted_project_id INTEGER,
+          converted_boq_id INTEGER,
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS quote_requests (
+          id SERIAL PRIMARY KEY,
+          reference_number TEXT NOT NULL UNIQUE,
+          user_id INTEGER,
+          client_name TEXT NOT NULL,
+          client_company TEXT,
+          client_email TEXT NOT NULL,
+          client_phone TEXT NOT NULL,
+          whatsapp_number TEXT,
+          preferred_contact_method TEXT DEFAULT 'WhatsApp',
+          preferred_contact_time TEXT DEFAULT 'Any time',
+          project_type TEXT NOT NULL,
+          services_requested JSONB NOT NULL,
+          region TEXT NOT NULL,
+          division TEXT,
+          subdivision TEXT,
+          city TEXT,
+          neighborhood TEXT,
+          site_address TEXT,
+          latitude NUMERIC,
+          longitude NUMERIC,
+          project_name TEXT NOT NULL,
+          project_description TEXT,
+          building_type TEXT,
+          storeys INTEGER DEFAULT 1,
+          floor_area NUMERIC,
+          floor_area_unit TEXT DEFAULT 'm²',
+          site_status TEXT,
+          project_stage TEXT,
+          budget_currency TEXT DEFAULT 'XAF',
+          budget_min NUMERIC,
+          budget_max NUMERIC,
+          budget_range_text TEXT,
+          desired_start_date TIMESTAMP,
+          expected_completion_date TIMESTAMP,
+          urgency TEXT DEFAULT 'Standard',
+          additional_notes TEXT,
+          source TEXT DEFAULT 'Website Direct',
+          source_metadata JSONB,
+          status TEXT DEFAULT 'NEW' NOT NULL,
+          priority TEXT DEFAULT 'NORMAL' NOT NULL,
+          assigned_to INTEGER,
+          internal_notes TEXT,
+          activity_timeline JSONB,
+          converted_project_id INTEGER,
+          converted_boq_id INTEGER,
+          converted_estimate_id INTEGER,
+          admin_notification_status TEXT DEFAULT 'PENDING',
+          client_confirmation_status TEXT DEFAULT 'PENDING',
+          admin_notification_sent_at TIMESTAMP,
+          client_confirmation_sent_at TIMESTAMP,
+          email_error TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS quote_request_documents (
+          id SERIAL PRIMARY KEY,
+          quote_request_id INTEGER REFERENCES quote_requests(id) ON DELETE CASCADE NOT NULL,
+          file_name TEXT NOT NULL,
+          file_url TEXT NOT NULL,
+          file_type TEXT,
+          file_size INTEGER,
+          uploaded_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS social_media_channels (
+          id SERIAL PRIMARY KEY,
+          platform TEXT NOT NULL,
+          channel_name TEXT NOT NULL,
+          account_handle TEXT,
+          account_id TEXT,
+          profile_image_url TEXT,
+          status TEXT DEFAULT 'CONNECTED' NOT NULL,
+          health_status TEXT DEFAULT 'HEALTHY',
+          approval_status TEXT DEFAULT 'APPROVED',
+          api_key_or_token TEXT,
+          access_token_encrypted TEXT,
+          refresh_token_encrypted TEXT,
+          token_expires_at TIMESTAMP,
+          scopes JSONB,
+          webhook_url TEXT,
+          is_custom BOOLEAN DEFAULT FALSE,
+          connected_by TEXT,
+          connected_at TIMESTAMP,
+          last_successful_api_check TIMESTAMP,
+          last_error_code TEXT,
+          last_error_message TEXT,
+          metadata JSONB,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS social_media_posts (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          seo_topic TEXT,
+          target_platforms JSONB,
+          caption TEXT NOT NULL,
+          hashtags TEXT,
+          cta_text TEXT,
+          media_url TEXT,
+          media_type TEXT DEFAULT 'image',
+          status TEXT DEFAULT 'DRAFT' NOT NULL,
+          scheduled_at TIMESTAMP,
+          published_at TIMESTAMP,
+          reach_estimate INTEGER DEFAULT 0,
+          engagement_count INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+        );
+
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS account_id TEXT;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS profile_image_url TEXT;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS health_status TEXT DEFAULT 'HEALTHY';
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'APPROVED';
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS access_token_encrypted TEXT;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS refresh_token_encrypted TEXT;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMP;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS scopes JSONB;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS connected_by TEXT;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS connected_at TIMESTAMP;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS last_successful_api_check TIMESTAMP;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS last_error_code TEXT;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS last_error_message TEXT;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS metadata JSONB;
+        ALTER TABLE social_media_channels ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+        -- Ensure missing columns are added if quote_requests pre-existed
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS reference_number TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS user_id INTEGER;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS client_name TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS client_company TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS client_email TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS client_phone TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS preferred_contact_method TEXT DEFAULT 'WhatsApp';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS preferred_contact_time TEXT DEFAULT 'Any time';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS project_type TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS services_requested JSONB;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS region TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS division TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS subdivision TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS city TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS neighborhood TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS site_address TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS latitude NUMERIC;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS longitude NUMERIC;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS project_name TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS project_description TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS building_type TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS storeys INTEGER DEFAULT 1;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS floor_area NUMERIC;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS floor_area_unit TEXT DEFAULT 'm²';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS site_status TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS project_stage TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS budget_currency TEXT DEFAULT 'XAF';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS budget_min NUMERIC;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS budget_max NUMERIC;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS budget_range_text TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS desired_start_date TIMESTAMP;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS expected_completion_date TIMESTAMP;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS urgency TEXT DEFAULT 'Standard';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS additional_notes TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'Website Direct';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS source_metadata JSONB;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'NEW';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'NORMAL';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS assigned_to INTEGER;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS internal_notes TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS activity_timeline JSONB;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS converted_project_id INTEGER;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS converted_boq_id INTEGER;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS converted_estimate_id INTEGER;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS admin_notification_status TEXT DEFAULT 'PENDING';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS client_confirmation_status TEXT DEFAULT 'PENDING';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS admin_notification_sent_at TIMESTAMP;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS client_confirmation_sent_at TIMESTAMP;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS email_error TEXT;
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+        ALTER TABLE quote_request_documents ADD COLUMN IF NOT EXISTS quote_request_id INTEGER;
+        ALTER TABLE quote_request_documents ADD COLUMN IF NOT EXISTS file_name TEXT;
+        ALTER TABLE quote_request_documents ADD COLUMN IF NOT EXISTS file_url TEXT;
+        ALTER TABLE quote_request_documents ADD COLUMN IF NOT EXISTS file_type TEXT;
+        ALTER TABLE quote_request_documents ADD COLUMN IF NOT EXISTS file_size INTEGER;
+        ALTER TABLE quote_request_documents ADD COLUMN IF NOT EXISTS uploaded_at TIMESTAMP DEFAULT NOW();
+
       `);
-      console.log('✅ BOQ, Receipts & Structural Calc infrastructure ready in Neon DB.');
+      console.log('✅ BOQ, Receipts, Rates & Budget Estimator infrastructure ready in Neon DB.');
     } catch (boqTableErr) {
       console.error('Failed creating BOQ tables in DB:', boqTableErr);
     }
+
+    // Seed default cost library items if table is empty
+    try {
+      const rateCountRes = await db.execute(sql`SELECT COUNT(*)::int as count FROM cost_library_items`);
+      const count = (rateCountRes.rows[0] as any)?.count || 0;
+      if (count === 0) {
+        console.log('Seeding official MADECC construction rate library...');
+        await db.execute(sql`
+          INSERT INTO cost_library_items (item_code, category, name, unit, base_price_xaf, douala_price, yaounde_price, garoua_price, specifications, updated_by) VALUES
+          ('MAT-CEM-425', 'Material', 'Portland Cement 42.5N (Dangal / CIMENCAM)', 'bag', 5200, 5000, 5200, 5800, '50kg High Grade Structural Cement', 'Adminmadeccgroup'),
+          ('MAT-AGG-SND', 'Material', 'River Sand (Sanaga / Moungo)', 'm3', 14000, 13500, 14500, 16000, 'Clean washed concrete sand', 'Adminmadeccgroup'),
+          ('MAT-AGG-GRV', 'Material', 'Crushed Aggregate Gravel (15/25mm)', 'm3', 18500, 17500, 18500, 21000, 'Hard granite crushed aggregate', 'Adminmadeccgroup'),
+          ('MAT-BLK-15', 'Material', 'Hollow Concrete Blocks 15x20x40cm', 'piece', 350, 320, 350, 420, 'Vibrated concrete block 15cm', 'Adminmadeccgroup'),
+          ('MAT-BLK-20', 'Material', 'Hollow Concrete Blocks 20x20x40cm', 'piece', 420, 390, 420, 490, 'Structural loadbearing block 20cm', 'Adminmadeccgroup'),
+          ('MAT-STL-FE400', 'Material', 'High-Yield Reinforcement Steel FeE400 (T10-T16)', 'kg', 750, 720, 750, 820, 'Deformed high-yield steel bars', 'Adminmadeccgroup'),
+          ('MAT-BRK-RED', 'Material', 'Compressed Stabilized Earth / Clay Bricks', 'piece', 220, 250, 220, 280, 'Eco-friendly compressed earth bricks', 'Adminmadeccgroup'),
+          ('MAT-TILE-PORC', 'Material', '60x60cm Porcelain Floor Tiles', 'm2', 8500, 8000, 8500, 9500, 'High-traffic glazed porcelain tile', 'Adminmadeccgroup'),
+          ('MAT-ROOF-ALU', 'Material', 'Aluminium Roofing Sheets (0.50mm)', 'm2', 6800, 6500, 6800, 7500, 'Corrugated aluminium roof sheet', 'Adminmadeccgroup'),
+          ('LAB-MASON-DAY', 'Labour', 'Master Mason / Builder Daily Rate', 'man-day', 12000, 12000, 12000, 10000, 'Skilled structural mason', 'Adminmadeccgroup'),
+          ('LAB-CARP-DAY', 'Labour', 'Formwork Carpenter Daily Rate', 'man-day', 10000, 10000, 10000, 9000, 'Skilled timber & shuttering carpenter', 'Adminmadeccgroup'),
+          ('LAB-STEEL-DAY', 'Labour', 'Steel Fixer / Ironworker Daily Rate', 'man-day', 10000, 10000, 10000, 9000, 'Rebar bending and fixing worker', 'Adminmadeccgroup'),
+          ('LAB-HELPER-DAY', 'Labour', 'Site Labourer / Helper Daily Rate', 'man-day', 5000, 5000, 5000, 4500, 'General site worker', 'Adminmadeccgroup'),
+          ('PLT-EXCAV-HR', 'Plant', 'Crawler Excavator Rental (20-Ton)', 'hour', 45000, 42000, 45000, 50000, 'Including operator and fuel allowance', 'Adminmadeccgroup'),
+          ('PLT-MIXER-DAY', 'Plant', 'Diesel Concrete Mixer 500L', 'day', 35000, 30000, 35000, 40000, 'Site portable concrete mixer', 'Adminmadeccgroup')
+        `);
+        console.log('✅ Official MADECC Construction Rate Library seeded.');
+      }
+    } catch (rateSeedErr) {
+      console.warn('Could not seed rate library:', rateSeedErr);
+    }
+
 
     // Seeding specific contract for live verification testing
     console.log('Seeding specific contract CNT-0ZS6BJ8EF5I9QJ4ASHMZ for verification...');
@@ -388,33 +1044,33 @@ export async function seedDatabase() {
       console.log('Database already has data. Running Cameroon localization on existing records...');
       try {
         await db.execute(sql`
-          UPDATE projects 
-          SET title = 'MADECC Eco-HQ Tower', 
-              location = 'Rue Joss, Bonanjo, Douala, Cameroon', 
+          UPDATE projects
+          SET title = 'MADECC Eco-HQ Tower',
+              location = 'Rue Joss, Bonanjo, Douala, Cameroon',
               budget = '14700000000',
               description = 'A cutting-edge 6-story commercial office tower in Douala featuring green facades, solar roofs, and zero-carbon building design adapted for tropical climates.'
           WHERE title LIKE '%Eco-HQ%' OR location LIKE '%London%';
         `);
         await db.execute(sql`
-          UPDATE projects 
-          SET title = 'Kribi Beachfront Luxury Estates', 
-              location = 'Kribi, South Region, Cameroon', 
+          UPDATE projects
+          SET title = 'Kribi Beachfront Luxury Estates',
+              location = 'Kribi, South Region, Cameroon',
               budget = '8500000000',
               description = 'A collection of twelve premium custom-built net-zero smart homes nestled near the gorgeous sandy beaches of Kribi.'
           WHERE title LIKE '%Oakridge%' OR title LIKE '%Surrey%' OR location LIKE '%Surrey%';
         `);
         await db.execute(sql`
-          UPDATE projects 
-          SET title = 'The Sanaga Bridge Corridor', 
-              location = 'Eda, Littoral Region, Cameroon', 
+          UPDATE projects
+          SET title = 'The Sanaga Bridge Corridor',
+              location = 'Eda, Littoral Region, Cameroon',
               budget = '43200000000',
               description = 'A vital civil infrastructure expansion spanning 2.4 kilometers of double-lane structural freeway and reinforced arch bridge across the Sanaga River.'
           WHERE title LIKE '%Viaduct%' OR title LIKE '%Devon%' OR location LIKE '%Devon%';
         `);
         await db.execute(sql`
-          UPDATE projects 
-          SET title = 'Douala Port Logistics Terminal', 
-              location = 'Douala Port Area, Cameroon', 
+          UPDATE projects
+          SET title = 'Douala Port Logistics Terminal',
+              location = 'Douala Port Area, Cameroon',
               budget = '22800000000',
               description = 'Massive, highly-efficient industrial shipping terminal and distribution warehouse designed for autonomous logistics in Central Africa.'
           WHERE title LIKE '%Logistics Terminal%' OR location LIKE '%Manchester%';
@@ -422,22 +1078,22 @@ export async function seedDatabase() {
 
         // Update services
         await db.execute(sql`
-          UPDATE services 
+          UPDATE services
           SET price_range = '30,000,000 - 6,000,000,000 FCFA'
           WHERE name = 'General Contracting';
         `);
         await db.execute(sql`
-          UPDATE services 
+          UPDATE services
           SET price_range = '3,000,000 - 300,000,000 FCFA'
           WHERE name = 'Architectural & Interior Design';
         `);
         await db.execute(sql`
-          UPDATE services 
+          UPDATE services
           SET price_range = '300,000,000 - 30,000,000,000 FCFA'
           WHERE name = 'Civil Infrastructure Planning';
         `);
         await db.execute(sql`
-          UPDATE services 
+          UPDATE services
           SET price_range = '60,000,000 - 12,000,000,000 FCFA'
           WHERE name = 'Green & Sustainable Building';
         `);

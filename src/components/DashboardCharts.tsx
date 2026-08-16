@@ -18,12 +18,14 @@ import {
 } from 'recharts';
 import { Project, Appointment, ContactMessage, NewsletterSubscriber } from '../types.ts';
 import { Calendar, Building, Mail, Users, TrendingUp, DollarSign, Award } from 'lucide-react';
+import { formatCurrency } from '../lib/utils.ts';
 
 interface DashboardChartsProps {
   projects: Project[];
   appointments: Appointment[];
   contacts: ContactMessage[];
   subscribers: NewsletterSubscriber[];
+  currency?: string;
   dbAnalytics?: {
     managedProjectsCount: number;
     totalProjectBudgetValue: number;
@@ -45,12 +47,13 @@ export default function DashboardCharts({
   appointments,
   contacts,
   subscribers,
+  currency = 'XAF',
   dbAnalytics,
 }: DashboardChartsProps) {
   // 1. Process Booking / Consultation Trends (Grouped by Month/Year)
   const bookingTrendsData = useMemo(() => {
     const monthlyCounts: Record<string, number> = {};
-    
+
     // Seed last 6 months with 0s to make sure there is always a clean trend line
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
@@ -124,7 +127,7 @@ export default function DashboardCharts({
   // 4. Process Engagement Trends (Contacts vs Subscribers over time)
   const engagementData = useMemo(() => {
     const dailyEngagement: Record<string, { Inquiries: number; Subscribers: number }> = {};
-    
+
     // Seed last 7 days
     const now = new Date();
     for (let i = 6; i >= 0; i--) {
@@ -178,8 +181,8 @@ export default function DashboardCharts({
       });
     }
 
-    const conversionRate = dbAnalytics 
-      ? dbAnalytics.bookingApprovalRate 
+    const conversionRate = dbAnalytics
+      ? dbAnalytics.bookingApprovalRate
       : (appointments.length > 0
         ? ((appointments.filter(a => a.status === 'confirmed' || a.status === 'completed').length / appointments.length) * 100).toFixed(1)
         : '0.0');
@@ -192,16 +195,12 @@ export default function DashboardCharts({
   }, [projects, appointments, dbAnalytics]);
 
   const currencyFormatter = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value);
+    return formatCurrency(value, currency);
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
+
       {/* Dynamic Key metrics summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
@@ -255,7 +254,7 @@ export default function DashboardCharts({
 
       {/* Grid of charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
+
         {/* 1. Project Booking trends (Area Chart) */}
         <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -301,7 +300,7 @@ export default function DashboardCharts({
               <BarChart data={projectBudgetData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} tickFormatter={(val) => `$${val / 1000}k`} />
+                <YAxis stroke="#64748b" fontSize={11} tickLine={false} tickFormatter={(val) => val >= 1000000 ? `${(val / 1000000).toFixed(1)}M ${currency}` : val >= 1000 ? `${(val / 1000).toFixed(0)}k ${currency}` : `${val} ${currency}`} />
                 <Tooltip
                   formatter={(value: any) => [currencyFormatter(value), 'Budget']}
                   contentStyle={{ backgroundColor: '#090d16', border: '1px solid #1e293b', borderRadius: '8px' }}

@@ -10,9 +10,9 @@ export function ensureAbsoluteUrl(url: string | null | undefined): string {
   const trimmed = url.trim();
   if (!trimmed) return '';
   if (
-    trimmed.startsWith('/') || 
-    trimmed.startsWith('data:') || 
-    trimmed.startsWith('http://') || 
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('http://') ||
     trimmed.startsWith('https://') ||
     trimmed.startsWith('blob:')
   ) {
@@ -30,7 +30,7 @@ export function getYouTubeEmbedUrl(url: string | null | undefined): string | nul
   const trimmed = url.trim();
   if (!trimmed) return null;
   if (trimmed.includes('youtube.com/embed/')) return trimmed;
-  
+
   const match = trimmed.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
   if (match && match[1]) {
     return `https://www.youtube.com/embed/${match[1]}`;
@@ -44,7 +44,7 @@ export function getYouTubeEmbedUrl(url: string | null | undefined): string | nul
  */
 export function getOptimizedImageUrl(url: string | null | undefined, width = 800, quality = 80): string {
   if (!url) return '';
-  
+
   let formattedUrl = ensureAbsoluteUrl(url);
   if (!formattedUrl) return '';
 
@@ -69,7 +69,7 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 800
       return formattedUrl;
     }
   }
-  
+
   return formattedUrl;
 }
 
@@ -93,4 +93,12 @@ export function exportToCSV(filename: string, headers: string[], rows: (string |
   link.click();
   document.body.removeChild(link);
 }
+
+export {
+  formatCurrency,
+  DEFAULT_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  getCurrencySymbol,
+  getProjectCurrency
+} from '../services/currency.ts';
 

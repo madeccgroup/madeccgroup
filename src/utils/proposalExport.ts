@@ -57,7 +57,7 @@ export async function generateProposalPdf(proposal: any): Promise<{ pdf: jsPDF; 
 
   doc.setTextColor(203, 213, 225);
   doc.setFontSize(7);
-  doc.text('Douala & Yaoundé, Republic of Cameroon | Email: info@madecc-group.cm | Tel: +237 670 000 000', margin + 6, y + 18.5);
+  doc.text('Douala & Yaoundé, Republic of Cameroon | Email: info@madeccgroup.cm | Tel: +237 671 063 511', margin + 6, y + 18.5);
 
   // Status Badge
   doc.setFillColor(217, 119, 6);

@@ -20,18 +20,35 @@ export interface AuthRequest extends Request {
 
 // Register or fetch user from DB
 export async function getOrCreateUser(uid: string, email: string, name: string) {
-  // Check if we want to make certain email admin automatically
-  const targetRole = (email.toLowerCase() === 'kreboya603@gmail.com') ? 'admin' : 'client';
+  const normalizedEmail = (email || '').toLowerCase().trim();
+  const reviewerEmail = (process.env.META_REVIEWER_EMAIL || 'meta-reviewer@madeccgroup.online').toLowerCase().trim();
+
+  // Check if we want to make certain email admin or reviewer automatically
+  let targetRole = 'client';
+  if (normalizedEmail === 'kreboya603@gmail.com') {
+    targetRole = 'admin';
+  } else if (normalizedEmail === reviewerEmail) {
+    targetRole = 'social_media_reviewer';
+  }
+
+  const effectiveName = normalizedEmail === reviewerEmail ? (name || 'Meta App Review Tester') : (name || email.split('@')[0]);
 
   try {
     // 1. Check if user exists by UID
     const existingByUid = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
     if (existingByUid.length > 0) {
       const user = existingByUid[0];
-      // Defensive: Ensure the admin role is enforced on this critical user
-      if (email.toLowerCase() === 'kreboya603@gmail.com' && user.role !== 'admin') {
+      // Defensive: Ensure the admin or reviewer role is enforced on critical users
+      if (normalizedEmail === 'kreboya603@gmail.com' && user.role !== 'admin') {
         const updated = await db.update(users)
           .set({ role: 'admin' })
+          .where(eq(users.id, user.id))
+          .returning();
+        return updated[0];
+      }
+      if (normalizedEmail === reviewerEmail && user.role !== 'social_media_reviewer') {
+        const updated = await db.update(users)
+          .set({ role: 'social_media_reviewer', name: user.name || 'Meta App Review Tester' })
           .where(eq(users.id, user.id))
           .returning();
         return updated[0];
@@ -50,8 +67,12 @@ export async function getOrCreateUser(uid: string, email: string, name: string) 
           updateFields.uid = uid;
         }
         // Ensure admin role is set if they exist by email but don't have it
-        if (email.toLowerCase() === 'kreboya603@gmail.com' && user.role !== 'admin') {
+        if (normalizedEmail === 'kreboya603@gmail.com' && user.role !== 'admin') {
           updateFields.role = 'admin';
+        }
+        if (normalizedEmail === reviewerEmail && user.role !== 'social_media_reviewer') {
+          updateFields.role = 'social_media_reviewer';
+          if (!user.name) updateFields.name = 'Meta App Review Tester';
         }
 
         if (Object.keys(updateFields).length > 0) {
@@ -70,7 +91,7 @@ export async function getOrCreateUser(uid: string, email: string, name: string) 
       .values({
         uid,
         email,
-        name: name || email.split('@')[0],
+        name: effectiveName,
         role: targetRole,
       })
       .returning();
@@ -93,13 +114,13 @@ export const requireAuth = async (
   }
 
   const token = authHeader.split('Bearer ')[1];
-  
+
   if (
-    token === 'ADMIN_BYPASS:Adminmadeccgroup' || 
-    token === 'Adminmadeccgroup' || 
-    token === 'ADMIN_BYPASS:MADECC_Group_admin' || 
-    token === 'ADMIN_BYPASS:MADECC Group admin' || 
-    token === 'MADECC_Group_admin' || 
+    token === 'ADMIN_BYPASS:Adminmadeccgroup' ||
+    token === 'Adminmadeccgroup' ||
+    token === 'ADMIN_BYPASS:MADECC_Group_admin' ||
+    token === 'ADMIN_BYPASS:MADECC Group admin' ||
+    token === 'MADECC_Group_admin' ||
     token === 'MADECC Group admin'
   ) {
     try {
@@ -161,6 +182,24 @@ export const requireStaffOrAdmin = async (
   await requireAuth(req, res, () => {
     if (!req.dbUser || (req.dbUser.role !== 'admin' && req.dbUser.role !== 'staff')) {
       return res.status(403).json({ error: 'Forbidden: Admin or Staff access required' });
+    }
+    next();
+  });
+};
+
+export const requireSocialMediaReviewerOrAdmin = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  await requireAuth(req, res, () => {
+    if (
+      !req.dbUser ||
+      (req.dbUser.role !== 'admin' &&
+        req.dbUser.role !== 'staff' &&
+        req.dbUser.role !== 'social_media_reviewer')
+    ) {
+      return res.status(403).json({ error: 'Forbidden: Social Media Reviewer or Admin access required' });
     }
     next();
   });

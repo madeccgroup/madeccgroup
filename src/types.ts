@@ -3,7 +3,7 @@ export interface User {
   uid: string;
   email: string;
   name: string;
-  role: 'admin' | 'staff' | 'client';
+  role: 'admin' | 'staff' | 'client' | 'social_media_reviewer';
   createdAt: string;
 }
 
@@ -18,6 +18,8 @@ export interface Project {
   title: string;
   description: string;
   budget: string | null;
+  currency?: string;
+  currency_code?: string;
   location: string;
   startDate: string | null;
   endDate: string | null;

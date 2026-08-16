@@ -1,33 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  LayoutDashboard, 
-  Building2, 
-  Sparkles, 
-  Calculator, 
-  FileText, 
-  DollarSign, 
-  Calendar, 
-  TrendingUp, 
-  ShoppingCart, 
-  Layers, 
-  Box, 
-  ShieldAlert, 
-  Share2, 
-  Download, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  CheckCircle2, 
-  Clock, 
-  AlertTriangle, 
-  FileDown, 
-  Send, 
-  RefreshCw, 
-  Search, 
-  Lock, 
-  Unlock, 
-  Printer, 
-  ArrowRight, 
+import {
+  LayoutDashboard,
+  Building2,
+  Sparkles,
+  Calculator,
+  FileText,
+  DollarSign,
+  Calendar,
+  TrendingUp,
+  ShoppingCart,
+  Layers,
+  Box,
+  ShieldAlert,
+  Share2,
+  Download,
+  Plus,
+  Trash2,
+  Edit3,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  FileDown,
+  Send,
+  RefreshCw,
+  Search,
+  Lock,
+  Unlock,
+  Printer,
+  ArrowRight,
   ChevronRight,
   Upload,
   BarChart3,
@@ -1644,7 +1644,7 @@ export default function AIConstructionIntelligence({
 
   return (
     <div className="space-y-6 text-slate-200 font-sans" id="ai-construction-intelligence-module">
-      
+
       {/* Official Enterprise Header */}
       <EngineeringHeader
         title="MADECC AI CONSTRUCTION INTELLIGENCE PLATFORM"
@@ -5032,7 +5032,7 @@ export default function AIConstructionIntelligence({
                     <th className="p-3">Ordered Qty</th>
                     <th className="p-3">Required Date</th>
                     <th className="p-3">Supplier Vendor</th>
-                    <th className="p-3">Cost (XAF)</th>
+                    <th className="p-3">Cost ({selectedProject?.currency || 'XAF'})</th>
                     <th className="p-3">Delivery Status</th>
                     <th className="p-3">Site Stock Balance</th>
                     <th className="p-3 text-right">Actions</th>
@@ -5293,7 +5293,7 @@ export default function AIConstructionIntelligence({
               {/* Form Inputs */}
               <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
                 <h4 className="font-extrabold text-xs text-white uppercase tracking-wider text-amber-500">Structural Element Dimensions</h4>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Element Type</label>
@@ -5430,7 +5430,7 @@ export default function AIConstructionIntelligence({
                           <span className="text-[10px] text-slate-400 font-bold uppercase block">Estimated Material Cost</span>
                           <span className="text-xs text-amber-500">Excluding transport & labor</span>
                         </div>
-                        <span className="text-xl font-black text-emerald-400 font-mono">{Math.round(estimatedCostXAF).toLocaleString()} XAF</span>
+                        <span className="text-xl font-black text-emerald-400 font-mono">{Math.round(estimatedCostXAF).toLocaleString()} {selectedProject?.currency || 'XAF'}</span>
                       </div>
                     </div>
                   );
@@ -5713,7 +5713,7 @@ export default function AIConstructionIntelligence({
                     <th className="p-3">Category</th>
                     <th className="p-3">Material Specification</th>
                     <th className="p-3">Unit</th>
-                    <th className="p-3 font-mono">{selectedRegion} Rate (XAF)</th>
+                    <th className="p-3 font-mono">{selectedRegion} Rate ({selectedProject?.currency || 'XAF'})</th>
                     <th className="p-3">Price Trend</th>
                     <th className="p-3">Verified Supplier</th>
                     <th className="p-3">Availability</th>
@@ -5730,7 +5730,7 @@ export default function AIConstructionIntelligence({
                         <td className="p-3 text-white font-medium">{item.material}</td>
                         <td className="p-3 text-slate-400 font-mono">{item.unit}</td>
                         <td className="p-3 font-mono font-black text-emerald-400 text-sm">
-                          {Number(currentRate).toLocaleString()} XAF
+                          {Number(currentRate).toLocaleString()} {selectedProject?.currency || 'XAF'}
                         </td>
                         <td className={`p-3 font-mono font-bold ${item.trend.startsWith('+') ? 'text-amber-500' : item.trend.startsWith('-') ? 'text-emerald-400' : 'text-slate-400'}`}>
                           {item.trend}
@@ -5791,7 +5791,7 @@ export default function AIConstructionIntelligence({
                     <tr className="bg-slate-900 text-slate-400 uppercase font-bold text-[10px] border-b border-slate-800">
                       <th className="p-3">Trade / Crew Composition</th>
                       <th className="p-3 font-mono">Daily Target Output</th>
-                      <th className="p-3 font-mono">Gang Daily Cost (XAF)</th>
+                      <th className="p-3 font-mono">Gang Daily Cost ({selectedProject?.currency || 'XAF'})</th>
                       <th className="p-3 font-mono">Derived Unit Rate</th>
                       <th className="p-3">Overtime Rate</th>
                     </tr>
@@ -5801,7 +5801,7 @@ export default function AIConstructionIntelligence({
                       <tr key={crew.id} className="hover:bg-slate-900/50">
                         <td className="p-3 font-extrabold text-white">{crew.trade}</td>
                         <td className="p-3 font-mono font-bold text-amber-400">{crew.output}</td>
-                        <td className="p-3 font-mono text-emerald-400 font-bold">{Number(crew.dailyCost).toLocaleString()} XAF</td>
+                        <td className="p-3 font-mono text-emerald-400 font-bold">{Number(crew.dailyCost).toLocaleString()} {selectedProject?.currency || 'XAF'}</td>
                         <td className="p-3 font-mono text-indigo-400 font-bold">{crew.unitCost}</td>
                         <td className="p-3 text-slate-400 font-mono">{crew.overtimeRate}</td>
                       </tr>
@@ -5822,7 +5822,7 @@ export default function AIConstructionIntelligence({
                     <div className="flex justify-between items-start">
                       <h5 className="font-extrabold text-white text-sm">{eq.plant}</h5>
                       <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded">
-                        {eq.rentalDaily.toLocaleString()} XAF/day
+                        {eq.rentalDaily.toLocaleString()} {selectedProject?.currency || 'XAF'}/day
                       </span>
                     </div>
 
@@ -5833,7 +5833,7 @@ export default function AIConstructionIntelligence({
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-400 uppercase block">Operator Cost</span>
-                        <strong className="text-emerald-400">{eq.operatorDaily.toLocaleString()} XAF</strong>
+                        <strong className="text-emerald-400">{eq.operatorDaily.toLocaleString()} {selectedProject?.currency || 'XAF'}</strong>
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-400 uppercase block">Daily Output</span>
@@ -6559,7 +6559,7 @@ export default function AIConstructionIntelligence({
                 <button
                   onClick={() => {
                     const items = boqSections.flatMap(s => s.items);
-                    const headers = ['Item No', 'Description', 'Unit', 'Quantity', 'Unit Rate (XAF)', 'Total Amount (XAF)'];
+                    const headers = ['Item No', 'Description', 'Unit', 'Quantity', `Unit Rate (${selectedProject?.currency || 'XAF'})`, `Total Amount (${selectedProject?.currency || 'XAF'})`];
                     const rows = items.map((it: any) => [it.itemNo, it.description, it.unit, it.quantity, it.unitRate, it.amount]);
                     exportToCSV(`${selectedProject?.projectId || 'BOQ'}_Bill_of_Quantities.csv`, headers, rows);
                     showToast('Exported complete BOQ to CSV format!', 'success');
@@ -6620,7 +6620,7 @@ export default function AIConstructionIntelligence({
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 font-bold uppercase block">Total Contract Sum</span>
-                  <strong className="text-emerald-700 font-mono font-extrabold text-sm">{Number(boqTotals.grandTotal).toLocaleString()} XAF (TTC)</strong>
+                  <strong className="text-emerald-700 font-mono font-extrabold text-sm">{Number(boqTotals.grandTotal).toLocaleString()} {selectedProject?.currency || 'XAF'} (TTC)</strong>
                 </div>
               </div>
 
@@ -7081,7 +7081,7 @@ export default function AIConstructionIntelligence({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">Unit Rate (XAF)</label>
+                  <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">Unit Rate ({selectedProject?.currency || 'XAF'})</label>
                   <input
                     type="number"
                     step="any"
@@ -7095,7 +7095,7 @@ export default function AIConstructionIntelligence({
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex justify-between items-center text-xs">
                 <span className="text-slate-400">Calculated Item Subtotal:</span>
                 <span className="font-mono font-extrabold text-emerald-400 text-sm">
-                  {((Number(boqItemForm.qty) || 0) * (Number(boqItemForm.rate) || 0)).toLocaleString()} XAF
+                  {((Number(boqItemForm.qty) || 0) * (Number(boqItemForm.rate) || 0)).toLocaleString()} {selectedProject?.currency || 'XAF'}
                 </span>
               </div>
             </div>
