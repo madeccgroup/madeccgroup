@@ -13056,7 +13056,7 @@ Return JSON with exact structure:
         'pages_show_list',
         'pages_read_engagement',
         'instagram_basic',
-        'instagram_content_publish',
+        
         'whatsapp_business_management',
         'whatsapp_business_messaging'
       ]
@@ -13078,7 +13078,7 @@ Return JSON with exact structure:
       'pages_show_list',
       'pages_read_engagement',
       'instagram_basic',
-      'instagram_content_publish',
+      
       'whatsapp_business_management',
       'whatsapp_business_messaging'
     ].join(',');
@@ -13148,7 +13148,7 @@ Return JSON with exact structure:
               accountId: igId,
               status: 'CONNECTED',
               lastSyncedAt: new Date().toISOString(),
-              permissions: ['instagram_basic', 'instagram_content_publish']
+              permissions: ['instagram_basic', ]
             });
           }
         }
@@ -13515,6 +13515,7 @@ const isServerless =
 if (!isServerless) {
   startServer();
 }
+
 
 
 

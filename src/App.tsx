@@ -122,6 +122,8 @@ function AppContent({
         );
       case 'terms':
         return <LegalPage type="terms" setCurrentTab={setCurrentTab} />;
+      case 'data-deletion':
+        return <DataDeletion />;
       case 'privacy':
         return <LegalPage type="privacy" setCurrentTab={setCurrentTab} />;
       case 'safety':
@@ -372,6 +374,9 @@ export default function App() {
     </LanguageProvider>
   );
 }
+
+
+
 
 
 

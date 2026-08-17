@@ -206,10 +206,7 @@ export function getProviderCredentials(provider: string) {
       clientId: process.env.INSTAGRAM_CLIENT_ID || process.env.META_CLIENT_ID || process.env.META_APP_ID || '',
       clientSecret: process.env.INSTAGRAM_CLIENT_SECRET || process.env.META_CLIENT_SECRET || process.env.META_APP_SECRET || '',
       scopes: [
-        'instagram_basic',
-        'instagram_content_publish',
-        'pages_show_list',
-        'pages_read_engagement'
+        'instagram_basic'
       ]
     };
   }
@@ -275,7 +272,6 @@ export function getPlatformCapabilities(provider: string): string[] {
       ];
     case 'instagram':
       return [
-        'instagram_content_publish',
         'instagram_basic',
         'publish_photo',
         'publish_reels',
@@ -3123,6 +3119,11 @@ export async function executePublishBroadcast(params: {
     publishedAt: new Date().toISOString()
   };
 }
+
+
+
+
+
 
 
 
