@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase.ts';
 import { User } from './types.ts';
@@ -25,6 +25,7 @@ import { Services } from './components/Services.tsx';
 import { RequestQuote } from './components/RequestQuote.tsx';
 import { ScheduleConsultation } from './components/ScheduleConsultation.tsx';
 import LegalPage from './components/LegalPage.tsx';
+import DataDeletion from './components/DataDeletion.tsx';
 
 import { ThemeProvider, useTheme } from './lib/ThemeContext.tsx';
 import { LanguageProvider } from './lib/LanguageContext.tsx';
@@ -218,6 +219,7 @@ export default function App() {
     if (path.includes('budget-calculator')) return 'budget-calculator';
     if (path.includes('terms')) return 'terms';
     if (path.includes('privacy')) return 'privacy';
+    if (path.includes('data-deletion') || path.includes('data_deletion')) return 'data-deletion';
     if (path.includes('safety') || path.includes('qhse')) return 'safety';
     if (path.includes('about')) return 'about';
     if (path.includes('projects')) return 'projects';
@@ -370,3 +372,6 @@ export default function App() {
     </LanguageProvider>
   );
 }
+
+
+

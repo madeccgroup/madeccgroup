@@ -1,4 +1,4 @@
-import { Express, Request, Response } from 'express';
+﻿import { Express, Request, Response } from 'express';
 import crypto from 'crypto';
 import { eq, desc, inArray } from 'drizzle-orm';
 import {
@@ -196,7 +196,6 @@ export function getProviderCredentials(provider: string) {
       scopes: [
         'pages_show_list',
         'pages_read_engagement',
-        'pages_manage_posts',
         'public_profile',
         'pages_messaging'
       ]
@@ -268,7 +267,6 @@ export function getPlatformCapabilities(provider: string): string[] {
   switch (p) {
     case 'facebook':
       return [
-        'pages_manage_posts',
         'pages_read_engagement',
         'pages_show_list',
         'publish_image',
@@ -818,7 +816,7 @@ export function setupSocialOAuthRoutes(app: Express, db: any) {
           </head>
           <body>
             <div class="card">
-              <div class="title">${status === 'success' ? '✓ Account Authorized' : '✕ Authorization Failed'}</div>
+              <div class="title">${status === 'success' ? 'âœ“ Account Authorized' : 'âœ• Authorization Failed'}</div>
               <div class="msg">${message}</div>
               <p style="font-size: 0.75rem; color: #64748b;">Closing window and updating dashboard...</p>
             </div>
@@ -2456,7 +2454,7 @@ async function publishToTwitter(
       };
     }
 
-    let text = `${content.title ? content.title + ' — ' : ''}${content.caption || ''}\n\n${content.ctaText || ''}\n${content.hashtags || ''}`.trim();
+    let text = `${content.title ? content.title + ' â€” ' : ''}${content.caption || ''}\n\n${content.ctaText || ''}\n${content.hashtags || ''}`.trim();
     if (text.length > 280) {
       text = text.substring(0, 277) + '...';
     }
@@ -3125,6 +3123,8 @@ export async function executePublishBroadcast(params: {
     publishedAt: new Date().toISOString()
   };
 }
+
+
 
 
 
