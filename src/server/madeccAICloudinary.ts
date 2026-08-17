@@ -1,0 +1,182 @@
+import {
+  v2 as cloudinary,
+  UploadApiResponse,
+} from "cloudinary";
+
+import fs from "node:fs";
+
+const cloudName =
+  process.env.CLOUDINARY_CLOUD_NAME;
+
+const apiKey =
+  process.env.CLOUDINARY_API_KEY;
+
+const apiSecret =
+  process.env.CLOUDINARY_API_SECRET;
+
+const folder =
+  process.env.CLOUDINARY_AI_FOLDER ||
+  "madecc ai-studio";
+
+if (
+  !cloudName ||
+  !apiKey ||
+  !apiSecret
+) {
+  console.warn(
+    "[MADECC_AI] Cloudinary credentials are not fully configured."
+  );
+}
+
+cloudinary.config({
+  cloud_name: cloudName,
+  api_key: apiKey,
+  api_secret: apiSecret,
+  secure: true,
+});
+
+export type MADECCCloudinaryUpload = {
+  url: string;
+  secureUrl: string;
+  publicId: string;
+  resourceType: string;
+  format?: string;
+  bytes?: number;
+};
+
+export async function uploadMADECCAIFile(
+  filePath: string,
+  options?: {
+    type?: "image" | "video" | "raw";
+    publicId?: string;
+    format?: string;
+  }
+): Promise<MADECCCloudinaryUpload> {
+  if (
+    !cloudName ||
+    !apiKey ||
+    !apiSecret
+  ) {
+    throw new Error(
+      "Cloudinary is not configured."
+    );
+  }
+
+  const resourceType =
+    options?.type || "auto";
+
+  const result =
+    await cloudinary.uploader.upload(
+      filePath,
+      {
+        folder,
+        resource_type:
+          resourceType,
+        public_id:
+          options?.publicId,
+        format:
+          options?.format,
+        overwrite: false,
+        unique_filename: true,
+      }
+    );
+
+  return {
+    url: result.url,
+    secureUrl:
+      result.secure_url,
+    publicId:
+      result.public_id,
+    resourceType:
+      result.resource_type,
+    format: result.format,
+    bytes: result.bytes,
+  };
+}
+
+export async function uploadMADECCAIStream(
+  buffer: Buffer,
+  options?: {
+    type?: "image" | "video" | "raw";
+    publicId?: string;
+    format?: string;
+  }
+): Promise<MADECCCloudinaryUpload> {
+  if (
+    !cloudName ||
+    !apiKey ||
+    !apiSecret
+  ) {
+    throw new Error(
+      "Cloudinary is not configured."
+    );
+  }
+
+  return new Promise(
+    (resolve, reject) => {
+      const stream =
+        cloudinary.uploader.upload_stream(
+          {
+            folder,
+            resource_type:
+              options?.type || "auto",
+            public_id:
+              options?.publicId,
+            format:
+              options?.format,
+            overwrite: false,
+          },
+          (
+            error,
+            result
+          ) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+
+            if (!result) {
+              reject(
+                new Error(
+                  "Cloudinary returned no upload result."
+                )
+              );
+              return;
+            }
+
+            resolve({
+              url: result.url,
+              secureUrl:
+                result.secure_url,
+              publicId:
+                result.public_id,
+              resourceType:
+                result.resource_type,
+              format:
+                result.format,
+              bytes:
+                result.bytes,
+            });
+          }
+        );
+
+      stream.end(buffer);
+    }
+  );
+}
+
+export async function deleteMADECCAIAsset(
+  publicId: string,
+  resourceType:
+    | "image"
+    | "video"
+    | "raw" = "image"
+) {
+  return cloudinary.uploader.destroy(
+    publicId,
+    {
+      resource_type:
+        resourceType,
+    }
+  );
+}

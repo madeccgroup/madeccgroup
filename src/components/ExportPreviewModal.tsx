@@ -117,6 +117,14 @@ export const ExportPreviewModal: React.FC<ExportPreviewModalProps> = ({
           estPages: '2 - 3 Pages (A4)',
           description: 'Official MINESEC Competency-Based Approach (CBA) lesson plan with methodological execution matrix.',
         };
+      case 'receipts':
+        return {
+          title: 'Corporate Digital Receipt & Fiscal Voucher',
+          badge: 'FISCAL_RECEIPT',
+          color: 'from-amber-500 to-amber-600',
+          estPages: '1 Page (A4 Portrait)',
+          description: 'Certified fiscal receipt mapping transaction breakdown, TVA tax, remaining balance, and public verification key.',
+        };
     }
   };
 

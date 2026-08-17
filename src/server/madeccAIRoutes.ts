@@ -1,0 +1,1901 @@
+﻿import {
+  Router,
+  Request,
+  Response,
+} from "express";
+
+import multer from "multer";
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import crypto from "node:crypto";
+
+import {
+  eq,
+  desc,
+} from "drizzle-orm";
+
+import { db } from "../db";
+
+import {
+  aiJobs,
+  aiMedia,
+  aiConversations,
+  aiMessages,
+} from "../db/schema";
+
+import {
+  generateText,
+  generateImage,
+  generateSpeech,
+  generateVideo,
+  transcribeAudio,
+  analyzeVideo,
+  analyzeImage,
+  analyzeDocument,
+  translateText,
+  generateBOQFromDrawing,
+} from "./madeccAIEngine";
+
+import {
+  uploadMADECCAIFile,
+} from "./madeccAICloudinary";
+
+const router =
+  Router();
+
+const uploadDir =
+  path.join(
+    process.cwd(),
+    "tmp",
+    "madecc-ai"
+  );
+
+const aiMediaDirectoryReady = fs.mkdir(
+  uploadDir,
+  {
+    recursive: true,
+  }
+);
+
+const maxUploadMB =
+  Number(
+    process.env
+      .MADECC_AI_MAX_UPLOAD_MB ||
+      "500"
+  );
+
+const upload =
+  multer({
+    dest: uploadDir,
+
+    limits: {
+      fileSize:
+        maxUploadMB *
+        1024 *
+        1024,
+    },
+  });
+
+function getUserId(
+  req: Request
+): string {
+  /*
+   * Your existing authentication
+   * middleware should populate req.user.
+   *
+   * This intentionally does NOT
+   * replace Firebase authentication.
+   */
+
+  const user =
+    (req as any).user;
+
+  const id =
+    user?.id ||
+    user?.uid ||
+    user?.userId;
+
+  if (!id) {
+    throw new Error(
+      "AUTHENTICATION_REQUIRED"
+    );
+  }
+
+  return String(id);
+}
+
+async function createJob(
+  userId: string,
+  type: string,
+  input: unknown,
+  projectId?: string
+) {
+  const [job] =
+    await db
+      .insert(aiJobs)
+      .values({
+        userId,
+        projectId:
+          projectId || null,
+        type,
+        status: "running",
+        provider: "google",
+        input: input as any,
+        startedAt:
+          new Date(),
+      })
+      .returning();
+
+  return job;
+}
+
+async function completeJob(
+  jobId: string,
+  output: unknown,
+  model: string,
+  startedAt: number
+) {
+  await db
+    .update(aiJobs)
+    .set({
+      status: "completed",
+      output: output as any,
+      model,
+      durationMs:
+        Date.now() -
+        startedAt,
+      completedAt:
+        new Date(),
+    })
+    .where(
+      eq(aiJobs.id, jobId)
+    );
+}
+
+async function failJob(
+  jobId: string,
+  error: unknown,
+  startedAt: number
+) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : String(error);
+
+  await db
+    .update(aiJobs)
+    .set({
+      status: "failed",
+      error: message,
+      durationMs:
+        Date.now() -
+        startedAt,
+      completedAt:
+        new Date(),
+    })
+    .where(
+      eq(aiJobs.id, jobId)
+    );
+}
+
+async function saveMedia(
+  values: {
+    jobId?: string;
+    userId: string;
+    projectId?: string;
+    name: string;
+    type: string;
+    mimeType?: string;
+    size?: number;
+    model?: string;
+    url?: string;
+    publicId?: string;
+    textContent?: string;
+    metadata?: unknown;
+  }
+) {
+  const [media] =
+    await db
+      .insert(aiMedia)
+      .values({
+        jobId:
+          values.jobId,
+        userId:
+          values.userId,
+        projectId:
+          values.projectId,
+        name:
+          values.name,
+        type:
+          values.type,
+        mimeType:
+          values.mimeType,
+        size:
+          values.size,
+        provider:
+          "google",
+        model:
+          values.model,
+        url:
+          values.url,
+        publicId:
+          values.publicId,
+        textContent:
+          values.textContent,
+        metadata:
+          values.metadata as any,
+      })
+      .returning();
+
+  return media;
+}
+
+async function cleanup(
+  filePath?: string
+) {
+  if (!filePath) return;
+
+  try {
+    await fs.unlink(
+      filePath
+    );
+  } catch {
+    // File may already be removed.
+  }
+}
+
+/* =========================================================
+   HEALTH
+========================================================= */
+
+router.get(
+  "/health",
+  async (
+    _req,
+    res
+  ) => {
+    res.json({
+      success: true,
+
+      gemini:
+        Boolean(
+          process.env
+            .GEMINI_API_KEY
+        ),
+
+      cloudinary:
+        Boolean(
+          process.env
+            .CLOUDINARY_CLOUD_NAME &&
+            process.env
+              .CLOUDINARY_API_KEY &&
+            process.env
+              .CLOUDINARY_API_SECRET
+        ),
+    });
+  }
+);
+
+/* =========================================================
+   TEXT
+========================================================= */
+
+router.post(
+  "/text",
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const {
+        prompt,
+        projectId,
+      } = req.body;
+
+      if (
+        typeof prompt !==
+          "string" ||
+        !prompt.trim()
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Prompt is required.",
+          });
+      }
+
+      const job =
+        await createJob(
+          userId,
+          "text_generation",
+          {
+            prompt,
+          },
+          projectId
+        );
+
+      const result =
+        await generateText(
+          prompt
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          projectId,
+          name:
+            `MADECC-AI-${job.id}.txt`,
+          type:
+            "text",
+          mimeType:
+            "text/plain",
+          size:
+            Buffer.byteLength(
+              result.text,
+              "utf8"
+            ),
+          model:
+            result.model,
+          textContent:
+            result.text,
+          metadata: {
+            interactionId:
+              result.interactionId,
+          },
+        });
+
+      await completeJob(
+        job.id,
+        {
+          text:
+            result.text,
+          mediaId:
+            media.id,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        text:
+          result.text,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_TEXT]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Text generation failed.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   CHAT
+========================================================= */
+
+router.post(
+  "/chat",
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const {
+        message,
+        projectId,
+        conversationId,
+      } = req.body;
+
+      if (
+        typeof message !==
+          "string" ||
+        !message.trim()
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Message is required.",
+          });
+      }
+
+      let history =
+        "";
+
+      if (
+        conversationId
+      ) {
+        const messages =
+          await db
+            .select()
+            .from(
+              aiMessages
+            )
+            .where(
+              eq(
+                aiMessages.conversationId,
+                conversationId
+              )
+            )
+            .orderBy(
+              desc(
+                aiMessages.createdAt
+              )
+            )
+            .limit(20);
+
+        history =
+          messages
+            .reverse()
+            .map(
+              (item) =>
+                `${item.role}: ${item.content}`
+            )
+            .join(
+              "\n\n"
+            );
+      }
+
+      const prompt =
+        history
+          ? `
+Conversation history:
+
+${history}
+
+New user request:
+
+${message}
+`
+          : message;
+
+      const result =
+        await generateText(
+          prompt
+        );
+
+      if (
+        conversationId
+      ) {
+        await db
+          .insert(
+            aiMessages
+          )
+          .values([
+            {
+              conversationId,
+              role: "user",
+              content:
+                message,
+            },
+
+            {
+              conversationId,
+              role:
+                "assistant",
+              content:
+                result.text,
+            },
+          ]);
+      }
+
+      return res.json({
+        success: true,
+        message:
+          result.text,
+        interactionId:
+          result.interactionId,
+        model:
+          result.model,
+        durationMs:
+          Date.now() -
+          started,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_CHAT]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "AI chat failed.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   IMAGE GENERATION
+========================================================= */
+
+router.post(
+  "/image",
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const {
+        prompt,
+        projectId,
+        aspectRatio,
+        imageSize,
+      } = req.body;
+
+      if (
+        typeof prompt !==
+          "string" ||
+        !prompt.trim()
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Image prompt is required.",
+          });
+      }
+
+      const job =
+        await createJob(
+          userId,
+          "image_generation",
+          {
+            prompt,
+            aspectRatio,
+            imageSize,
+          },
+          projectId
+        );
+
+      const result =
+        await generateImage(
+          prompt,
+          {
+            aspectRatio,
+            imageSize,
+          }
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          projectId,
+          name:
+            `MADECC-AI-${job.id}.png`,
+          type:
+            "image",
+          mimeType:
+            "image/png",
+          size:
+            result.bytes,
+          model:
+            result.model,
+          url:
+            result.secureUrl,
+          publicId:
+            result.publicId,
+          metadata: {
+            interactionId:
+              result.interactionId,
+          },
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          url:
+            result.secureUrl,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        url:
+          result.secureUrl,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_IMAGE]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Image generation failed.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   TEXT TO SPEECH
+========================================================= */
+
+router.post(
+  "/speech",
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const {
+        text,
+        projectId,
+        voice,
+        language,
+      } = req.body;
+
+      if (
+        typeof text !==
+          "string" ||
+        !text.trim()
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Text is required.",
+          });
+      }
+
+      const job =
+        await createJob(
+          userId,
+          "text_to_speech",
+          {
+            text,
+            voice,
+            language,
+          },
+          projectId
+        );
+
+      const result =
+        await generateSpeech(
+          text,
+          {
+            voice,
+            language,
+          }
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          projectId,
+          name:
+            `MADECC-AI-${job.id}.wav`,
+          type:
+            "audio",
+          mimeType:
+            "audio/wav",
+          size:
+            result.bytes,
+          model:
+            result.model,
+          url:
+            result.secureUrl,
+          publicId:
+            result.publicId,
+          metadata: {
+            interactionId:
+              result.interactionId,
+          },
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          url:
+            result.secureUrl,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        url:
+          result.secureUrl,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_SPEECH]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Speech generation failed.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   TEXT TO VIDEO
+========================================================= */
+
+router.post(
+  "/video",
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const {
+        prompt,
+        projectId,
+        aspectRatio,
+      } = req.body;
+
+      if (
+        typeof prompt !==
+          "string" ||
+        !prompt.trim()
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Video prompt is required.",
+          });
+      }
+
+      const job =
+        await createJob(
+          userId,
+          "text_to_video",
+          {
+            prompt,
+            aspectRatio,
+          },
+          projectId
+        );
+
+      const result =
+        await generateVideo(
+          prompt,
+          {
+            aspectRatio,
+          }
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          projectId,
+          name:
+            `MADECC-AI-${job.id}.mp4`,
+          type:
+            "video",
+          mimeType:
+            "video/mp4",
+          size:
+            result.bytes,
+          model:
+            result.model,
+          url:
+            result.secureUrl,
+          publicId:
+            result.publicId,
+          metadata: {
+            interactionId:
+              result.interactionId,
+          },
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          url:
+            result.secureUrl,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        url:
+          result.secureUrl,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_VIDEO]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Video generation failed.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   UPLOAD + ANALYSIS
+========================================================= */
+
+router.post(
+  "/transcribe",
+  upload.single("file"),
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    const file =
+      req.file;
+
+    if (!file) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Audio file is required.",
+        });
+    }
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const projectId =
+        String(
+          req.body.projectId ||
+            ""
+        ) || undefined;
+
+      const job =
+        await createJob(
+          userId,
+          "speech_to_text",
+          {
+            filename:
+              file.originalname,
+            mimeType:
+              file.mimetype,
+          },
+          projectId
+        );
+
+      const result =
+        await transcribeAudio(
+          file.path,
+          file.mimetype
+        );
+
+      const uploaded =
+        await uploadMADECCAIFile(
+          file.path,
+          {
+            type:
+              file.mimetype.startsWith(
+                "video/"
+              )
+                ? "video"
+                : "raw",
+          }
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          projectId,
+          name:
+            file.originalname,
+          type:
+            "transcript",
+          mimeType:
+            "text/plain",
+          size:
+            Buffer.byteLength(
+              result.text,
+              "utf8"
+            ),
+          model:
+            result.model,
+          url:
+            uploaded.secureUrl,
+          textContent:
+            result.text,
+          metadata: {
+            sourceUrl:
+              uploaded.secureUrl,
+            interactionId:
+              result.interactionId,
+          },
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          transcript:
+            result.text,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        transcript:
+          result.text,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_TRANSCRIBE]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Transcription failed.",
+        });
+    } finally {
+      await cleanup(
+        file.path
+      );
+    }
+  }
+);
+
+/* =========================================================
+   VIDEO ANALYSIS
+========================================================= */
+
+router.post(
+  "/video/analyze",
+  upload.single("file"),
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    const file =
+      req.file;
+
+    if (!file) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Video file is required.",
+        });
+    }
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const projectId =
+        String(
+          req.body.projectId ||
+            ""
+        ) || undefined;
+
+      const job =
+        await createJob(
+          userId,
+          "video_to_text",
+          {
+            filename:
+              file.originalname,
+          },
+          projectId
+        );
+
+      const result =
+        await analyzeVideo(
+          file.path,
+          file.mimetype
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          projectId,
+          name:
+            `${file.originalname}.analysis.txt`,
+          type:
+            "video_analysis",
+          mimeType:
+            "text/plain",
+          size:
+            Buffer.byteLength(
+              result.text,
+              "utf8"
+            ),
+          model:
+            result.model,
+          textContent:
+            result.text,
+          metadata: {
+            interactionId:
+              result.interactionId,
+          },
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          analysis:
+            result.text,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        analysis:
+          result.text,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_VIDEO_ANALYSIS]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Video analysis failed.",
+        });
+    } finally {
+      await cleanup(
+        file.path
+      );
+    }
+  }
+);
+
+/* =========================================================
+   IMAGE ANALYSIS
+========================================================= */
+
+router.post(
+  "/image/analyze",
+  upload.single("file"),
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    const file =
+      req.file;
+
+    if (!file) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Image file is required.",
+        });
+    }
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const job =
+        await createJob(
+          userId,
+          "image_to_text",
+          {
+            filename:
+              file.originalname,
+          }
+        );
+
+      const result =
+        await analyzeImage(
+          file.path,
+          file.mimetype,
+          req.body.prompt
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          name:
+            `${file.originalname}.analysis.txt`,
+          type:
+            "image_analysis",
+          mimeType:
+            "text/plain",
+          size:
+            Buffer.byteLength(
+              result.text,
+              "utf8"
+            ),
+          model:
+            result.model,
+          textContent:
+            result.text,
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          analysis:
+            result.text,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        analysis:
+          result.text,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_IMAGE_ANALYSIS]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Image analysis failed.",
+        });
+    } finally {
+      await cleanup(
+        file.path
+      );
+    }
+  }
+);
+
+/* =========================================================
+   DOCUMENT ANALYSIS
+========================================================= */
+
+router.post(
+  "/document/analyze",
+  upload.single("file"),
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    const file =
+      req.file;
+
+    if (!file) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Document is required.",
+        });
+    }
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const job =
+        await createJob(
+          userId,
+          "document_to_text",
+          {
+            filename:
+              file.originalname,
+          }
+        );
+
+      const result =
+        await analyzeDocument(
+          file.path,
+          file.mimetype
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          name:
+            `${file.originalname}.analysis.txt`,
+          type:
+            "document_analysis",
+          mimeType:
+            "text/plain",
+          size:
+            Buffer.byteLength(
+              result.text,
+              "utf8"
+            ),
+          model:
+            result.model,
+          textContent:
+            result.text,
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          analysis:
+            result.text,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        analysis:
+          result.text,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_DOCUMENT]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Document analysis failed.",
+        });
+    } finally {
+      await cleanup(
+        file.path
+      );
+    }
+  }
+);
+
+/* =========================================================
+   DRAWING -> BOQ
+========================================================= */
+
+router.post(
+  "/drawing/analyze",
+  upload.single("file"),
+  async (
+    req,
+    res
+  ) => {
+    const started =
+      Date.now();
+
+    const file =
+      req.file;
+
+    if (!file) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Drawing is required.",
+        });
+    }
+
+    try {
+      const userId =
+        getUserId(req);
+
+      const projectId =
+        String(
+          req.body.projectId ||
+            ""
+        ) || undefined;
+
+      const job =
+        await createJob(
+          userId,
+          "drawing_to_boq",
+          {
+            filename:
+              file.originalname,
+          },
+          projectId
+        );
+
+      const result =
+        await generateBOQFromDrawing(
+          file.path,
+          file.mimetype
+        );
+
+      const media =
+        await saveMedia({
+          jobId:
+            job.id,
+          userId,
+          projectId,
+          name:
+            `${file.originalname}.boq.json`,
+          type:
+            "boq",
+          mimeType:
+            "application/json",
+          size:
+            Buffer.byteLength(
+              JSON.stringify(
+                result.data
+              ),
+              "utf8"
+            ),
+          model:
+            result.model,
+          textContent:
+            JSON.stringify(
+              result.data,
+              null,
+              2
+            ),
+          metadata:
+            result.data,
+        });
+
+      await completeJob(
+        job.id,
+        {
+          mediaId:
+            media.id,
+          boq:
+            result.data,
+        },
+        result.model,
+        started
+      );
+
+      return res.json({
+        success: true,
+        jobId:
+          job.id,
+        mediaId:
+          media.id,
+        boq:
+          result.data,
+      });
+    } catch (error) {
+      console.error(
+        "[MADECC_AI_BOQ]",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Drawing analysis failed.",
+        });
+    } finally {
+      await cleanup(
+        file.path
+      );
+    }
+  }
+);
+
+/* =========================================================
+   TRANSLATION
+========================================================= */
+
+router.post(
+  "/translate",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      getUserId(req);
+
+      const {
+        text,
+        targetLanguage,
+      } = req.body;
+
+      if (
+        !text ||
+        !targetLanguage
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Text and target language are required.",
+          });
+      }
+
+      const result =
+        await translateText(
+          text,
+          targetLanguage
+        );
+
+      return res.json({
+        success: true,
+        translation:
+          result.text,
+      });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Translation failed.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   MEDIA LIBRARY
+========================================================= */
+
+router.get(
+  "/media",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const userId =
+        getUserId(req);
+
+      const media =
+        await db
+          .select()
+          .from(aiMedia)
+          .where(
+            eq(
+              aiMedia.userId,
+              userId
+            )
+          )
+          .orderBy(
+            desc(
+              aiMedia.createdAt
+            )
+          )
+          .limit(100);
+
+      return res.json({
+        success: true,
+        media,
+      });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to load AI media.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   DOWNLOAD TEXT MEDIA
+========================================================= */
+
+router.get(
+  "/media/:id/download",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const userId =
+        getUserId(req);
+
+      const rows =
+        await db
+          .select()
+          .from(aiMedia)
+          .where(
+            eq(
+              aiMedia.id,
+              req.params.id
+            )
+          )
+          .limit(1);
+
+      const media =
+        rows[0];
+
+      if (
+        !media ||
+        media.userId !== userId
+      ) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Media not found.",
+          });
+      }
+
+      if (
+        media.url
+      ) {
+        return res.redirect(
+          media.url
+        );
+      }
+
+      const text =
+        media.textContent ||
+        "";
+
+      res.setHeader(
+        "Content-Type",
+        media.mimeType ||
+          "text/plain"
+      );
+
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${media.name}"`
+      );
+
+      return res.send(
+        text
+      );
+    } catch (error) {
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Download failed.",
+        });
+    }
+  }
+);
+
+/* =========================================================
+   CONVERSATIONS
+========================================================= */
+
+router.get(
+  "/conversations",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const userId =
+        getUserId(req);
+
+      const rows =
+        await db
+          .select()
+          .from(
+            aiConversations
+          )
+          .where(
+            eq(
+              aiConversations.userId,
+              userId
+            )
+          )
+          .orderBy(
+            desc(
+              aiConversations.updatedAt
+            )
+          );
+
+      return res.json({
+        success: true,
+        conversations:
+          rows,
+      });
+    } catch {
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to load conversations.",
+        });
+    }
+  }
+);
+
+router.post(
+  "/conversations",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const userId =
+        getUserId(req);
+
+      const {
+        title,
+        mode,
+        projectId,
+      } = req.body;
+
+      const [conversation] =
+        await db
+          .insert(
+            aiConversations
+          )
+          .values({
+            userId,
+            title:
+              title ||
+              "New AI Conversation",
+            mode:
+              mode ||
+              "general",
+            projectId:
+              projectId ||
+              null,
+          })
+          .returning();
+
+      return res.json({
+        success: true,
+        conversation,
+      });
+    } catch {
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to create conversation.",
+        });
+    }
+  }
+);
+
+router.delete(
+  "/conversations/:id",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const userId =
+        getUserId(req);
+
+      const rows =
+        await db
+          .select()
+          .from(
+            aiConversations
+          )
+          .where(
+            eq(
+              aiConversations.id,
+              req.params.id
+            )
+          )
+          .limit(1);
+
+      if (
+        !rows[0] ||
+        rows[0].userId !==
+          userId
+      ) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Conversation not found.",
+          });
+      }
+
+      await db
+        .delete(
+          aiMessages
+        )
+        .where(
+          eq(
+            aiMessages.conversationId,
+            req.params.id
+          )
+        );
+
+      await db
+        .delete(
+          aiConversations
+        )
+        .where(
+          eq(
+            aiConversations.id,
+            req.params.id
+          )
+        );
+
+      return res.json({
+        success: true,
+      });
+    } catch {
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to delete conversation.",
+        });
+    }
+  }
+);
+
+export default router;

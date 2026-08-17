@@ -205,17 +205,17 @@ export default function Navbar({
     }
   };
 
-  const menuItems = [
-    { id: 'home', label: t('nav_home') },
-    { id: 'services', label: 'Services' },
-    { id: 'projects', label: t('nav_projects') },
-    { id: 'request-a-quote', label: 'Request a Quote' },
-    { id: 'budget-calculator', label: 'Budget Calculator' },
-    { id: 'construction-cost-guide', label: 'Cost Guide' },
-    { id: 'about', label: t('nav_about') },
-    { id: 'contact', label: t('nav_contact') },
-  ];
-
+const menuItems = [
+  { id: 'home', label: t('nav_home') },
+  { id: 'services', label: 'Services' },
+  { id: 'ai-studio', label: 'AI Studio' },
+  { id: 'projects', label: t('nav_projects') },
+  { id: 'request-a-quote', label: 'Request a Quote' },
+  { id: 'budget-calculator', label: 'Budget Calculator' },
+  { id: 'construction-cost-guide', label: 'Cost Guide' },
+  { id: 'about', label: t('nav_about') },
+  { id: 'contact', label: t('nav_contact') },
+];
   return (
     <nav className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
       theme === 'light'

@@ -1,0 +1,278 @@
+﻿import type { Express, Request, Response } from "express";
+import multer from "multer";
+
+import {
+  exportAudio,
+  exportText,
+  archiveMedia,
+} from "./mediaService";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 500 * 1024 * 1024,
+  },
+});
+
+/**
+ * MADECC AI Media API
+ *
+ * IMPORTANT:
+ * This application uses direct Express app registration,
+ * not a separate Express Router.
+ */
+export function registerMediaRoutes(app: Express) {
+
+  /**
+   * POST /api/ai/media/upload
+   *
+   * Multipart upload endpoint.
+   *
+   * The upload middleware is attached ONLY to this endpoint,
+   * so global express.json() does not interfere with multipart data.
+   */
+  app.post(
+    "/api/ai/media/upload",
+    upload.single("file"),
+    async (req: Request, res: Response) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({
+            success: false,
+            error: "No media file was uploaded.",
+          });
+        }
+
+        return res.status(501).json({
+          success: false,
+          error:
+            "Media upload persistence must be handled by the existing media service.",
+          filename: req.file.originalname,
+          mimeType: req.file.mimetype,
+          sizeBytes: req.file.size,
+        });
+      } catch (error) {
+        console.error("[MEDIA_UPLOAD]", error);
+
+        return res.status(500).json({
+          success: false,
+          error: "Media upload failed.",
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/ai/media/:id/audio
+   *
+   * Extract audio from a stored video media asset.
+   *
+   * format:
+   *   mp3
+   *   wav
+   */
+  app.post(
+    "/api/ai/media/:id/audio",
+    async (req: Request, res: Response) => {
+      try {
+        const mediaId = String(req.params.id);
+        const userId =
+          String(
+            req.body?.userId ||
+            req.headers["x-user-id"] ||
+            ""
+          ).trim();
+
+        const format =
+          req.body?.format === "wav"
+            ? "wav"
+            : "mp3";
+
+        if (!mediaId) {
+          return res.status(400).json({
+            success: false,
+            error: "Media ID is required.",
+          });
+        }
+
+        if (!userId) {
+          return res.status(401).json({
+            success: false,
+            error: "Authenticated media user is required.",
+          });
+        }
+
+        const exported = await exportAudio({
+          mediaId,
+          userId,
+          format,
+        });
+
+        res.setHeader(
+          "Content-Type",
+          exported.mimeType
+        );
+
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${exported.filename}"`
+        );
+
+        res.setHeader(
+          "Content-Length",
+          exported.buffer.length
+        );
+
+        return res.send(
+          exported.buffer
+        );
+
+      } catch (error) {
+        console.error(
+          "[MEDIA_AUDIO_EXPORT]",
+          error
+        );
+
+        return res.status(500).json({
+          success: false,
+          error:
+            "Audio extraction failed.",
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/ai/media/:id/export
+   *
+   * Text exports:
+   * TXT
+   * DOCX
+   * PDF
+   */
+  app.post(
+    "/api/ai/media/:id/export",
+    async (req: Request, res: Response) => {
+      try {
+        const mediaId = String(req.params.id);
+        const userId =
+          String(
+            req.body?.userId ||
+            req.headers["x-user-id"] ||
+            ""
+          ).trim();
+
+        const format =
+          String(req.body?.format || "txt")
+            .toLowerCase();
+
+        if (!mediaId) {
+          return res.status(400).json({
+            success: false,
+            error: "Media ID is required.",
+          });
+        }
+
+        if (!userId) {
+          return res.status(401).json({
+            success: false,
+            error: "Authenticated media user is required.",
+          });
+        }
+
+        if (!["txt", "docx", "pdf"].includes(format)) {
+          return res.status(400).json({
+            success: false,
+            error:
+              "Unsupported export format. Use txt, docx, or pdf.",
+          });
+        }
+
+        const exported = await exportText({
+          mediaId,
+          userId,
+          format: format as "txt" | "docx" | "pdf",
+        });
+
+        res.setHeader(
+          "Content-Type",
+          exported.mimeType
+        );
+
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${exported.filename}"`
+        );
+
+        res.setHeader(
+          "Content-Length",
+          exported.buffer.length
+        );
+
+        return res.send(
+          exported.buffer
+        );
+
+      } catch (error) {
+        console.error(
+          "[MEDIA_TEXT_EXPORT]",
+          error
+        );
+
+        return res.status(500).json({
+          success: false,
+          error:
+            "Media export failed.",
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/ai/media/:id
+   */
+  app.delete(
+    "/api/ai/media/:id",
+    async (
+      req: Request,
+      res: Response
+    ) => {
+      try {
+        const userId =
+          String(
+            req.body?.userId ||
+            req.headers["x-user-id"] ||
+            ""
+          ).trim();
+
+        if (!userId) {
+          return res.status(401).json({
+            success: false,
+            error: "Authenticated media user is required.",
+          });
+        }
+
+        await archiveMedia(
+          req.params.id,
+          userId
+        );
+
+        return res.json({
+          success: true,
+        });
+
+      } catch (error) {
+        console.error(
+          "[MEDIA_DELETE]",
+          error
+        );
+
+        return res.status(500).json({
+          success: false,
+          error:
+            "Unable to delete media.",
+        });
+      }
+    }
+  );
+}

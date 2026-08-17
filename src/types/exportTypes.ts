@@ -1,9 +1,12 @@
+export type { ReceiptExportModel } from './receiptTypes.ts';
+
 export type ExportModuleType = 
   | 'civil_works'
   | 'articles_of_association'
   | 'blueprints'
   | 'safety_inspections'
-  | 'pedagogical_lessons';
+  | 'pedagogical_lessons'
+  | 'receipts';
 
 export type ExportFormat = 'pdf' | 'docx';
 

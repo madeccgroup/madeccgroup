@@ -35,6 +35,16 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Project, Appointment, ContactMessage, Review } from '../types.ts';
+import { 
+  ReceiptDocument, 
+  ReceiptFinancialSummary, 
+  ReceiptExportModel,
+  calculateReceiptTotals, 
+  createDefaultReceipt, 
+  cloneReceiptDocument, 
+  validateReceiptDocument 
+} from '../types/receiptTypes.ts';
+import { ReceiptExporter } from '../services/exporters/ReceiptExporter.ts';
 
 // =========================================================================
 // 1. EXECUTIVE ANALYTICS REPORT PDF GENERATOR
@@ -304,29 +314,29 @@ export default function DocumentStudio({
   const [contractAdvancePayment, setContractAdvancePayment] = useState('372000');
 
   // ==========================================
-  // --- RECEIPT GENERATOR STATE ---
+  // --- CANONICAL RECEIPT DOCUMENT STATE ---
   // ==========================================
-  const [receiptNumber, setReceiptNumber] = useState(`REC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
-  const [receiptClient, setReceiptClient] = useState('');
-  const [receiptNiu, setReceiptNiu] = useState('');
-  const [receiptProject, setReceiptProject] = useState('');
-  const [receiptInvoiceTotal, setReceiptInvoiceTotal] = useState('10000000');
-  const [receiptAmount, setReceiptAmount] = useState('4500000');
-  const [receiptRemainingBalance, setReceiptRemainingBalance] = useState('5500000');
-  const [receiptTaxRate, setReceiptTaxRate] = useState('19.25'); // Standard Cameroon VAT
-  const [receiptMethod, setReceiptMethod] = useState('MTN Mobile Money');
-  const [receiptMemo, setReceiptMemo] = useState('Initial mobilization fee for site geotechnical analysis.');
-  const [receiptSignatory, setReceiptSignatory] = useState('Jean-Pierre Bikoula (Chief Financial Officer)');
-  const [receiptTypedSign, setReceiptTypedSign] = useState('');
-  const [isReceiptDigitallySigned, setIsReceiptDigitallySigned] = useState(false);
-  const [receiptVerificationToken, setReceiptVerificationToken] = useState('');
-  const [receiptQrCodeBase64, setReceiptQrCodeBase64] = useState('');
-  const [receiptBarcodeBase64, setReceiptBarcodeBase64] = useState('');
+  const [selectedReceipt, setSelectedReceipt] = useState<ReceiptDocument>(() => createDefaultReceipt());
   const [isSigningReceiptInProgress, setIsSigningReceiptInProgress] = useState(false);
-  const [receiptClientEmail, setReceiptClientEmail] = useState('');
-  const [receiptDrawnSignature, setReceiptDrawnSignature] = useState('');
   const [showReceiptSignaturePad, setShowReceiptSignaturePad] = useState(false);
   const [isEmailingReceipt, setIsEmailingReceipt] = useState(false);
+
+  const updateReceiptField = <K extends keyof ReceiptDocument>(field: K, value: ReceiptDocument[K]) => {
+    setSelectedReceipt(prev => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'invoiceTotalAmount' || field === 'receiptAmount') {
+        const inv = parseFloat(String(field === 'invoiceTotalAmount' ? value : updated.invoiceTotalAmount || '0').replace(/,/g, '')) || 0;
+        const paid = parseFloat(String(field === 'receiptAmount' ? value : updated.receiptAmount || '0').replace(/,/g, '')) || 0;
+        if (inv > 0) {
+          updated.remainingBalance = Math.max(0, inv - paid).toString();
+        }
+      }
+      return updated;
+    });
+  };
+
+  // Canonical receipt financial summary engine
+  const currentReceiptTotals = calculateReceiptTotals(selectedReceipt);
 
   // ==========================================
   // --- ARTICLES OF ASSOCIATION STATE & HELPERS ---
@@ -382,6 +392,49 @@ export default function DocumentStudio({
   const [pedagogicalTeacherCoaching, setPedagogicalTeacherCoaching] = useState('Prioritize physical modeling of rebar overlap (lap length). Explain the chemical curing of concrete (hydration reaction) and potential shrinkage cracking when water-cement ratios are exceeded. Use sandbox layout for psychomotor scaffolding.');
 
   const openExportModalForActiveSubMode = () => {
+    if (mode === 'receipts') {
+      const totals = calculateReceiptTotals(selectedReceipt);
+      const recordData: ReceiptExportModel = {
+        recordId: selectedReceipt.receiptNo,
+        receiptNo: selectedReceipt.receiptNo,
+        id: selectedReceipt.id,
+        version: selectedReceipt.version || 1,
+        title: `Official Receipt ${selectedReceipt.receiptNo}`,
+        clientName: selectedReceipt.clientName || 'Valued Client',
+        clientNiu: selectedReceipt.clientNiu || '',
+        clientEmail: selectedReceipt.clientEmail || '',
+        projectName: selectedReceipt.receiptProject || 'General Construction Services',
+        receiptMethod: selectedReceipt.receiptMethod || 'Direct Bank Settlement',
+        memo: selectedReceipt.receiptMemo || 'Official mobilization & infrastructure settlement milestone.',
+        invoiceTotalAmount: totals.invoiceTotal,
+        receiptAmount: totals.subtotalPaid,
+        taxRate: totals.taxRate,
+        taxAmount: totals.taxAmount,
+        totalPaidThisReceipt: totals.totalPaidThisReceipt,
+        remainingBalance: totals.remainingBalance,
+        isPaidInFull: totals.isPaidInFull,
+        currency: totals.currency,
+        signatoryName: selectedReceipt.receiptSignatory || 'Jean-Pierre Bikoula (Chief Financial Officer)',
+        authorizedOfficer: selectedReceipt.receiptTypedSign || 'Authorized Officer',
+        drawnSignatureBase64: selectedReceipt.drawnCfoSignature || undefined,
+        verificationToken: selectedReceipt.verificationToken,
+        verificationUrl: `${window.location.origin}/?verify=${selectedReceipt.verificationToken}`,
+        qrCodeBase64: selectedReceipt.qrCodeBase64 || undefined,
+        barcodeBase64: selectedReceipt.barcodeBase64 || undefined,
+        isDigitallySigned: Boolean(selectedReceipt.isDigitallySigned),
+        date: selectedReceipt.signedAt ? new Date(selectedReceipt.signedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        signedAt: selectedReceipt.signedAt ? new Date(selectedReceipt.signedAt).toISOString() : new Date().toISOString(),
+        status: selectedReceipt.status || 'ISSUED',
+      };
+
+      setExportModalModuleType('receipts');
+      setExportModalRecordId(selectedReceipt.receiptNo);
+      setExportModalDocumentTitle(`Official Receipt ${selectedReceipt.receiptNo}`);
+      setExportModalRecordData(recordData);
+      setIsExportPreviewModalOpen(true);
+      return;
+    }
+
     let moduleType: ExportModuleType = 'civil_works';
     let recordId: string | number = contractNo || 'CW-2026-001';
     let title = contractProject || 'Civil Works Report';
@@ -1021,12 +1074,9 @@ export default function DocumentStudio({
       if (response.ok) {
         showToast('Receipt deleted successfully.', 'success');
         fetchSavedReceipts();
-        // If the deleted receipt is the one in preview, reset it
-        if (receiptVerificationToken) {
-          setIsReceiptDigitallySigned(false);
-          setReceiptVerificationToken('');
-          setReceiptQrCodeBase64('');
-          setReceiptBarcodeBase64('');
+        // If the deleted receipt is currently selected, reset it to a new clean receipt
+        if (selectedReceipt.id === id) {
+          setSelectedReceipt(createDefaultReceipt());
         }
       } else {
         const err = await response.text();
@@ -1039,37 +1089,92 @@ export default function DocumentStudio({
   };
 
   const handleLoadReceiptToPreview = async (receipt: any) => {
-    setReceiptNumber(receipt.receiptNo || '');
-    setReceiptClient(receipt.clientName || '');
-    setReceiptNiu(receipt.clientNiu || '');
-    setReceiptProject(receipt.receiptProject || '');
-    setReceiptInvoiceTotal(receipt.invoiceTotalAmount || receipt.receiptAmount || '0');
-    setReceiptAmount(receipt.receiptAmount || '');
-    setReceiptRemainingBalance(receipt.remainingBalance || '0');
-    setReceiptTaxRate(receipt.receiptTaxRate || '19.25');
-    setReceiptMethod(receipt.receiptMethod || 'MTN Mobile Money');
-    setReceiptMemo(receipt.receiptMemo || '');
-    setReceiptSignatory(receipt.receiptSignatory || '');
-    setReceiptTypedSign(receipt.receiptTypedSign || '');
-    setReceiptVerificationToken(receipt.verificationToken || '');
-    setReceiptDrawnSignature(receipt.drawnCfoSignature || '');
-    setReceiptClientEmail(''); // Reset or default
-    setIsReceiptDigitallySigned(true);
+    const canonicalDoc: ReceiptDocument = {
+      id: receipt.id,
+      receiptNo: receipt.receiptNo || `REC-${new Date().getFullYear()}-0000`,
+      clientName: receipt.clientName || '',
+      clientNiu: receipt.clientNiu || '',
+      clientEmail: receipt.clientEmail || '',
+      receiptProject: receipt.receiptProject || '',
+      invoiceTotalAmount: receipt.invoiceTotalAmount || receipt.receiptAmount || '0',
+      receiptAmount: receipt.receiptAmount || '0',
+      remainingBalance: receipt.remainingBalance || '0',
+      receiptTaxRate: receipt.receiptTaxRate || '19.25',
+      currency: receipt.currency || 'XAF',
+      receiptMethod: receipt.receiptMethod || 'MTN Mobile Money',
+      receiptMemo: receipt.receiptMemo || '',
+      receiptSignatory: receipt.receiptSignatory || '',
+      receiptTypedSign: receipt.receiptTypedSign || '',
+      drawnCfoSignature: receipt.drawnCfoSignature || null,
+      verificationToken: receipt.verificationToken || '',
+      version: receipt.version || 1,
+      status: receipt.status || 'ISSUED',
+      signedAt: receipt.signedAt || new Date().toISOString(),
+      updatedAt: receipt.updatedAt || new Date().toISOString(),
+      isDigitallySigned: true,
+      qrCodeBase64: null,
+      barcodeBase64: null
+    };
 
     // Request and download the public QR code
-    const verificationUrl = `${window.location.origin}/?verify=${receipt.verificationToken}`;
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verificationUrl)}`;
-    fetchBase64Image(qrApiUrl).then(base64 => {
-      setReceiptQrCodeBase64(base64);
-    });
+    if (receipt.verificationToken) {
+      const verificationUrl = `${window.location.origin}/?verify=${receipt.verificationToken}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verificationUrl)}`;
+      fetchBase64Image(qrApiUrl).then(base64 => {
+        setSelectedReceipt(prev => ({ ...prev, qrCodeBase64: base64 }));
+      }).catch(() => null);
+    }
 
     // Download barcode image
-    const barcodeApiUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(receipt.receiptNo)}&scale=2&includetext=true`;
-    fetchBase64Image(barcodeApiUrl).then(base64 => {
-      setReceiptBarcodeBase64(base64);
-    });
+    if (receipt.receiptNo) {
+      const barcodeApiUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(receipt.receiptNo)}&scale=2&includetext=true`;
+      fetchBase64Image(barcodeApiUrl).then(base64 => {
+        setSelectedReceipt(prev => ({ ...prev, barcodeBase64: base64 }));
+      }).catch(() => null);
+    }
 
-    showToast('Receipt loaded into active preview & download desk.', 'info');
+    setSelectedReceipt(canonicalDoc);
+    showToast(`Receipt ${canonicalDoc.receiptNo} loaded into active preview.`, 'info');
+  };
+
+  const handleDuplicateReceipt = async (receipt: any) => {
+    try {
+      const authToken = await getAuthToken();
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
+      if (receipt.id) {
+        const response = await fetch(`/api/receipts/${receipt.id}/duplicate`, {
+          method: 'POST',
+          headers
+        });
+        if (response.ok) {
+          const duplicated = await response.json();
+          showToast(`Receipt duplicated as ${duplicated.receiptNo} in Neon PostgreSQL.`, 'success');
+          await fetchSavedReceipts();
+          handleLoadReceiptToPreview(duplicated);
+          return;
+        }
+      }
+
+      // Offline clone fallback
+      const cloned = cloneReceiptDocument(receipt);
+      setSelectedReceipt(cloned);
+      showToast(`Receipt duplicated locally as draft ${cloned.receiptNo}.`, 'info');
+    } catch (err: any) {
+      console.error('Duplicate receipt error:', err);
+      const cloned = cloneReceiptDocument(receipt);
+      setSelectedReceipt(cloned);
+      showToast(`Receipt duplicated locally as draft ${cloned.receiptNo}.`, 'info');
+    }
+  };
+
+  const handleCreateNewReceipt = () => {
+    const newDoc = createDefaultReceipt();
+    setSelectedReceipt(newDoc);
+    showToast('New clean receipt initialized.', 'info');
   };
 
   const handleDuplicateContract = (contract: any) => {
@@ -1281,13 +1386,14 @@ export default function DocumentStudio({
 
   const applyReceiptSignature = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!receiptTypedSign) {
-      showToast('Please type your name/title to authorize the receipt.', 'error');
+    const validation = validateReceiptDocument(selectedReceipt);
+    if (!validation.isValid) {
+      showToast(validation.errors[0] || 'Please complete all required fields.', 'error');
       return;
     }
+
     setIsSigningReceiptInProgress(true);
     try {
-      const activeClientName = receiptClient.trim() || 'Client';
       const authToken = await getAuthToken();
       const headers: any = { 'Content-Type': 'application/json' };
       if (authToken) {
@@ -1295,19 +1401,23 @@ export default function DocumentStudio({
       }
 
       const payload = {
-        receiptNo: receiptNumber,
-        clientName: activeClientName,
-        clientNiu: receiptNiu,
-        receiptProject: receiptProject || 'General Construction Services',
-        invoiceTotalAmount: receiptInvoiceTotal,
-        receiptAmount: receiptAmount,
-        remainingBalance: receiptRemainingBalance,
-        receiptTaxRate: receiptTaxRate,
-        receiptMethod: receiptMethod,
-        receiptMemo: receiptMemo,
-        receiptSignatory: receiptSignatory,
-        receiptTypedSign: receiptTypedSign,
-        drawnCfoSignature: receiptDrawnSignature || null
+        id: selectedReceipt.id,
+        receiptNo: selectedReceipt.receiptNo,
+        clientName: selectedReceipt.clientName.trim(),
+        clientNiu: selectedReceipt.clientNiu || null,
+        clientEmail: selectedReceipt.clientEmail || null,
+        receiptProject: selectedReceipt.receiptProject,
+        invoiceTotalAmount: selectedReceipt.invoiceTotalAmount,
+        receiptAmount: selectedReceipt.receiptAmount,
+        remainingBalance: selectedReceipt.remainingBalance,
+        receiptTaxRate: selectedReceipt.receiptTaxRate,
+        currency: selectedReceipt.currency || 'XAF',
+        receiptMethod: selectedReceipt.receiptMethod,
+        receiptMemo: selectedReceipt.receiptMemo || null,
+        receiptSignatory: selectedReceipt.receiptSignatory,
+        receiptTypedSign: selectedReceipt.receiptTypedSign,
+        drawnCfoSignature: selectedReceipt.drawnCfoSignature || null,
+        status: 'ISSUED'
       };
 
       const response = await fetch('/api/receipts/sign', {
@@ -1321,23 +1431,26 @@ export default function DocumentStudio({
         throw new Error(errText || 'Failed to register the receipt on the compliance ledger.');
       }
 
-      const data = await response.json();
-      const token = data.verificationToken;
-      setReceiptVerificationToken(token);
+      const savedDoc = await response.json();
+      const token = savedDoc.verificationToken;
 
       // Request and download the public QR code
       const verificationUrl = `${window.location.origin}/?verify=${token}`;
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verificationUrl)}`;
-      const base64Qr = await fetchBase64Image(qrApiUrl);
-      setReceiptQrCodeBase64(base64Qr);
+      const base64Qr = await fetchBase64Image(qrApiUrl).catch(() => null);
 
       // Download barcode image
-      const barcodeApiUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(receiptNumber)}&scale=2&includetext=true`;
-      const base64Barcode = await fetchBase64Image(barcodeApiUrl);
-      setReceiptBarcodeBase64(base64Barcode);
+      const barcodeApiUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(savedDoc.receiptNo)}&scale=2&includetext=true`;
+      const base64Barcode = await fetchBase64Image(barcodeApiUrl).catch(() => null);
 
-      setIsReceiptDigitallySigned(true);
-      showToast('Receipt registered in live Neon database & digitally certified.', 'success');
+      setSelectedReceipt({
+        ...savedDoc,
+        qrCodeBase64: base64Qr,
+        barcodeBase64: base64Barcode,
+        isDigitallySigned: true
+      });
+
+      showToast(`Receipt ${savedDoc.receiptNo} (v${savedDoc.version || 1}) certified & saved to Neon database.`, 'success');
       fetchSavedReceipts();
     } catch (error: any) {
       console.error('Receipt signing error:', error);
@@ -1362,7 +1475,7 @@ export default function DocumentStudio({
       backgroundColor: '#ffffff',
     }).then((canvas) => {
       const link = document.createElement('a');
-      link.download = `MADECC_Receipt_${receiptNumber}.png`;
+      link.download = `MADECC_Receipt_${selectedReceipt.receiptNo}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       showToast('Receipt PNG exported successfully!', 'success');
@@ -1373,11 +1486,11 @@ export default function DocumentStudio({
   };
 
   const emailReceiptDirectly = async () => {
-    if (!receiptClientEmail) {
+    if (!selectedReceipt.clientEmail) {
       showToast('Please provide a valid client email address first.', 'error');
       return;
     }
-    if (!isReceiptDigitallySigned || !receiptVerificationToken) {
+    if (!selectedReceipt.isDigitallySigned || !selectedReceipt.verificationToken) {
       showToast('Please sign and certify the receipt first before emailing.', 'error');
       return;
     }
@@ -1396,29 +1509,30 @@ export default function DocumentStudio({
         method: 'POST',
         headers,
         body: JSON.stringify({
-          receiptNo: receiptNumber,
-          clientName: receiptClient || 'Valued Client',
-          clientEmail: receiptClientEmail,
-          receiptProject: receiptProject || 'General Construction Services',
-          invoiceTotalAmount: receiptInvoiceTotal,
-          receiptAmount: receiptAmount,
-          remainingBalance: receiptRemainingBalance,
-          receiptTaxRate: receiptTaxRate,
-          receiptMethod: receiptMethod,
-          receiptMemo: receiptMemo,
-          verificationToken: receiptVerificationToken
+          receiptNo: selectedReceipt.receiptNo,
+          clientName: selectedReceipt.clientName || 'Valued Client',
+          clientEmail: selectedReceipt.clientEmail,
+          receiptProject: selectedReceipt.receiptProject || 'General Construction Services',
+          invoiceTotalAmount: selectedReceipt.invoiceTotalAmount,
+          receiptAmount: selectedReceipt.receiptAmount,
+          remainingBalance: selectedReceipt.remainingBalance,
+          receiptTaxRate: selectedReceipt.receiptTaxRate,
+          receiptMethod: selectedReceipt.receiptMethod,
+          receiptMemo: selectedReceipt.receiptMemo,
+          verificationToken: selectedReceipt.verificationToken,
+          currency: selectedReceipt.currency || 'XAF'
         })
       });
 
       if (response.ok) {
-        showToast(`Receipt emailed successfully to ${receiptClientEmail}!`, 'success');
+        showToast(`Receipt emailed successfully to ${selectedReceipt.clientEmail}!`, 'success');
       } else {
         const errText = await response.text();
         showToast(`Failed to email receipt: ${errText}`, 'error');
       }
     } catch (err: any) {
       console.error('Email receipt error:', err);
-      showToast(`Email transmission failed: ${err.message}`, 'error');
+      showToast(`Email error: ${err.message}`, 'error');
     } finally {
       setIsEmailingReceipt(false);
     }
@@ -1427,7 +1541,7 @@ export default function DocumentStudio({
   // ==========================================
   // --- PDF GENERATION ENGINE ---
   // ==========================================
-  const generatePDFDocument = (format: 'a4' | 'a5', docType: 'contract' | 'receipt') => {
+  const generatePDFDocument = async (format: 'a4' | 'a5', docType: 'contract' | 'receipt') => {
     const isA4 = format === 'a4';
     
     // A4 dimensions: 210 x 297 mm
@@ -1869,260 +1983,44 @@ export default function DocumentStudio({
       doc.save(`MADECC_Construction_Contract_${clientName.replace(/\s+/g, '_') || 'Draft'}_${format.toUpperCase()}.pdf`);
     } else {
       // -----------------------------------------------------------------
-      // DIGITAL RECEIPT PDF GENERATION
+      // DIGITAL RECEIPT PDF GENERATION (CANONICAL ENGINE)
       // -----------------------------------------------------------------
+      const totals = calculateReceiptTotals(selectedReceipt);
+      const exportModel: ReceiptExportModel = {
+        recordId: selectedReceipt.receiptNo,
+        receiptNo: selectedReceipt.receiptNo,
+        id: selectedReceipt.id,
+        version: selectedReceipt.version || 1,
+        title: `Official Receipt ${selectedReceipt.receiptNo}`,
+        clientName: selectedReceipt.clientName || 'Valued Client Profile',
+        clientNiu: selectedReceipt.clientNiu || '',
+        clientEmail: selectedReceipt.clientEmail || '',
+        projectName: selectedReceipt.receiptProject || 'General Construction Services',
+        receiptMethod: selectedReceipt.receiptMethod || 'Direct Bank Settlement',
+        memo: selectedReceipt.receiptMemo || 'General infrastructure development milestones',
+        invoiceTotalAmount: totals.invoiceTotal,
+        receiptAmount: totals.subtotalPaid,
+        taxRate: totals.taxRate,
+        taxAmount: totals.taxAmount,
+        totalPaidThisReceipt: totals.totalPaidThisReceipt,
+        remainingBalance: totals.remainingBalance,
+        isPaidInFull: totals.isPaidInFull,
+        currency: totals.currency,
+        signatoryName: selectedReceipt.receiptSignatory || 'Jean-Pierre Bikoula (Chief Financial Officer)',
+        authorizedOfficer: selectedReceipt.receiptTypedSign || 'Authorized Officer',
+        drawnSignatureBase64: selectedReceipt.drawnCfoSignature || undefined,
+        verificationToken: selectedReceipt.verificationToken,
+        verificationUrl: `${window.location.origin}/?verify=${selectedReceipt.verificationToken}`,
+        qrCodeBase64: selectedReceipt.qrCodeBase64 || undefined,
+        barcodeBase64: selectedReceipt.barcodeBase64 || undefined,
+        isDigitallySigned: Boolean(selectedReceipt.isDigitallySigned),
+        date: selectedReceipt.signedAt ? new Date(selectedReceipt.signedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        signedAt: selectedReceipt.signedAt ? new Date(selectedReceipt.signedAt).toISOString() : new Date().toISOString(),
+        status: selectedReceipt.status || 'ISSUED',
+      };
 
-      // Minimalist Clean Modern Invoice Header
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 16 : 12);
-      doc.setTextColor(15, 23, 42);
-      doc.text('MADECC GROUP SARL', padding, padding + 4);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(isA4 ? 8 : 6);
-      doc.setTextColor(100, 116, 139);
-      doc.text('Civil Engineering, Logistics & Development', padding, padding + 8.5);
-      doc.text('Akwa Boulevard, Douala, Cameroon', padding, padding + 12);
-
-      // Receipt Title Box
-      doc.setFillColor(248, 250, 252);
-      doc.setDrawColor(226, 232, 240);
-      doc.rect(w - padding - (isA4 ? 65 : 45), padding, isA4 ? 65 : 45, isA4 ? 20 : 14, 'FD');
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 11 : 8.5);
-      doc.setTextColor(245, 158, 11);
-      doc.text('OFFICIAL RECEIPT', w - padding - (isA4 ? 61 : 42), padding + (isA4 ? 5 : 4));
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(isA4 ? 7.5 : 5.5);
-      doc.setTextColor(51, 65, 85);
-      doc.text(`No: ${receiptNumber}`, w - padding - (isA4 ? 61 : 42), padding + (isA4 ? 11 : 8.5));
-      doc.text(`Date: ${stampDate.split(' ')[0]}`, w - padding - (isA4 ? 61 : 42), padding + (isA4 ? 16 : 12));
-
-      // Receipt Metadata
-      let currentY = padding + (isA4 ? 28 : 20);
-      doc.setDrawColor(245, 158, 11);
-      doc.setLineWidth(0.6);
-      doc.line(padding, currentY, w - padding, currentY);
-
-      currentY += isA4 ? 8 : 6;
-      doc.setTextColor(15, 23, 42);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 9.5 : 7.5);
-      doc.text('RECEIVED FROM:', padding, currentY);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(isA4 ? 8.5 : 6.5);
-      doc.text(receiptClient || 'Valued Client Profile', padding + (isA4 ? 35 : 25), currentY);
-      
-      if (receiptNiu) {
-        doc.setFontSize(isA4 ? 7.5 : 5.5);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Client Valid ID Number: ${receiptNiu}`, padding + (isA4 ? 35 : 25), currentY + (isA4 ? 4 : 3));
-        currentY += isA4 ? 4 : 3;
-      }
-
-      currentY += isA4 ? 8 : 6;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 9.5 : 7.5);
-      doc.setTextColor(15, 23, 42);
-      doc.text('PAYMENT CHANNEL:', padding, currentY);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(isA4 ? 8.5 : 6.5);
-      doc.text(receiptMethod, padding + (isA4 ? 35 : 25), currentY);
-
-      currentY += isA4 ? 8 : 6;
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(15, 23, 42);
-      doc.text('ALLOCATED PROJECT:', padding, currentY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(receiptProject || 'General Construction Services', padding + (isA4 ? 35 : 25), currentY);
-
-      // Receipt Detail Box Table
-      currentY += isA4 ? 12 : 8;
-      doc.setFillColor(15, 23, 42);
-      doc.rect(padding, currentY, w - (padding * 2), isA4 ? 8 : 6, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 8 : 6);
-      doc.text('TRANSACTION PARTICULARS', padding + 3, currentY + (isA4 ? 5.5 : 4));
-      doc.text('TOTAL EXCLUDING VAT', w - padding - (isA4 ? 45 : 30), currentY + (isA4 ? 5.5 : 4));
-
-      currentY += isA4 ? 8 : 6;
-      doc.setFillColor(248, 250, 252);
-      doc.rect(padding, currentY, w - (padding * 2), isA4 ? 14 : 10, 'F');
-      
-      doc.setTextColor(51, 65, 85);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(isA4 ? 7.5 : 5.5);
-      const splitMemo = doc.splitTextToSize(receiptMemo || 'General infrastructure development milestones', w - padding * 2 - (isA4 ? 55 : 35));
-      doc.text(splitMemo, padding + 3, currentY + (isA4 ? 5 : 4));
-
-      // Calculate taxes
-      const amountRaw = parseFloat(receiptAmount || '0');
-      const vatRateRaw = parseFloat(receiptTaxRate || '19.25');
-      const calculatedVat = (amountRaw * vatRateRaw) / 100;
-      const finalTotal = amountRaw + calculatedVat;
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 8.5 : 6.5);
-      doc.text(`${amountRaw.toLocaleString()} XAF`, w - padding - (isA4 ? 45 : 30), currentY + (isA4 ? 7 : 5));
-
-      // Totals Box
-      currentY += isA4 ? 18 : 12;
-      doc.setDrawColor(226, 232, 240);
-      doc.line(w - padding - (isA4 ? 75 : 55), currentY, w - padding, currentY);
-
-      const invTotalNum = parseFloat(receiptInvoiceTotal || '0');
-      const remBalNum = parseFloat(receiptRemainingBalance || '0');
-      const isPaidFull = remBalNum <= 0;
-
-      if (invTotalNum > 0) {
-        currentY += isA4 ? 4.5 : 3;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(isA4 ? 8 : 6);
-        doc.setTextColor(15, 23, 42);
-        doc.text('TOTAL INVOICE AMOUNT:', w - padding - (isA4 ? 75 : 55), currentY);
-        doc.text(`${invTotalNum.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY);
-      }
-
-      currentY += isA4 ? 4.5 : 3;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(isA4 ? 8 : 6);
-      doc.setTextColor(51, 65, 85);
-      doc.text('SUBTOTAL PAID:', w - padding - (isA4 ? 75 : 55), currentY);
-      doc.text(`${amountRaw.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY);
-
-      currentY += isA4 ? 4.5 : 3;
-      doc.text(`TVA TAX (${receiptTaxRate}%):`, w - padding - (isA4 ? 75 : 55), currentY);
-      doc.text(`${calculatedVat.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY);
-
-      currentY += isA4 ? 5.5 : 4;
-      doc.setFillColor(245, 158, 11);
-      doc.rect(w - padding - (isA4 ? 75 : 55), currentY - (isA4 ? 3.5 : 2.5), (isA4 ? 75 : 55), isA4 ? 6 : 4.5, 'F');
-      doc.setTextColor(15, 23, 42);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 8.5 : 6.5);
-      doc.text('TOTAL PAID THIS RECEIPT:', w - padding - (isA4 ? 73 : 53), currentY + 0.5);
-      doc.text(`${finalTotal.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY + 0.5);
-
-      // Remaining Balance Box
-      currentY += isA4 ? 7.5 : 5.5;
-      if (isPaidFull) {
-        doc.setFillColor(34, 197, 94); // Green
-        doc.rect(w - padding - (isA4 ? 75 : 55), currentY - (isA4 ? 3.5 : 2.5), (isA4 ? 75 : 55), isA4 ? 6.5 : 5, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(isA4 ? 9 : 7);
-        doc.text('REMAINING BALANCE: PAID IN FULL', w - padding - (isA4 ? 73 : 53), currentY + 0.8);
-      } else {
-        doc.setFillColor(254, 242, 242); // Red-50
-        doc.setDrawColor(239, 68, 68);
-        doc.rect(w - padding - (isA4 ? 75 : 55), currentY - (isA4 ? 3.5 : 2.5), (isA4 ? 75 : 55), isA4 ? 6.5 : 5, 'FD');
-        doc.setTextColor(185, 28, 28);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(isA4 ? 8 : 6);
-        doc.text('OUTSTANDING BALANCE:', w - padding - (isA4 ? 73 : 53), currentY + 0.8);
-        doc.text(`${remBalNum.toLocaleString()} XAF`, w - padding - (isA4 ? 30 : 20), currentY + 0.8);
-      }
-
-      // Authorized Signatory
-      currentY += isA4 ? 20 : 14;
-      doc.setTextColor(51, 65, 85);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 8.5 : 6.5);
-      doc.text('AUTHORIZED FINANCE DESK', padding, currentY);
-      
-      currentY += isA4 ? 4 : 3;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(isA4 ? 7.5 : 5.5);
-      doc.text(receiptSignatory, padding, currentY);
-
-      if (isReceiptDigitallySigned) {
-        doc.setDrawColor(16, 185, 129);
-        doc.setFillColor(240, 253, 250);
-        doc.rect(padding, currentY + (isA4 ? 3 : 2), 65, isA4 ? 14 : 10, 'FD');
-        doc.setTextColor(4, 120, 87);
-        doc.setFont('courier', 'bold');
-        doc.setFontSize(isA4 ? 8 : 6);
-        doc.text(`Authorized: /${receiptTypedSign}/`, padding + 3, currentY + (isA4 ? 8 : 6));
-
-        if (receiptDrawnSignature) {
-          try {
-            doc.addImage(receiptDrawnSignature, 'PNG', padding + 40, currentY + (isA4 ? 4 : 3), 20, 8);
-          } catch (err) {
-            console.error('Error adding handdrawn CFO signature to PDF:', err);
-          }
-        }
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(isA4 ? 5.5 : 4);
-        doc.text('STAMPED & FILED IN FISCAL LEDGER', padding + 3, currentY + (isA4 ? 11 : 8.5));
-      } else {
-        doc.setDrawColor(239, 68, 68);
-        doc.setFillColor(254, 242, 242);
-        doc.rect(padding, currentY + (isA4 ? 3 : 2), 65, isA4 ? 14 : 10, 'FD');
-        doc.setTextColor(185, 28, 28);
-        doc.setFontSize(isA4 ? 7 : 5);
-        doc.text('AWAITING CFO AUTHORIZATION', padding + 3, currentY + (isA4 ? 11 : 8));
-      }
-
-      // QR Code & Barcode Public Verification Block for Receipts
-      if (isReceiptDigitallySigned && receiptVerificationToken) {
-        currentY += isA4 ? 20 : 14;
-        doc.setDrawColor(245, 158, 11); // Amber
-        doc.setFillColor(254, 252, 232); // Amber-50
-        doc.rect(padding, currentY, w - padding * 2, isA4 ? 24 : 18, 'FD');
-        
-        // Add QR code image if available
-        if (receiptQrCodeBase64) {
-          try {
-            doc.addImage(receiptQrCodeBase64, 'PNG', padding + 3, currentY + 3, isA4 ? 18 : 12, isA4 ? 18 : 12);
-          } catch (err) {
-            console.error('Error adding QR to receipt PDF:', err);
-          }
-        }
-        
-        // Add Barcode image if available
-        if (receiptBarcodeBase64) {
-          try {
-            doc.addImage(receiptBarcodeBase64, 'PNG', w - padding - (isA4 ? 48 : 36), currentY + 4, isA4 ? 45 : 32, isA4 ? 15 : 10);
-          } catch (err) {
-            console.error('Error adding Barcode to receipt PDF:', err);
-          }
-        }
-        
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(isA4 ? 7.5 : 5.5);
-        doc.setTextColor(15, 23, 42);
-        doc.text('PUBLIC VERIFICATION & FISCAL STAMP', padding + (isA4 ? 24 : 18), currentY + 5);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(isA4 ? 6 : 4);
-        doc.setTextColor(100, 116, 139);
-        doc.text('Scan the QR to verify validity or scan Barcode for physical inventory:', padding + (isA4 ? 24 : 18), currentY + 9);
-        
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(245, 158, 11);
-        doc.setFontSize(isA4 ? 6.5 : 4.5);
-        doc.text(`${window.location.origin}/?verify=${receiptVerificationToken}`, padding + (isA4 ? 24 : 18), currentY + 13);
-        
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(isA4 ? 5.5 : 3.5);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`Verification Key: ${receiptVerificationToken}`, padding + (isA4 ? 24 : 18), currentY + 17);
-      }
-
-      // Security watermark block
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(isA4 ? 6.5 : 4.5);
-      doc.setTextColor(148, 163, 184);
-      doc.text('This payment receipt acts as proof of mobilization under legal guidelines of the', padding, h - padding - 4);
-      doc.text('General Tax Code of the Republic of Cameroon (Code Général des Impôts). Sec-ID verified.', padding, h - padding - 1.5);
-
-      doc.save(`MADECC_Digital_Receipt_${receiptNumber}_${format.toUpperCase()}.pdf`);
+      await ReceiptExporter.exportPDF(exportModel);
+      return;
     }
   };
 
@@ -3113,12 +3011,30 @@ export default function DocumentStudio({
               </div>
             ) : (
             /* =========================================================================
-               RECEIPTS FORM
+               RECEIPTS FORM (CANONICAL OBJECT INTEGRATION)
                ========================================================================= */
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-lg">
-              <h2 className="text-sm font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2">
-                <ReceiptIcon className="w-4 h-4 text-amber-500" /> Payment & Voucher Information
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <h2 className="text-sm font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2">
+                  <ReceiptIcon className="w-4 h-4 text-amber-500" /> Payment & Voucher Information
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCreateNewReceipt}
+                    className="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px] font-bold uppercase px-2.5 py-1 rounded-lg cursor-pointer transition-colors"
+                  >
+                    + New Receipt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicateReceipt(selectedReceipt)}
+                    className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono text-[11px] font-bold uppercase px-2.5 py-1 rounded-lg cursor-pointer transition-colors"
+                  >
+                    Duplicate
+                  </button>
+                </div>
+              </div>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3127,8 +3043,8 @@ export default function DocumentStudio({
                     <input
                       type="text"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono font-bold"
-                      value={receiptNumber}
-                      onChange={(e) => setReceiptNumber(e.target.value)}
+                      value={selectedReceipt.receiptNo}
+                      onChange={(e) => updateReceiptField('receiptNo', e.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
@@ -3137,21 +3053,21 @@ export default function DocumentStudio({
                       type="text"
                       placeholder="e.g. Ministry of Urban Dev"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
-                      value={receiptClient}
-                      onChange={(e) => setReceiptClient(e.target.value)}
+                      value={selectedReceipt.clientName}
+                      onChange={(e) => updateReceiptField('clientName', e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500 font-bold uppercase block">Client Valid ID Number</label>
+                    <label className="text-xs text-slate-500 font-bold uppercase block">Client Valid ID Number (NIU)</label>
                     <input
                       type="text"
                       placeholder="e.g. Passport, CNI, or Taxpayer ID"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                      value={receiptNiu}
-                      onChange={(e) => setReceiptNiu(e.target.value)}
+                      value={selectedReceipt.clientNiu}
+                      onChange={(e) => updateReceiptField('clientNiu', e.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
@@ -3160,8 +3076,8 @@ export default function DocumentStudio({
                       type="text"
                       placeholder="e.g. Yaoundé Municipal Library"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                      value={receiptProject}
-                      onChange={(e) => setReceiptProject(e.target.value)}
+                      value={selectedReceipt.receiptProject}
+                      onChange={(e) => updateReceiptField('receiptProject', e.target.value)}
                     />
                   </div>
                 </div>
@@ -3172,8 +3088,8 @@ export default function DocumentStudio({
                     type="email"
                     placeholder="e.g. client@madecc-partner.com"
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
-                    value={receiptClientEmail}
-                    onChange={(e) => setReceiptClientEmail(e.target.value)}
+                    value={selectedReceipt.clientEmail}
+                    onChange={(e) => updateReceiptField('clientEmail', e.target.value)}
                   />
                 </div>
 
@@ -3182,60 +3098,48 @@ export default function DocumentStudio({
                     <span className="text-xs font-bold text-amber-500 uppercase tracking-wide flex items-center gap-1.5">
                       💳 Account Balance & Invoice Controls
                     </span>
-                    {parseFloat(receiptRemainingBalance || '0') <= 0 ? (
+                    {currentReceiptTotals.isPaidInFull ? (
                       <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                         ✓ PAID IN FULL
                       </span>
                     ) : (
                       <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
-                        OUTSTANDING: {parseFloat(receiptRemainingBalance || '0').toLocaleString()} {contractCurrency}
+                        OUTSTANDING: {currentReceiptTotals.remainingBalance.toLocaleString()} {currentReceiptTotals.currency}
                       </span>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[11px] text-slate-400 font-bold uppercase block">Total Invoice Amount ({contractCurrency})</label>
+                      <label className="text-[11px] text-slate-400 font-bold uppercase block">Total Invoice Amount ({currentReceiptTotals.currency})</label>
                       <input
                         type="number"
                         placeholder="e.g. 10000000"
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono font-bold"
-                        value={receiptInvoiceTotal}
-                        onChange={(e) => {
-                          const newInvTotal = e.target.value;
-                          setReceiptInvoiceTotal(newInvTotal);
-                          const invNum = parseFloat(newInvTotal || '0');
-                          const paidNum = parseFloat(receiptAmount || '0');
-                          setReceiptRemainingBalance(Math.max(0, invNum - paidNum).toString());
-                        }}
+                        value={selectedReceipt.invoiceTotalAmount}
+                        onChange={(e) => updateReceiptField('invoiceTotalAmount', e.target.value)}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] text-amber-400 font-bold uppercase block">Amount Paid This Receipt ({contractCurrency})</label>
+                      <label className="text-[11px] text-amber-400 font-bold uppercase block">Amount Paid This Receipt ({currentReceiptTotals.currency})</label>
                       <input
                         type="number"
                         placeholder="e.g. 4500000"
                         className="w-full bg-slate-900 border border-amber-500/40 rounded-xl py-2 px-3 text-xs text-amber-300 outline-none focus:border-amber-500 font-mono font-bold"
-                        value={receiptAmount}
-                        onChange={(e) => {
-                          const newPaid = e.target.value;
-                          setReceiptAmount(newPaid);
-                          const invNum = parseFloat(receiptInvoiceTotal || '0');
-                          const paidNum = parseFloat(newPaid || '0');
-                          setReceiptRemainingBalance(Math.max(0, invNum - paidNum).toString());
-                        }}
+                        value={selectedReceipt.receiptAmount}
+                        onChange={(e) => updateReceiptField('receiptAmount', e.target.value)}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] text-slate-400 font-bold uppercase block">Remaining Balance ({contractCurrency})</label>
+                      <label className="text-[11px] text-slate-400 font-bold uppercase block">Remaining Balance ({currentReceiptTotals.currency})</label>
                       <input
                         type="number"
                         placeholder="e.g. 5500000"
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono font-bold"
-                        value={receiptRemainingBalance}
-                        onChange={(e) => setReceiptRemainingBalance(e.target.value)}
+                        value={selectedReceipt.remainingBalance}
+                        onChange={(e) => updateReceiptField('remainingBalance', e.target.value)}
                       />
                     </div>
                   </div>
@@ -3247,16 +3151,16 @@ export default function DocumentStudio({
                     <input
                       type="text"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-mono"
-                      value={receiptTaxRate}
-                      onChange={(e) => setReceiptTaxRate(e.target.value)}
+                      value={selectedReceipt.receiptTaxRate}
+                      onChange={(e) => updateReceiptField('receiptTaxRate', e.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500 font-bold uppercase block">Payment Channel</label>
                     <select
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 cursor-pointer font-bold"
-                      value={receiptMethod}
-                      onChange={(e) => setReceiptMethod(e.target.value)}
+                      value={selectedReceipt.receiptMethod}
+                      onChange={(e) => updateReceiptField('receiptMethod', e.target.value)}
                     >
                       <option value="MTN Mobile Money">MTN Mobile Money (MOMO)</option>
                       <option value="Orange Money">Orange Money</option>
@@ -3271,8 +3175,8 @@ export default function DocumentStudio({
                     <input
                       type="text"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500 font-medium"
-                      value={receiptSignatory}
-                      onChange={(e) => setReceiptSignatory(e.target.value)}
+                      value={selectedReceipt.receiptSignatory}
+                      onChange={(e) => updateReceiptField('receiptSignatory', e.target.value)}
                     />
                   </div>
                 </div>
@@ -3282,8 +3186,8 @@ export default function DocumentStudio({
                   <textarea
                     rows={3}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white outline-none focus:border-amber-500"
-                    value={receiptMemo}
-                    onChange={(e) => setReceiptMemo(e.target.value)}
+                    value={selectedReceipt.receiptMemo}
+                    onChange={(e) => updateReceiptField('receiptMemo', e.target.value)}
                   />
                 </div>
 
@@ -3299,20 +3203,20 @@ export default function DocumentStudio({
                         type="text"
                         placeholder="e.g. J. Bikoula"
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-xs text-white outline-none focus-visible:border-amber-500 font-medium"
-                        value={receiptTypedSign}
+                        value={selectedReceipt.receiptTypedSign}
                         onChange={(e) => {
-                          setReceiptTypedSign(e.target.value);
-                          setIsReceiptDigitallySigned(false);
+                          updateReceiptField('receiptTypedSign', e.target.value);
+                          updateReceiptField('isDigitallySigned', false);
                         }}
                       />
                     </div>
 
                     <div className="space-y-1.5 border-t border-slate-800/50 pt-3">
                       <label className="text-[11px] text-slate-500 uppercase block">Handdrawn CFO Signature (Optional)</label>
-                      {receiptDrawnSignature ? (
+                      {selectedReceipt.drawnCfoSignature ? (
                         <div className="bg-slate-950 border border-slate-800 rounded-xl p-2 flex items-center justify-center h-16 relative group">
                           <img
-                            src={receiptDrawnSignature}
+                            src={selectedReceipt.drawnCfoSignature}
                             alt="Drawn CFO Signature"
                             className="max-h-full max-w-full object-contain invert brightness-200"
                             referrerPolicy="no-referrer"
@@ -3320,8 +3224,8 @@ export default function DocumentStudio({
                           <button
                             type="button"
                             onClick={() => {
-                              setReceiptDrawnSignature('');
-                              setIsReceiptDigitallySigned(false);
+                              updateReceiptField('drawnCfoSignature', null);
+                              updateReceiptField('isDigitallySigned', false);
                             }}
                             className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white font-mono text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded cursor-pointer transition-colors"
                           >
@@ -3342,9 +3246,9 @@ export default function DocumentStudio({
                         <div className="mt-2 border border-slate-800/60 rounded-xl p-2 bg-slate-950/40 animate-in fade-in duration-150">
                           <SignaturePad
                             onSave={(base64) => {
-                              setReceiptDrawnSignature(base64);
+                              updateReceiptField('drawnCfoSignature', base64);
                               setShowReceiptSignaturePad(false);
-                              setIsReceiptDigitallySigned(false);
+                              updateReceiptField('isDigitallySigned', false);
                             }}
                             onCancel={() => setShowReceiptSignaturePad(false)}
                             title="CFO / Finance Director Signature Pad"
@@ -3364,10 +3268,10 @@ export default function DocumentStudio({
                     ) : (
                       <button
                         onClick={applyReceiptSignature}
-                        disabled={!receiptTypedSign}
+                        disabled={!selectedReceipt.receiptTypedSign}
                         className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold py-2 px-4 rounded-xl text-xs uppercase tracking-wider cursor-pointer transition-colors"
                       >
-                        Authorize & Set Official stamp
+                        {selectedReceipt.isDigitallySigned ? 'Resign & Update Certified Receipt' : 'Authorize & Set Official Stamp'}
                       </button>
                     )}
                   </div>
@@ -3437,7 +3341,7 @@ export default function DocumentStudio({
                 </div>
               </div>
             )}
-            {mode === 'receipts' && isReceiptDigitallySigned && (
+            {mode === 'receipts' && selectedReceipt.isDigitallySigned && (
               <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none">
                 <div className="border-8 border-amber-500 text-amber-500 font-extrabold text-5xl uppercase tracking-widest p-4 transform -rotate-12 rounded-2xl">
                   LEGAL CLEARANCE
@@ -3774,7 +3678,8 @@ export default function DocumentStudio({
                   </div>
                   <div className="bg-slate-100 p-2 text-right rounded-lg border border-slate-200">
                     <span className="font-sans font-bold text-amber-600 text-[9px] block uppercase">PAYMENT RECEIPT</span>
-                    <span className="font-mono text-[8px] text-slate-700 block font-bold">{receiptNumber}</span>
+                    <span className="font-mono text-[8px] text-slate-700 block font-bold">{selectedReceipt.receiptNo}</span>
+                    <span className="font-mono text-[7px] text-slate-500 block">v{selectedReceipt.version || 1} • {selectedReceipt.status || 'ISSUED'}</span>
                   </div>
                 </div>
 
@@ -3782,12 +3687,13 @@ export default function DocumentStudio({
                 <div className="grid grid-cols-2 gap-4 text-[10px]">
                   <div>
                     <span className="font-bold block font-sans text-slate-400 text-[8px] uppercase">Received From</span>
-                    <p className="font-bold text-slate-900">{receiptClient || '[ Awaiting Client Name ]'}</p>
-                    {receiptNiu && <p className="font-mono text-slate-500 text-[8.5px]">Valid ID Number: {receiptNiu}</p>}
+                    <p className="font-bold text-slate-900">{selectedReceipt.clientName || '[ Awaiting Client Name ]'}</p>
+                    {selectedReceipt.clientNiu && <p className="font-mono text-slate-500 text-[8.5px]">Valid ID Number: {selectedReceipt.clientNiu}</p>}
+                    {selectedReceipt.clientEmail && <p className="font-sans text-slate-500 text-[8px]">{selectedReceipt.clientEmail}</p>}
                   </div>
                   <div>
                     <span className="font-bold block font-sans text-slate-400 text-[8px] uppercase">Payment Mode</span>
-                    <p className="font-semibold text-slate-800">{receiptMethod}</p>
+                    <p className="font-semibold text-slate-800">{selectedReceipt.receiptMethod}</p>
                   </div>
                 </div>
 
@@ -3800,10 +3706,10 @@ export default function DocumentStudio({
                   
                   <div className="flex justify-between text-[9.5px]">
                     <div className="space-y-1 max-w-[70%]">
-                      <p className="font-bold text-slate-800">{receiptProject || '[ Associated Project ]'}</p>
-                      <p className="text-slate-500 text-[8.5px] italic leading-normal font-sans">{receiptMemo || '[ Associated Payment Memo Details ]'}</p>
+                      <p className="font-bold text-slate-800">{selectedReceipt.receiptProject || '[ Associated Project ]'}</p>
+                      <p className="text-slate-500 text-[8.5px] italic leading-normal font-sans">{selectedReceipt.receiptMemo || '[ Associated Payment Memo Details ]'}</p>
                     </div>
-                    <span className="font-bold text-slate-800 font-sans">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
+                    <span className="font-bold text-slate-800 font-sans">{currentReceiptTotals.subtotalPaid.toLocaleString()} {currentReceiptTotals.currency}</span>
                   </div>
                 </div>
 
@@ -3811,22 +3717,22 @@ export default function DocumentStudio({
                 <div className="pt-3 border-t border-slate-100 flex flex-col items-end text-[10px] space-y-1 font-sans">
                   <div className="flex gap-4 text-slate-700 text-[9.5px]">
                     <span className="font-semibold">Total Invoice Amount:</span>
-                    <span className="font-bold w-32 text-right">{parseFloat(receiptInvoiceTotal || '0').toLocaleString()} XAF</span>
+                    <span className="font-bold w-32 text-right">{currentReceiptTotals.invoiceTotal.toLocaleString()} {currentReceiptTotals.currency}</span>
                   </div>
                   <div className="flex gap-4 text-slate-500 text-[9px]">
                     <span>Amount Paid This Receipt:</span>
-                    <span className="font-bold w-32 text-right">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
+                    <span className="font-bold w-32 text-right">{currentReceiptTotals.subtotalPaid.toLocaleString()} {currentReceiptTotals.currency}</span>
                   </div>
                   <div className="flex gap-4 text-slate-500 text-[9px]">
-                    <span>TVA ({receiptTaxRate}%):</span>
+                    <span>TVA ({currentReceiptTotals.taxRate}%):</span>
                     <span className="font-bold w-32 text-right">
-                      {((parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
+                      {currentReceiptTotals.taxAmount.toLocaleString()} {currentReceiptTotals.currency}
                     </span>
                   </div>
                   <div className="flex gap-4 text-slate-900 font-bold bg-amber-100 p-1.5 rounded-lg border border-amber-200 mt-1">
                     <span>Total Settled This Session:</span>
                     <span className="w-32 text-right font-mono">
-                      {(parseFloat(receiptAmount || '0') + (parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
+                      {currentReceiptTotals.totalPaidThisReceipt.toLocaleString()} {currentReceiptTotals.currency}
                     </span>
                   </div>
                   
@@ -3834,14 +3740,14 @@ export default function DocumentStudio({
                   <div className="mt-2 w-full max-w-[280px] space-y-1">
                     <div className="flex justify-between items-center text-[8.5px] px-1">
                       <span className="text-slate-500 font-bold uppercase">OUTSTANDING BALANCE:</span>
-                      <span className="font-mono font-black text-slate-900">{parseFloat(receiptRemainingBalance || '0').toLocaleString()} XAF</span>
+                      <span className="font-mono font-black text-slate-900">{currentReceiptTotals.remainingBalance.toLocaleString()} {currentReceiptTotals.currency}</span>
                     </div>
 
-                    {parseFloat(receiptRemainingBalance || '0') <= 0 ? (
+                    {currentReceiptTotals.isPaidInFull ? (
                       <div className="bg-emerald-600 text-white font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-emerald-700 flex items-center justify-center gap-1">
                         <span>✓</span> PAID IN FULL
                       </div>
-                    ) : parseFloat(receiptAmount || '0') > 0 ? (
+                    ) : currentReceiptTotals.subtotalPaid > 0 ? (
                       <div className="bg-amber-500 text-slate-950 font-black text-center p-2 rounded-lg text-[9.5px] uppercase tracking-wider shadow-sm border border-amber-600 flex items-center justify-center gap-1">
                         <span>⏳</span> PARTIALLY PAID
                       </div>
@@ -3857,24 +3763,28 @@ export default function DocumentStudio({
             )}
 
             {/* Visual QR & Barcode seal on sheet */}
-            {mode === 'receipts' && isReceiptDigitallySigned && receiptVerificationToken && (
+            {mode === 'receipts' && selectedReceipt.isDigitallySigned && selectedReceipt.verificationToken && (
               <div className="mt-4 pt-3 border-t border-dashed border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 bg-amber-50/50 p-2.5 rounded-lg border border-amber-100">
                 <div className="flex items-center gap-2 max-w-[65%]">
-                  {receiptQrCodeBase64 ? (
-                    <img src={receiptQrCodeBase64} alt="Verification QR" className="w-14 h-14 border border-slate-200 bg-white p-0.5 rounded shadow-sm" referrerPolicy="no-referrer" />
+                  {selectedReceipt.qrCodeBase64 ? (
+                    <img src={selectedReceipt.qrCodeBase64} alt="Verification QR" className="w-14 h-14 border border-slate-200 bg-white p-0.5 rounded shadow-sm" referrerPolicy="no-referrer" />
                   ) : (
-                    <div className="w-14 h-14 bg-slate-100 flex items-center justify-center text-[7px] text-slate-400">Loading QR...</div>
+                    <div className="w-14 h-14 bg-slate-100 flex items-center justify-center text-[7px] text-slate-400">
+                      <QRCodeSVG value={`${window.location.origin}/?verify=${selectedReceipt.verificationToken}`} size={48} />
+                    </div>
                   )}
                   <div className="space-y-0.5 text-left text-[8px]">
                     <span className="font-bold text-slate-800 block uppercase tracking-tight">FISCAL VERIFICATION SEAL</span>
                     <p className="text-slate-500 leading-normal">Scan QR to authenticate in the live ledger repository.</p>
-                    <p className="font-mono text-amber-600 font-bold truncate text-[7.5px]">{receiptVerificationToken}</p>
+                    <p className="font-mono text-amber-600 font-bold truncate text-[7.5px]">{selectedReceipt.verificationToken}</p>
                   </div>
                 </div>
-                {receiptBarcodeBase64 ? (
-                  <img src={receiptBarcodeBase64} alt="Inventory Barcode" className="h-10 w-28 object-contain" referrerPolicy="no-referrer" />
+                {selectedReceipt.barcodeBase64 ? (
+                  <img src={selectedReceipt.barcodeBase64} alt="Inventory Barcode" className="h-10 w-28 object-contain" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="h-10 w-28 bg-slate-100 flex items-center justify-center text-[7px] text-slate-400">Loading Barcode...</div>
+                  <div className="h-10 w-28 bg-slate-100 flex items-center justify-center text-[7px] text-slate-400 font-mono">
+                    {selectedReceipt.receiptNo}
+                  </div>
                 )}
               </div>
             )}
@@ -3905,18 +3815,18 @@ export default function DocumentStudio({
                     <span className="text-slate-300 italic">Waiting Signee</span>
                   )
                 ) : (
-                  isReceiptDigitallySigned ? (
+                  selectedReceipt.isDigitallySigned ? (
                     <div className="border-2 border-dashed border-amber-500 bg-amber-50/60 p-1.5 rounded font-mono text-[8px] text-amber-600 font-extrabold rotate-[-2deg] flex flex-col items-center justify-center min-w-[120px]">
                       <span>CFO STAMP VALID</span>
-                      {receiptDrawnSignature && (
+                      {selectedReceipt.drawnCfoSignature && (
                         <img
-                          src={receiptDrawnSignature}
+                          src={selectedReceipt.drawnCfoSignature}
                           alt="CFO Handdrawn Signature"
                           className="h-6 object-contain invert brightness-0 my-1 max-w-[100px]"
                           referrerPolicy="no-referrer"
                         />
                       )}
-                      <span className="text-[6.5px] font-sans font-normal block mt-0.5">{receiptTypedSign}</span>
+                      <span className="text-[6.5px] font-sans font-normal block mt-0.5">{selectedReceipt.receiptTypedSign}</span>
                     </div>
                   ) : (
                     <span className="text-slate-300 italic">Waiting CFO</span>
@@ -4158,11 +4068,14 @@ export default function DocumentStudio({
                     return (
                       <tr 
                         key={receiptItem.id} 
-                        className={`hover:bg-slate-900/60 transition-colors ${receiptVerificationToken === receiptItem.verificationToken ? 'bg-amber-500/5' : ''}`}
+                        className={`hover:bg-slate-900/60 transition-colors ${selectedReceipt.verificationToken === receiptItem.verificationToken ? 'bg-amber-500/5' : ''}`}
                       >
                         <td className="py-3.5 px-4">
                           <div className="space-y-1">
-                            <span className="font-mono font-bold text-slate-200 block text-xs">{receiptItem.receiptNo}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-slate-200 block text-xs">{receiptItem.receiptNo}</span>
+                              <span className="text-[9px] font-mono text-slate-400 bg-slate-800 px-1 rounded">v{receiptItem.version || 1}</span>
+                            </div>
                             <span className="text-[10px] text-slate-500 block">{receiptItem.signedAt ? new Date(receiptItem.signedAt).toLocaleDateString() : 'Unspecified'}</span>
                           </div>
                         </td>
@@ -4170,13 +4083,14 @@ export default function DocumentStudio({
                           <div className="space-y-0.5">
                             <p className="font-semibold text-white">{receiptItem.clientName}</p>
                             <p className="text-[10px] text-slate-500 font-mono">{receiptItem.receiptProject || 'General Project'}</p>
+                            {receiptItem.clientEmail && <p className="text-[9px] text-slate-400">{receiptItem.clientEmail}</p>}
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-300 text-xs">
-                          {invTotal > 0 ? invTotal.toLocaleString() : 'N/A'}
+                          {invTotal > 0 ? `${invTotal.toLocaleString()} ${receiptItem.currency || 'XAF'}` : 'N/A'}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-500 text-xs">
-                          {totalPaidAmt.toLocaleString()}
+                          {totalPaidAmt.toLocaleString()} {receiptItem.currency || 'XAF'}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex flex-col items-center gap-1">
@@ -4193,13 +4107,20 @@ export default function DocumentStudio({
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => handleLoadReceiptToPreview(receiptItem)}
                               title="Load into Preview & Output Hub"
                               className="p-1.5 bg-slate-900 hover:bg-amber-500/10 text-slate-400 hover:text-amber-500 rounded-lg border border-slate-800 hover:border-amber-500/20 cursor-pointer transition-all"
                             >
                               <Printer className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDuplicateReceipt(receiptItem)}
+                              title="Duplicate Receipt in Neon PostgreSQL"
+                              className="p-1.5 bg-slate-900 hover:bg-blue-500/10 text-slate-400 hover:text-blue-400 rounded-lg border border-slate-800 hover:border-blue-500/20 cursor-pointer transition-all"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
                             </button>
                             <a
                               href={`/?verify=${receiptItem.verificationToken}`}
@@ -4243,7 +4164,7 @@ export default function DocumentStudio({
               </div>
             </div>
           )}
-          {mode === 'receipts' && isReceiptDigitallySigned && (
+          {mode === 'receipts' && selectedReceipt.isDigitallySigned && (
             <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
               <div className="border-8 border-amber-500 text-amber-500 font-extrabold text-5xl uppercase tracking-widest p-4 transform -rotate-12 rounded-2xl">
                 LEGAL CLEARANCE
@@ -4333,7 +4254,8 @@ export default function DocumentStudio({
                 </div>
                 <div className="text-right">
                   <span className="font-mono text-[8px] font-bold text-slate-500 block">Receipt No:</span>
-                  <span className="font-mono text-[8.5px] font-bold text-slate-800">{receiptNumber}</span>
+                  <span className="font-mono text-[8.5px] font-bold text-slate-800">{selectedReceipt.receiptNo}</span>
+                  <span className="font-mono text-[7px] text-slate-500 block">v{selectedReceipt.version || 1}</span>
                 </div>
               </div>
 
@@ -4344,12 +4266,12 @@ export default function DocumentStudio({
 
               {/* Receipt Info */}
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 grid grid-cols-2 gap-y-1 text-[8px]">
-                <div><strong className="text-slate-500 font-bold">CLIENT NAME:</strong> <span className="text-slate-900 font-bold">{receiptClient || '[ CLIENT NAME AWAITING ]'}</span></div>
-                <div><strong className="text-slate-500 font-bold">CLIENT NIU:</strong> <span className="font-mono text-slate-800 font-bold">{receiptNiu || '[ NIU REGISTRY ID ]'}</span></div>
-                <div><strong className="text-slate-500 font-bold">PROJECT SITE:</strong> <span className="text-slate-800">{receiptProject || '[ ASSOCIATED PROJECT ]'}</span></div>
-                <div><strong className="text-slate-500 font-bold">AMOUNT PAID:</strong> <span className="font-mono text-slate-900 font-bold">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span></div>
-                <div><strong className="text-slate-500 font-bold">PAYMENT MODE:</strong> <span className="text-slate-800">{receiptMethod}</span></div>
-                <div><strong className="text-slate-500 font-bold">DATE ISSUED:</strong> <span className="text-slate-800">{new Date().toLocaleDateString('en-GB')}</span></div>
+                <div><strong className="text-slate-500 font-bold">CLIENT NAME:</strong> <span className="text-slate-900 font-bold">{selectedReceipt.clientName || '[ CLIENT NAME AWAITING ]'}</span></div>
+                <div><strong className="text-slate-500 font-bold">CLIENT NIU:</strong> <span className="font-mono text-slate-800 font-bold">{selectedReceipt.clientNiu || '[ NIU REGISTRY ID ]'}</span></div>
+                <div><strong className="text-slate-500 font-bold">PROJECT SITE:</strong> <span className="text-slate-800">{selectedReceipt.receiptProject || '[ ASSOCIATED PROJECT ]'}</span></div>
+                <div><strong className="text-slate-500 font-bold">AMOUNT PAID:</strong> <span className="font-mono text-slate-900 font-bold">{currentReceiptTotals.subtotalPaid.toLocaleString()} {currentReceiptTotals.currency}</span></div>
+                <div><strong className="text-slate-500 font-bold">PAYMENT MODE:</strong> <span className="text-slate-800">{selectedReceipt.receiptMethod}</span></div>
+                <div><strong className="text-slate-500 font-bold">DATE ISSUED:</strong> <span className="text-slate-800">{selectedReceipt.signedAt ? new Date(selectedReceipt.signedAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span></div>
               </div>
 
               <div className="pt-3 border-t border-slate-100 text-[10px] space-y-3">
@@ -4358,26 +4280,32 @@ export default function DocumentStudio({
                   <span>Subtotal</span>
                 </div>
                 <div className="flex justify-between text-[9.5px]">
-                  <span className="text-slate-800">{receiptProject || '[ Associated Project ]'} - {receiptMemo || 'General Payment'}</span>
-                  <span className="font-bold text-slate-800 font-sans">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
+                  <span className="text-slate-800">{selectedReceipt.receiptProject || '[ Associated Project ]'} - {selectedReceipt.receiptMemo || 'General Payment'}</span>
+                  <span className="font-bold text-slate-800 font-sans">{currentReceiptTotals.subtotalPaid.toLocaleString()} {currentReceiptTotals.currency}</span>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex flex-col items-end text-[10px] space-y-1 font-sans">
                 <div className="flex gap-4 text-slate-500 text-[9px]">
                   <span>Subtotal:</span>
-                  <span className="font-bold w-24 text-right">{parseFloat(receiptAmount || '0').toLocaleString()} XAF</span>
+                  <span className="font-bold w-24 text-right">{currentReceiptTotals.subtotalPaid.toLocaleString()} {currentReceiptTotals.currency}</span>
                 </div>
                 <div className="flex gap-4 text-slate-500 text-[9px]">
-                  <span>TVA ({receiptTaxRate}%):</span>
+                  <span>TVA ({currentReceiptTotals.taxRate}%):</span>
                   <span className="font-bold w-24 text-right">
-                    {((parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
+                    {currentReceiptTotals.taxAmount.toLocaleString()} {currentReceiptTotals.currency}
                   </span>
                 </div>
                 <div className="flex gap-4 text-slate-900 font-bold bg-amber-100 p-1.5 rounded-lg border border-amber-200 mt-1">
                   <span>Total Paid:</span>
                   <span className="w-24 text-right">
-                    {(parseFloat(receiptAmount || '0') + (parseFloat(receiptAmount || '0') * parseFloat(receiptTaxRate || '19.25')) / 100).toLocaleString()} XAF
+                    {currentReceiptTotals.totalPaidThisReceipt.toLocaleString()} {currentReceiptTotals.currency}
+                  </span>
+                </div>
+                <div className="flex gap-4 text-slate-600 text-[9px] mt-1">
+                  <span>Remaining Balance:</span>
+                  <span className="font-bold w-24 text-right">
+                    {currentReceiptTotals.remainingBalance.toLocaleString()} {currentReceiptTotals.currency}
                   </span>
                 </div>
               </div>
@@ -4406,18 +4334,18 @@ export default function DocumentStudio({
                   <span className="text-slate-300 italic">Waiting Signee</span>
                 )
               ) : (
-                isReceiptDigitallySigned ? (
+                selectedReceipt.isDigitallySigned ? (
                   <div className="border-2 border-dashed border-amber-500 bg-amber-50/60 p-1.5 rounded font-mono text-[8px] text-amber-600 font-extrabold rotate-[-2deg] flex flex-col items-center justify-center min-w-[120px]">
                     <span>CFO STAMP VALID</span>
-                    {receiptDrawnSignature && (
+                    {selectedReceipt.drawnCfoSignature && (
                       <img
-                        src={receiptDrawnSignature}
+                        src={selectedReceipt.drawnCfoSignature}
                         alt="CFO Handdrawn Signature"
                         className="h-6 object-contain invert brightness-0 my-1 max-w-[100px]"
                         referrerPolicy="no-referrer"
                       />
                     )}
-                    <span className="text-[6.5px] font-sans font-normal block mt-0.5">{receiptTypedSign}</span>
+                    <span className="text-[6.5px] font-sans font-normal block mt-0.5">{selectedReceipt.receiptTypedSign}</span>
                   </div>
                 ) : (
                   <span className="text-slate-300 italic">Waiting CFO</span>

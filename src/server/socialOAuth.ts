@@ -1,4 +1,5 @@
 ﻿import { Express, Request, Response } from 'express';
+import { resolveSocialToken } from "./security/socialToken";
 import crypto from 'crypto';
 import { eq, desc, inArray } from 'drizzle-orm';
 import {
@@ -23,37 +24,7 @@ const SECRET_KEY = crypto
   )
   .digest();
 
-export function encryptToken(text: string): string {
-  if (!text) return '';
-  try {
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(ALGORITHM, SECRET_KEY, iv);
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    const authTag = cipher.getAuthTag().toString('hex');
-    return `${iv.toString('hex')}:${authTag}:${encrypted}`;
-  } catch (err) {
-    console.error('[TOKEN_ENCRYPTION_ERROR]', err);
-    return text;
-  }
-}
-
-export function decryptToken(cipherText: string): string {
-  if (!cipherText || !cipherText.includes(':')) return cipherText || '';
-  try {
-    const [ivHex, authTagHex, encryptedHex] = cipherText.split(':');
-    if (!ivHex || !authTagHex || !encryptedHex) return cipherText;
-    const iv = Buffer.from(ivHex, 'hex');
-    const authTag = Buffer.from(authTagHex, 'hex');
-    const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, iv);
-    decipher.setAuthTag(authTag);
-    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  } catch (err) {
-    return cipherText;
-  }
-}
+export { encryptToken, decryptToken } from "./security/security";
 
 // ==========================================
 // SSRF & WEBHOOK SECURITY PROTECTION
@@ -196,6 +167,7 @@ export function getProviderCredentials(provider: string) {
       scopes: [
         'pages_show_list',
         'pages_read_engagement',
+        'pages_manage_posts',
         'public_profile',
         'pages_messaging'
       ]
@@ -206,7 +178,10 @@ export function getProviderCredentials(provider: string) {
       clientId: process.env.INSTAGRAM_CLIENT_ID || process.env.META_CLIENT_ID || process.env.META_APP_ID || '',
       clientSecret: process.env.INSTAGRAM_CLIENT_SECRET || process.env.META_CLIENT_SECRET || process.env.META_APP_SECRET || '',
       scopes: [
-        'instagram_basic'
+        'instagram_basic',
+        'instagram_content_publish',
+        'pages_show_list',
+        'pages_read_engagement'
       ]
     };
   }
@@ -264,6 +239,7 @@ export function getPlatformCapabilities(provider: string): string[] {
   switch (p) {
     case 'facebook':
       return [
+        'pages_manage_posts',
         'pages_read_engagement',
         'pages_show_list',
         'publish_image',
@@ -272,6 +248,7 @@ export function getPlatformCapabilities(provider: string): string[] {
       ];
     case 'instagram':
       return [
+        'instagram_content_publish',
         'instagram_basic',
         'publish_photo',
         'publish_reels',
@@ -628,7 +605,7 @@ export function setupSocialOAuthRoutes(app: Express, db: any) {
       }
 
       const state = crypto.randomBytes(32).toString('hex');
-      const baseUrl = getAppBaseUrl(req, true);
+      const baseUrl = getAppBaseUrl(req);
       const redirectUri = `${baseUrl}/api/social/oauth/${provider}/callback`;
 
       // Generate PKCE code verifier & S256 challenge for YouTube, TikTok, and X/Twitter
@@ -711,7 +688,7 @@ export function setupSocialOAuthRoutes(app: Express, db: any) {
       }
 
       const state = crypto.randomBytes(32).toString('hex');
-      const baseUrl = getAppBaseUrl(req, true);
+      const baseUrl = getAppBaseUrl(req);
       const redirectUri = `${baseUrl}/api/social/oauth/${provider}/callback`;
 
       const codeVerifier = crypto.randomBytes(32).toString('base64url');
@@ -1909,6 +1886,211 @@ export function setupSocialOAuthRoutes(app: Express, db: any) {
 // 8. MULTI-PLATFORM PUBLISHING ENGINE & REAL PROVIDER DISPATCHERS
 // =========================================================================
 
+export interface NormalizedSocialError {
+  standardCode:
+    | 'AUTH_EXPIRED'
+    | 'ACCOUNT_NOT_CONNECTED'
+    | 'MEDIA_UNSUPPORTED'
+    | 'PERMISSION_DENIED'
+    | 'RATE_LIMITED'
+    | 'NETWORK_TIMEOUT'
+    | 'API_ERROR';
+  providerCode: string;
+  title: string;
+  reason: string;
+  actionRequired: string;
+  retryable: boolean;
+  requiresReauth: boolean;
+  httpStatus?: number;
+}
+
+export function normalizeSocialProviderError(params: {
+  platform: string;
+  error?: any;
+  httpStatus?: number;
+  rawCode?: string;
+  rawMessage?: string;
+}): NormalizedSocialError {
+  const { platform, error, httpStatus, rawCode, rawMessage } = params;
+  const p = (platform || 'unknown').toLowerCase();
+  const capPlatform = p.charAt(0).toUpperCase() + p.slice(1);
+  const msg = (rawMessage || error?.message || error?.detail || (typeof error === 'string' ? error : '') || '').toLowerCase();
+  const code = (rawCode || error?.code || error?.error?.code || '').toString().toUpperCase();
+
+  // 1. Account not connected / missing tokens
+  if (
+    code.includes('NOT_CONNECTED') ||
+    code.includes('TOKEN_MISSING') ||
+    msg.includes('not connected') ||
+    msg.includes('token missing') ||
+    msg.includes('no active connected account') ||
+    msg.includes('account not found')
+  ) {
+    return {
+      standardCode: 'ACCOUNT_NOT_CONNECTED',
+      providerCode: rawCode || `${p.toUpperCase()}_ACCOUNT_NOT_CONNECTED`,
+      title: `${capPlatform} Account Not Connected`,
+      reason: `No active connected account or authorized OAuth credentials found for ${capPlatform}.`,
+      actionRequired: `Connect and authorize ${capPlatform} in the Social Account Connection Center.`,
+      retryable: false,
+      requiresReauth: true,
+      httpStatus: httpStatus || 404
+    };
+  }
+
+  // 2. Auth expired / revoked / invalid token (e.g. FB_ERR_190, IG_CONTAINER_ERR_190, WA_ERR_190, 401, etc.)
+  if (
+    code === '190' ||
+    code === '102' ||
+    code.includes('ERR_190') ||
+    code.includes('ERR_102') ||
+    code.includes('TOKEN_EXPIRED') ||
+    code.includes('TOKEN_INVALID') ||
+    code.includes('AUTH_EXPIRED') ||
+    httpStatus === 401 ||
+    msg.includes('expired') ||
+    msg.includes('revoked') ||
+    msg.includes('cannot parse access token') ||
+    msg.includes('invalid oauth') ||
+    msg.includes('invalid access token') ||
+    msg.includes('session has expired') ||
+    msg.includes('unauthorized')
+  ) {
+    return {
+      standardCode: 'AUTH_EXPIRED',
+      providerCode: rawCode || `${p.toUpperCase()}_ERR_190`,
+      title: `${capPlatform} Access Token Expired or Revoked`,
+      reason: `The OAuth access token for ${capPlatform} has expired, revoked, or cannot be parsed by the provider.`,
+      actionRequired: `Re-authorize ${capPlatform} in the Social Account Connection Center to refresh credentials.`,
+      retryable: false,
+      requiresReauth: true,
+      httpStatus: httpStatus || 401
+    };
+  }
+
+  // 3. Media requirements / incompatible format
+  if (
+    code.includes('MEDIA') ||
+    code.includes('VIDEO_REQUIRED') ||
+    msg.includes('requires an image') ||
+    msg.includes('requires a video') ||
+    msg.includes('video asset') ||
+    msg.includes('media asset') ||
+    msg.includes('media format') ||
+    msg.includes('character limit') ||
+    msg.includes('280')
+  ) {
+    let customReason = `Media format or asset requirements not met for ${capPlatform}.`;
+    let customAction = `Verify image/video compatibility for ${capPlatform}.`;
+    if (p === 'instagram') {
+      customReason = 'Instagram requires an image or video asset URL (text-only posts are not supported).';
+      customAction = 'Attach an image or video asset to the post before publishing.';
+    } else if (p === 'youtube') {
+      customReason = 'YouTube requires a video asset (.mp4 or .mov).';
+      customAction = 'Attach a valid video asset or deselect YouTube from broadcast destinations.';
+    } else if (p === 'tiktok') {
+      customReason = 'TikTok requires a video asset (static images are not supported).';
+      customAction = 'Attach a valid video asset or deselect TikTok from broadcast destinations.';
+    } else if (p === 'twitter' || p === 'x') {
+      customReason = 'X (Twitter) post exceeds 280-character maximum limit.';
+      customAction = 'Use Auto-Fit 280 or trim post content before publishing to X.';
+    }
+
+    return {
+      standardCode: 'MEDIA_UNSUPPORTED',
+      providerCode: rawCode || `${p.toUpperCase()}_MEDIA_REQUIREMENT_FAILED`,
+      title: `${capPlatform} Media Incompatible`,
+      reason: customReason,
+      actionRequired: customAction,
+      retryable: false,
+      requiresReauth: false,
+      httpStatus: httpStatus || 400
+    };
+  }
+
+  // 4. Permissions denied
+  if (
+    code === '200' ||
+    code === '10' ||
+    code.includes('PERMISSION') ||
+    httpStatus === 403 ||
+    msg.includes('permission') ||
+    msg.includes('scope') ||
+    msg.includes('forbidden') ||
+    msg.includes('insufficient')
+  ) {
+    return {
+      standardCode: 'PERMISSION_DENIED',
+      providerCode: rawCode || `${p.toUpperCase()}_PERMISSION_DENIED`,
+      title: `${capPlatform} Permissions Denied`,
+      reason: `The authorized ${capPlatform} account lacks required publishing scopes or permissions.`,
+      actionRequired: `Reconnect ${capPlatform} in Connection Center and grant all requested scopes.`,
+      retryable: false,
+      requiresReauth: true,
+      httpStatus: httpStatus || 403
+    };
+  }
+
+  // 5. Rate limiting
+  if (
+    code === '4' ||
+    code === '17' ||
+    code === '32' ||
+    code === '613' ||
+    code.includes('RATE_LIMIT') ||
+    httpStatus === 429 ||
+    msg.includes('rate limit') ||
+    msg.includes('too many requests') ||
+    msg.includes('throttled')
+  ) {
+    return {
+      standardCode: 'RATE_LIMITED',
+      providerCode: rawCode || `${p.toUpperCase()}_RATE_LIMIT_EXCEEDED`,
+      title: `${capPlatform} Rate Limit Exceeded`,
+      reason: `${capPlatform} API rate limit reached. Requests are temporarily throttled by the provider.`,
+      actionRequired: 'Wait 5â€“15 minutes before retrying this destination.',
+      retryable: true,
+      requiresReauth: false,
+      httpStatus: 429
+    };
+  }
+
+  // 6. Network timeout / connection error
+  if (
+    code.includes('NETWORK') ||
+    code.includes('TIMEOUT') ||
+    httpStatus === 504 ||
+    msg.includes('timeout') ||
+    msg.includes('timed out') ||
+    msg.includes('aborterror') ||
+    msg.includes('fetch failed') ||
+    msg.includes('econnrefused')
+  ) {
+    return {
+      standardCode: 'NETWORK_TIMEOUT',
+      providerCode: rawCode || `${p.toUpperCase()}_NETWORK_TIMEOUT`,
+      title: `${capPlatform} Network Timeout`,
+      reason: `Network communication with ${capPlatform} API timed out or failed to connect.`,
+      actionRequired: 'Verify connectivity and retry the broadcast destination.',
+      retryable: true,
+      requiresReauth: false,
+      httpStatus: httpStatus || 504
+    };
+  }
+
+  // 7. General API Error
+  return {
+    standardCode: 'API_ERROR',
+    providerCode: rawCode || `${p.toUpperCase()}_API_ERROR`,
+    title: `${capPlatform} Publishing Error`,
+    reason: rawMessage || error?.message || `${capPlatform} API returned HTTP error ${httpStatus || 500}.`,
+    actionRequired: 'Review destination configuration and retry the broadcast.',
+    retryable: true,
+    requiresReauth: false,
+    httpStatus: httpStatus || 500
+  };
+}
+
 export interface PlatformPublishResult {
   status: 'SUCCESS' | 'FAILED';
   httpStatus?: number;
@@ -1932,14 +2114,20 @@ async function publishToFacebook(
       : (process.env.FACEBOOK_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN || channel?.apiKeyOrToken || '');
 
     if (!rawToken) {
+      const norm = normalizeSocialProviderError({
+        platform: 'facebook',
+        rawCode: 'FB_OAUTH_TOKEN_MISSING',
+        rawMessage: 'Facebook OAuth access token missing.',
+        httpStatus: 401
+      });
       return {
         status: 'FAILED',
-        httpStatus: 401,
-        errorCode: 'FB_OAUTH_TOKEN_MISSING',
-        errorMessage: 'Facebook OAuth access token missing.',
-        reason: 'Facebook access token missing or not authorized',
-        actionRequired: 'Authorize Facebook Page in Social Account Connection Center',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -1982,26 +2170,39 @@ async function publishToFacebook(
       };
     } else {
       const errObj = data.error || {};
-      const isAuthErr = errObj.code === 190 || errObj.code === 102 || response.status === 401;
+      const norm = normalizeSocialProviderError({
+        platform: 'facebook',
+        error: errObj,
+        httpStatus: response.status,
+        rawCode: errObj.code ? `FB_ERR_${errObj.code}` : 'FB_API_FAILED',
+        rawMessage: errObj.message || `Facebook Graph API responded with status ${response.status}`
+      });
       return {
         status: 'FAILED',
         httpStatus: response.status,
-        errorCode: errObj.code ? `FB_ERR_${errObj.code}` : 'FB_API_FAILED',
-        errorMessage: errObj.message || `Facebook Graph API responded with status ${response.status}`,
-        reason: isAuthErr ? 'Access token expired or permission revoked' : (errObj.message || 'Facebook API error'),
-        actionRequired: isAuthErr ? 'Reconnect Facebook Page in Connection Center' : 'Review post parameters',
-        retryable: !isAuthErr
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
   } catch (err: any) {
+    const norm = normalizeSocialProviderError({
+      platform: 'facebook',
+      error: err,
+      httpStatus: 500,
+      rawCode: 'FB_NETWORK_ERROR',
+      rawMessage: err.name === 'AbortError' ? 'Facebook API request timed out' : err.message
+    });
     return {
       status: 'FAILED',
-      httpStatus: 500,
-      errorCode: 'FB_NETWORK_ERROR',
-      errorMessage: err.name === 'AbortError' ? 'Facebook API request timed out' : 'Network communication error',
-      reason: err.name === 'AbortError' ? 'Request timed out after 12s' : 'Network error communicating with Meta Graph API',
-      actionRequired: 'Verify network connectivity and retry',
-      retryable: true
+      httpStatus: norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: norm.reason,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
     };
   }
 }
@@ -2017,26 +2218,38 @@ async function publishToInstagram(
       : (process.env.INSTAGRAM_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN || channel?.apiKeyOrToken || '');
 
     if (!rawToken) {
+      const norm = normalizeSocialProviderError({
+        platform: 'instagram',
+        rawCode: 'IG_OAUTH_TOKEN_MISSING',
+        rawMessage: 'Instagram OAuth access token missing.',
+        httpStatus: 401
+      });
       return {
         status: 'FAILED',
-        httpStatus: 401,
-        errorCode: 'IG_OAUTH_TOKEN_MISSING',
-        errorMessage: 'Instagram OAuth access token missing.',
-        reason: 'Instagram access token missing or account not connected',
-        actionRequired: 'Authorize Instagram Professional Account in Connection Center',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
     if (!content.mediaUrl) {
+      const norm = normalizeSocialProviderError({
+        platform: 'instagram',
+        rawCode: 'IG_MEDIA_REQUIRED',
+        rawMessage: 'Instagram Graph API requires an image or video URL to publish a post.',
+        httpStatus: 400
+      });
       return {
         status: 'FAILED',
-        httpStatus: 400,
-        errorCode: 'IG_MEDIA_REQUIRED',
-        errorMessage: 'Instagram Graph API requires an image or video URL to publish a post.',
-        reason: 'Media asset required (Instagram does not support text-only posts)',
-        actionRequired: 'Attach an image or video asset to the post',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2062,15 +2275,21 @@ async function publishToInstagram(
     const containerData = await containerRes.json().catch(() => ({}));
     if (!containerRes.ok || !containerData.id) {
       clearTimeout(timeout);
-      const isAuthErr = containerData.error?.code === 190 || containerRes.status === 401;
+      const norm = normalizeSocialProviderError({
+        platform: 'instagram',
+        error: containerData.error,
+        httpStatus: containerRes.status,
+        rawCode: containerData.error?.code ? `IG_CONTAINER_ERR_${containerData.error.code}` : 'IG_CONTAINER_FAILED',
+        rawMessage: containerData.error?.message || 'Failed to create Instagram media container'
+      });
       return {
         status: 'FAILED',
         httpStatus: containerRes.status,
-        errorCode: containerData.error?.code ? `IG_CONTAINER_ERR_${containerData.error.code}` : 'IG_CONTAINER_FAILED',
-        errorMessage: containerData.error?.message || 'Failed to create Instagram media container',
-        reason: isAuthErr ? 'Instagram access token expired or revoked' : (containerData.error?.message || 'Media container creation failed'),
-        actionRequired: isAuthErr ? 'Reconnect Instagram Business account in Connection Center' : 'Verify image URL accessibility',
-        retryable: !isAuthErr
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2098,25 +2317,39 @@ async function publishToInstagram(
         reason: 'Published successfully to Instagram Business'
       };
     } else {
+      const norm = normalizeSocialProviderError({
+        platform: 'instagram',
+        error: publishData.error,
+        httpStatus: publishRes.status,
+        rawCode: 'IG_PUBLISH_FAILED',
+        rawMessage: publishData.error?.message || 'Failed to publish Instagram media container'
+      });
       return {
         status: 'FAILED',
         httpStatus: publishRes.status,
-        errorCode: 'IG_PUBLISH_FAILED',
-        errorMessage: publishData.error?.message || 'Failed to publish Instagram media container',
-        reason: publishData.error?.message || 'Instagram publishing failed',
-        actionRequired: 'Verify Instagram Business account status and permissions',
-        retryable: true
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
   } catch (err: any) {
+    const norm = normalizeSocialProviderError({
+      platform: 'instagram',
+      error: err,
+      httpStatus: 500,
+      rawCode: 'IG_NETWORK_ERROR',
+      rawMessage: err.name === 'AbortError' ? 'Instagram API request timed out' : err.message
+    });
     return {
       status: 'FAILED',
-      httpStatus: 500,
-      errorCode: 'IG_NETWORK_ERROR',
-      errorMessage: err.name === 'AbortError' ? 'Instagram API request timed out' : 'Network communication error',
-      reason: err.name === 'AbortError' ? 'Request timed out after 12s' : 'Network error communicating with Instagram Graph API',
-      actionRequired: 'Retry the publication',
-      retryable: true
+      httpStatus: norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: norm.reason,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
     };
   }
 }
@@ -2132,27 +2365,39 @@ async function publishToYouTube(
       : (process.env.YOUTUBE_ACCESS_TOKEN || process.env.GOOGLE_ACCESS_TOKEN || '');
 
     if (!rawToken) {
+      const norm = normalizeSocialProviderError({
+        platform: 'youtube',
+        rawCode: 'YT_OAUTH_TOKEN_MISSING',
+        rawMessage: 'YouTube OAuth access token missing.',
+        httpStatus: 401
+      });
       return {
         status: 'FAILED',
-        httpStatus: 401,
-        errorCode: 'YT_OAUTH_TOKEN_MISSING',
-        errorMessage: 'YouTube OAuth access token missing.',
-        reason: 'YouTube account not authorized or token missing',
-        actionRequired: 'Authorize YouTube Channel in Social Account Connection Center',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
     const isVideo = content.mediaType === 'video' || (content.mediaUrl && Boolean(content.mediaUrl.match(/\.(mp4|mov|webm|mkv)/i)));
     if (!isVideo) {
+      const norm = normalizeSocialProviderError({
+        platform: 'youtube',
+        rawCode: 'YT_VIDEO_ASSET_REQUIRED',
+        rawMessage: 'YouTube distribution requires a valid video asset (.mp4/.mov).',
+        httpStatus: 400
+      });
       return {
         status: 'FAILED',
-        httpStatus: 400,
-        errorCode: 'YT_VIDEO_ASSET_REQUIRED',
-        errorMessage: 'YouTube distribution requires a valid video asset (.mp4/.mov).',
-        reason: 'Video file required (YouTube does not support static images or text posts)',
-        actionRequired: 'Attach a video asset or deselect YouTube from target destinations',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2163,15 +2408,21 @@ async function publishToYouTube(
 
     if (!chRes.ok) {
       const chData = await chRes.json().catch(() => ({}));
-      const isAuthErr = chRes.status === 401 || chData.error?.code === 401;
+      const norm = normalizeSocialProviderError({
+        platform: 'youtube',
+        error: chData.error,
+        httpStatus: chRes.status,
+        rawCode: chRes.status === 401 ? 'YT_OAUTH_TOKEN_EXPIRED' : 'YT_API_ERROR',
+        rawMessage: chData.error?.message || 'YouTube channel verification failed'
+      });
       return {
         status: 'FAILED',
         httpStatus: chRes.status,
-        errorCode: isAuthErr ? 'YT_OAUTH_TOKEN_EXPIRED' : 'YT_API_ERROR',
-        errorMessage: chData.error?.message || 'YouTube API error',
-        reason: isAuthErr ? 'YouTube authorization expired or revoked' : (chData.error?.message || 'YouTube channel verification failed'),
-        actionRequired: isAuthErr ? 'Reconnect YouTube Channel in Connection Center' : 'Check Google Cloud Console YouTube quotas',
-        retryable: !isAuthErr
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2186,14 +2437,21 @@ async function publishToYouTube(
       reason: 'Published successfully to YouTube Channel'
     };
   } catch (err: any) {
+    const norm = normalizeSocialProviderError({
+      platform: 'youtube',
+      error: err,
+      httpStatus: 500,
+      rawCode: 'YT_NETWORK_ERROR',
+      rawMessage: err.name === 'AbortError' ? 'YouTube API request timed out' : err.message
+    });
     return {
       status: 'FAILED',
-      httpStatus: 500,
-      errorCode: 'YT_NETWORK_ERROR',
-      errorMessage: err.name === 'AbortError' ? 'YouTube API request timed out' : 'Network communication error',
-      reason: 'Network error communicating with Google YouTube API',
-      actionRequired: 'Verify connectivity and retry',
-      retryable: true
+      httpStatus: norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: norm.reason,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
     };
   }
 }
@@ -2209,27 +2467,39 @@ async function publishToTikTok(
       : (process.env.TIKTOK_ACCESS_TOKEN || '');
 
     if (!rawToken) {
+      const norm = normalizeSocialProviderError({
+        platform: 'tiktok',
+        rawCode: 'TIKTOK_ACCOUNT_NOT_CONNECTED',
+        rawMessage: 'TikTok OAuth token missing.',
+        httpStatus: 401
+      });
       return {
         status: 'FAILED',
-        httpStatus: 401,
-        errorCode: 'TIKTOK_OAUTH_TOKEN_MISSING',
-        errorMessage: 'TikTok OAuth token missing.',
-        reason: 'TikTok Business account not authorized or token missing',
-        actionRequired: 'Authorize TikTok Business Account in Social Account Connection Center',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
     const isVideo = content.mediaType === 'video' || (content.mediaUrl && Boolean(content.mediaUrl.match(/\.(mp4|mov|webm|mkv)/i)));
     if (!isVideo) {
+      const norm = normalizeSocialProviderError({
+        platform: 'tiktok',
+        rawCode: 'TIKTOK_VIDEO_REQUIRED',
+        rawMessage: 'TikTok Content Posting API requires a video asset.',
+        httpStatus: 400
+      });
       return {
         status: 'FAILED',
-        httpStatus: 400,
-        errorCode: 'TIKTOK_VIDEO_REQUIRED',
-        errorMessage: 'TikTok Content Posting API requires a video asset.',
-        reason: 'Video file required (TikTok does not support text-only or static images)',
-        actionRequired: 'Attach a video asset or deselect TikTok from target destinations',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2239,14 +2509,20 @@ async function publishToTikTok(
     });
 
     if (!userRes.ok) {
+      const norm = normalizeSocialProviderError({
+        platform: 'tiktok',
+        httpStatus: userRes.status,
+        rawCode: 'TIKTOK_TOKEN_INVALID',
+        rawMessage: 'TikTok access token expired or permissions revoked.'
+      });
       return {
         status: 'FAILED',
         httpStatus: userRes.status,
-        errorCode: 'TIKTOK_TOKEN_INVALID',
-        errorMessage: 'TikTok authorization token expired or invalid.',
-        reason: 'TikTok access token expired or permissions revoked',
-        actionRequired: 'Reconnect TikTok in Connection Center',
-        retryable: false
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2259,14 +2535,21 @@ async function publishToTikTok(
       reason: 'Published successfully to TikTok Business Account'
     };
   } catch (err: any) {
+    const norm = normalizeSocialProviderError({
+      platform: 'tiktok',
+      error: err,
+      httpStatus: 500,
+      rawCode: 'TIKTOK_NETWORK_ERROR',
+      rawMessage: err.message
+    });
     return {
       status: 'FAILED',
-      httpStatus: 500,
-      errorCode: 'TIKTOK_NETWORK_ERROR',
-      errorMessage: err.message || 'TikTok network error',
-      reason: 'Network error communicating with TikTok Open API',
-      actionRequired: 'Verify connectivity and retry',
-      retryable: true
+      httpStatus: norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: norm.reason,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
     };
   }
 }
@@ -2274,78 +2557,298 @@ async function publishToTikTok(
 // Real WhatsApp Cloud API Publisher
 async function publishToWhatsApp(
   channel: any,
-  content: { title?: string; caption?: string; ctaText?: string; hashtags?: string; broadcastId: string }
+  content: {
+    title?: string;
+    caption?: string;
+    ctaText?: string;
+    hashtags?: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    broadcastId: string;
+    recipientPhone?: string;
+    recipientPhones?: string[];
+    templateName?: string;
+    templateLanguage?: string;
+    templateParameters?: Array<string | number>;
+  }
 ): Promise<PlatformPublishResult> {
   try {
     const rawToken = channel?.accessTokenEncrypted
       ? decryptToken(channel.accessTokenEncrypted)
       : (process.env.WHATSAPP_API_TOKEN || process.env.META_ACCESS_TOKEN || '');
 
-    const phoneId = channel?.accountId || process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_ID;
+    const phoneId =
+      process.env.WHATSAPP_PHONE_NUMBER_ID ||
+      process.env.WHATSAPP_PHONE_ID;
 
-    if (!rawToken || !phoneId) {
+    if (!rawToken) {
+      const norm = normalizeSocialProviderError({
+        platform: 'whatsapp',
+        rawCode: 'WA_OAUTH_TOKEN_MISSING',
+        rawMessage: 'WhatsApp Cloud API access token is missing.',
+        httpStatus: 401
+      });
+
       return {
         status: 'FAILED',
-        httpStatus: 401,
-        errorCode: 'WHATSAPP_CONFIG_MISSING',
-        errorMessage: 'WhatsApp Cloud API Token or Phone Number ID not configured.',
-        reason: 'WhatsApp Cloud API credentials or Phone Number ID not configured',
-        actionRequired: 'Configure WhatsApp Cloud API credentials in Connection Center',
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: 'Configure WHATSAPP_API_TOKEN in the server environment.',
+        actionRequired: 'Configure a valid WhatsApp Cloud API access token.',
         retryable: false
       };
     }
 
-    const fullMessage = `${content.title ? `*${content.title}*\n\n` : ''}${content.caption || ''}\n\n${content.ctaText || ''}\n\n${content.hashtags || ''}`.trim();
-    const targetPhone = channel?.accountHandle?.replace(/[^0-9]/g, '') || '237671063511';
-
-    const response = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${rawToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: targetPhone,
-        type: 'text',
-        text: { preview_url: true, body: fullMessage }
-      })
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (response.ok && data.messages?.[0]?.id) {
-      return {
-        status: 'SUCCESS',
-        httpStatus: response.status,
-        externalPostId: data.messages[0].id,
-        externalUrl: `https://wa.me/${targetPhone}`,
-        reason: 'Broadcast delivered to WhatsApp Channel'
-      };
-    } else {
+    if (!phoneId) {
       return {
         status: 'FAILED',
-        httpStatus: response.status,
-        errorCode: data.error?.code ? `WA_ERR_${data.error.code}` : 'WA_DISPATCH_FAILED',
-        errorMessage: data.error?.message || 'WhatsApp Cloud API dispatch failed.',
-        reason: data.error?.message || 'WhatsApp Cloud API delivery failure',
-        actionRequired: 'Check WhatsApp phone number status and Meta API token validity',
-        retryable: true
+        httpStatus: 500,
+        errorCode: 'WA_PHONE_NUMBER_ID_MISSING',
+        errorMessage: 'WhatsApp Phone Number ID is not configured.',
+        reason: 'WHATSAPP_PHONE_NUMBER_ID is missing from the server environment.',
+        actionRequired: 'Configure WHATSAPP_PHONE_NUMBER_ID=406678202523472.',
+        retryable: false
       };
     }
-  } catch (err: any) {
+
+    const recipients = [
+      ...(Array.isArray(content.recipientPhones) ? content.recipientPhones : []),
+      ...(content.recipientPhone ? [content.recipientPhone] : [])
+    ]
+      .map((v) => String(v).replace(/[^\d]/g, ''))
+      .filter(Boolean);
+
+    const uniqueRecipients = [...new Set(recipients)];
+
+    if (uniqueRecipients.length === 0) {
+      return {
+        status: 'FAILED',
+        httpStatus: 400,
+        errorCode: 'WA_RECIPIENT_REQUIRED',
+        errorMessage: 'WhatsApp recipient is required.',
+        reason: 'No recipientPhone or recipientPhones was supplied. The connected MADECC business number will not be used as a recipient automatically.',
+        actionRequired: 'Select or provide at least one WhatsApp recipient.',
+        retryable: false
+      };
+    }
+
+    const apiBase = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
+
+    const cleanText = [
+      content.title ? `*${content.title}*` : '',
+      content.caption || '',
+      content.ctaText || '',
+      content.hashtags || ''
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim();
+
+    const mediaType = String(content.mediaType || '').toLowerCase();
+    const mediaUrl = content.mediaUrl || undefined;
+
+    const buildMessage = (recipient: string) => {
+      if (content.templateName) {
+        const parameters = Array.isArray(content.templateParameters)
+          ? content.templateParameters.map((value) => ({
+              type: 'text',
+              text: String(value)
+            }))
+          : [];
+
+        return {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: recipient,
+          type: 'template',
+          template: {
+            name: content.templateName,
+            language: {
+              code: content.templateLanguage || 'en_US'
+            },
+            components: parameters.length
+              ? [
+                  {
+                    type: 'body',
+                    parameters
+                  }
+                ]
+              : undefined
+          }
+        };
+      }
+
+      if (mediaUrl && ['image', 'photo', 'jpg', 'jpeg', 'png'].includes(mediaType)) {
+        return {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: recipient,
+          type: 'image',
+          image: {
+            link: mediaUrl,
+            caption: cleanText || undefined
+          }
+        };
+      }
+
+      if (mediaUrl && ['video', 'mp4', 'mov', 'webm'].includes(mediaType)) {
+        return {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: recipient,
+          type: 'video',
+          video: {
+            link: mediaUrl,
+            caption: cleanText || undefined
+          }
+        };
+      }
+
+      if (mediaUrl && ['document', 'pdf', 'doc', 'docx', 'xlsx', 'xls'].includes(mediaType)) {
+        return {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: recipient,
+          type: 'document',
+          document: {
+            link: mediaUrl,
+            caption: cleanText || undefined
+          }
+        };
+      }
+
+      return {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipient,
+        type: 'text',
+        text: {
+          preview_url: true,
+          body: cleanText || 'MADECC Group update'
+        }
+      };
+    };
+
+    const results: Array<{
+      recipient: string;
+      success: boolean;
+      id?: string;
+      error?: any;
+      httpStatus?: number;
+    }> = [];
+
+    for (const recipient of uniqueRecipients) {
+      try {
+        const message = buildMessage(recipient);
+
+        const response = await fetch(apiBase, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${rawToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(message)
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && data.messages?.[0]?.id) {
+          results.push({
+            recipient,
+            success: true,
+            id: data.messages[0].id,
+            httpStatus: response.status
+          });
+        } else {
+          results.push({
+            recipient,
+            success: false,
+            error: data.error || data,
+            httpStatus: response.status
+          });
+        }
+      } catch (sendErr: any) {
+        results.push({
+          recipient,
+          success: false,
+          error: {
+            message: sendErr?.message || 'Network error'
+          },
+          httpStatus: 500
+        });
+      }
+    }
+
+    const successful = results.filter((r) => r.success);
+    const failed = results.filter((r) => !r.success);
+
+    if (successful.length > 0) {
+      const firstSuccessful = successful[0];
+
+      if (failed.length === 0) {
+        return {
+          status: 'SUCCESS',
+          httpStatus: 200,
+          externalPostId: firstSuccessful.id,
+          externalUrl: `https://wa.me/${firstSuccessful.recipient}`,
+          reason: `WhatsApp message delivered successfully to ${successful.length} recipient${successful.length === 1 ? '' : 's'}.`
+        };
+      }
+
+      return {
+        status: 'SUCCESS',
+        httpStatus: 207,
+        externalPostId: firstSuccessful.id,
+        externalUrl: `https://wa.me/${firstSuccessful.recipient}`,
+        reason: `WhatsApp broadcast partially completed: ${successful.length} succeeded and ${failed.length} failed.`
+      };
+    }
+
+    const firstFailure = failed[0];
+    const providerError = firstFailure?.error || {};
+
+    const norm = normalizeSocialProviderError({
+      platform: 'whatsapp',
+      error: providerError,
+      httpStatus: firstFailure?.httpStatus || 500,
+      rawCode: providerError?.code
+        ? `WA_ERR_${providerError.code}`
+        : 'WA_DISPATCH_FAILED',
+      rawMessage:
+        providerError?.message ||
+        'WhatsApp Cloud API message delivery failed.'
+    });
+
     return {
       status: 'FAILED',
+      httpStatus: firstFailure?.httpStatus || norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: `${norm.reason} Failed recipients: ${failed.length}.`,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
+    };
+  } catch (err: any) {
+    const norm = normalizeSocialProviderError({
+      platform: 'whatsapp',
+      error: err,
       httpStatus: 500,
-      errorCode: 'WA_NETWORK_ERROR',
-      errorMessage: err.message,
-      reason: 'Network error communicating with WhatsApp Cloud API',
-      actionRequired: 'Retry the dispatch',
-      retryable: true
+      rawCode: 'WA_NETWORK_ERROR',
+      rawMessage: err?.message || 'WhatsApp publisher failed unexpectedly.'
+    });
+
+    return {
+      status: 'FAILED',
+      httpStatus: norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: norm.reason,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
     };
   }
 }
-
 // Real LinkedIn UGC / Posts API Publisher
 async function publishToLinkedIn(
   channel: any,
@@ -2357,14 +2860,20 @@ async function publishToLinkedIn(
       : (process.env.LINKEDIN_ACCESS_TOKEN || '');
 
     if (!rawToken) {
+      const norm = normalizeSocialProviderError({
+        platform: 'linkedin',
+        rawCode: 'LINKEDIN_OAUTH_TOKEN_MISSING',
+        rawMessage: 'LinkedIn OAuth access token missing.',
+        httpStatus: 401
+      });
       return {
         status: 'FAILED',
-        httpStatus: 401,
-        errorCode: 'LINKEDIN_OAUTH_TOKEN_MISSING',
-        errorMessage: 'LinkedIn OAuth access token missing.',
-        reason: 'LinkedIn Company Page not authorized or token missing',
-        actionRequired: 'Authorize LinkedIn Company Page in Social Account Connection Center',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2404,26 +2913,39 @@ async function publishToLinkedIn(
       };
     } else {
       const errData = await response.json().catch(() => ({}));
-      const isAuthErr = response.status === 401 || errData.status === 401;
+      const norm = normalizeSocialProviderError({
+        platform: 'linkedin',
+        error: errData,
+        httpStatus: response.status,
+        rawCode: 'LINKEDIN_API_FAILED',
+        rawMessage: errData.message || `LinkedIn API responded with HTTP ${response.status}`
+      });
       return {
         status: 'FAILED',
         httpStatus: response.status,
-        errorCode: 'LINKEDIN_API_FAILED',
-        errorMessage: errData.message || `LinkedIn API error (HTTP ${response.status})`,
-        reason: isAuthErr ? 'LinkedIn OAuth authorization expired' : (errData.message || 'LinkedIn publishing error'),
-        actionRequired: isAuthErr ? 'Reconnect LinkedIn Company Page in Connection Center' : 'Verify LinkedIn organization URN and permissions',
-        retryable: !isAuthErr
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
   } catch (err: any) {
+    const norm = normalizeSocialProviderError({
+      platform: 'linkedin',
+      error: err,
+      httpStatus: 500,
+      rawCode: 'LINKEDIN_NETWORK_ERROR',
+      rawMessage: err.message
+    });
     return {
       status: 'FAILED',
-      httpStatus: 500,
-      errorCode: 'LINKEDIN_NETWORK_ERROR',
-      errorMessage: err.message,
-      reason: 'Network error communicating with LinkedIn API',
-      actionRequired: 'Retry the publication',
-      retryable: true
+      httpStatus: norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: norm.reason,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
     };
   }
 }
@@ -2439,14 +2961,20 @@ async function publishToTwitter(
       : (process.env.X_ACCESS_TOKEN || process.env.TWITTER_ACCESS_TOKEN || process.env.TWITTER_BEARER_TOKEN || '');
 
     if (!rawToken) {
+      const norm = normalizeSocialProviderError({
+        platform: 'twitter',
+        rawCode: 'X_OAUTH_TOKEN_MISSING',
+        rawMessage: 'X (Twitter) OAuth 2.0 PKCE access token missing.',
+        httpStatus: 401
+      });
       return {
         status: 'FAILED',
-        httpStatus: 401,
-        errorCode: 'X_OAUTH_TOKEN_MISSING',
-        errorMessage: 'X (Twitter) OAuth 2.0 PKCE access token missing.',
-        reason: 'X (Twitter) account not authorized or token missing',
-        actionRequired: 'Connect @MADECCGroupCM in Social Account Connection Center',
-        retryable: false
+        httpStatus: norm.httpStatus,
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
 
@@ -2474,31 +3002,44 @@ async function publishToTwitter(
         reason: 'Tweet published successfully to @MADECCGroupCM'
       };
     } else {
-      const isAuthErr = response.status === 401;
+      const norm = normalizeSocialProviderError({
+        platform: 'twitter',
+        error: data,
+        httpStatus: response.status,
+        rawCode: data.title ? `X_ERR_${data.title}` : 'X_API_FAILED',
+        rawMessage: data.detail || data.title || `X API responded with HTTP ${response.status}`
+      });
       return {
         status: 'FAILED',
         httpStatus: response.status,
-        errorCode: data.title ? `X_ERR_${data.title}` : 'X_API_FAILED',
-        errorMessage: data.detail || data.title || `X API responded with HTTP ${response.status}`,
-        reason: isAuthErr ? 'X (Twitter) OAuth token expired or revoked' : (data.detail || 'X API delivery error'),
-        actionRequired: isAuthErr ? 'Reconnect @MADECCGroupCM in Connection Center' : 'Review tweet text and parameters',
-        retryable: !isAuthErr
+        errorCode: norm.providerCode,
+        errorMessage: norm.title,
+        reason: norm.reason,
+        actionRequired: norm.actionRequired,
+        retryable: norm.retryable
       };
     }
   } catch (err: any) {
+    const norm = normalizeSocialProviderError({
+      platform: 'twitter',
+      error: err,
+      httpStatus: 500,
+      rawCode: 'X_NETWORK_ERROR',
+      rawMessage: err.message
+    });
     return {
       status: 'FAILED',
-      httpStatus: 500,
-      errorCode: 'X_NETWORK_ERROR',
-      errorMessage: err.message,
-      reason: 'Network error communicating with X (Twitter) API',
-      actionRequired: 'Retry the tweet',
-      retryable: true
+      httpStatus: norm.httpStatus,
+      errorCode: norm.providerCode,
+      errorMessage: norm.title,
+      reason: norm.reason,
+      actionRequired: norm.actionRequired,
+      retryable: norm.retryable
     };
   }
 }
 
-// Standalone Pre-flight Diagnostics Function
+// Standalone Pre-flight Diagnostics Function (runSocialPreflight)
 export async function diagnosePublishing(params: {
   targetPlatforms?: string[];
   mediaUrl?: string | null;
@@ -2547,7 +3088,7 @@ export async function diagnosePublishing(params: {
         media: 'PASS',
         api: 'PASS',
         publishingCapability: enabledOutlets.length > 0 ? 'READY' : 'NOT_CONNECTED',
-        action: enabledOutlets.length > 0 ? 'Ready to broadcast' : 'Configure and enable custom webhook outlet',
+        action: enabledOutlets.length > 0 ? 'Ready to broadcast' : 'Configure and enable custom webhook outlet in Custom Outlets',
         summary: enabledOutlets.length > 0
           ? `${enabledOutlets.length} active webhook outlet(s) ready`
           : 'No active custom webhook outlets configured'
@@ -2652,14 +3193,19 @@ export async function diagnosePublishing(params: {
     });
   }
 
+  const readyCount = diagnostics.filter(d => d.publishingCapability === 'READY').length;
+
   return {
     success: true,
+    allReady: readyCount === diagnostics.length && diagnostics.length > 0,
     totalDestinations: diagnostics.length,
-    readyCount: diagnostics.filter(d => d.publishingCapability === 'READY').length,
+    readyCount,
     destinations: diagnostics,
     evaluatedAt: new Date().toISOString()
   };
 }
+
+export const runSocialPreflight = diagnosePublishing;
 
 // Standalone Exported Broadcast Publisher Engine
 export async function executePublishBroadcast(params: {
@@ -2718,17 +3264,23 @@ export async function executePublishBroadcast(params: {
         : customOutlets.filter(o => o.enabled);
 
       if (selectedOutlets.length === 0) {
+        const norm = normalizeSocialProviderError({
+          platform: 'custom',
+          rawCode: 'NO_WEBHOOK_CONFIGURED',
+          rawMessage: 'No active custom webhook outlets configured to receive broadcasts.',
+          httpStatus: 404
+        });
         const fallbackJob = {
           jobId: `JOB-${Date.now()}-${Math.floor(Math.random() * 1000)}-webhook-none`,
           platform: 'custom',
           destinationName: 'Custom Webhook Outlets',
           status: 'FAILED' as const,
           attempt: 1,
-          httpStatus: 404,
-          errorCode: 'NO_WEBHOOK_CONFIGURED',
-          errorMessage: 'No active custom webhook outlets configured to receive broadcasts.',
-          reason: 'No active custom webhook outlets configured',
-          actionRequired: 'Create and enable a webhook outlet in Custom Outlets',
+          httpStatus: norm.httpStatus,
+          errorCode: norm.providerCode,
+          errorMessage: norm.title,
+          reason: norm.reason,
+          actionRequired: norm.actionRequired,
           retryable: false,
           startedAt: new Date().toISOString(),
           completedAt: new Date().toISOString()
@@ -2825,7 +3377,7 @@ export async function executePublishBroadcast(params: {
         let attempt = 1;
         let jobStatus: 'SUCCESS' | 'FAILED' = 'SUCCESS';
         let httpStatus = 200;
-        let errorMsg = null;
+        let errorMsg: string | null = null;
 
         try {
           const controller = new AbortController();
@@ -2977,13 +3529,19 @@ export async function executePublishBroadcast(params: {
       const hasEnvToken = Boolean(process.env[envKey] || (p === 'facebook' && process.env.META_ACCESS_TOKEN));
 
       if (!matchingChan && !hasEnvToken) {
+        const norm = normalizeSocialProviderError({
+          platform: p,
+          rawCode: `${p.toUpperCase()}_ACCOUNT_NOT_CONNECTED`,
+          rawMessage: `No active connected account found for ${p}.`,
+          httpStatus: 404
+        });
         dispatchRes = {
           status: 'FAILED',
-          httpStatus: 404,
-          errorCode: `${p.toUpperCase()}_ACCOUNT_NOT_CONNECTED`,
-          errorMessage: `No active connected account found for ${p}.`,
-          reason: 'Account not connected in Social Account Connection Center',
-          actionRequired: `Connect ${p.charAt(0).toUpperCase() + p.slice(1)} in Connection Center`,
+          httpStatus: norm.httpStatus,
+          errorCode: norm.providerCode,
+          errorMessage: norm.title,
+          reason: norm.reason,
+          actionRequired: norm.actionRequired,
           retryable: false
         };
       } else {
@@ -3119,14 +3677,6 @@ export async function executePublishBroadcast(params: {
     publishedAt: new Date().toISOString()
   };
 }
-
-
-
-
-
-
-
-
 
 
 

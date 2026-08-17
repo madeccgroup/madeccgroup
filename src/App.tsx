@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase.ts';
 import { User } from './types.ts';
@@ -25,10 +25,13 @@ import { Services } from './components/Services.tsx';
 import { RequestQuote } from './components/RequestQuote.tsx';
 import { ScheduleConsultation } from './components/ScheduleConsultation.tsx';
 import LegalPage from './components/LegalPage.tsx';
-import DataDeletion from './components/DataDeletion.tsx';
 
 import { ThemeProvider, useTheme } from './lib/ThemeContext.tsx';
 import { LanguageProvider } from './lib/LanguageContext.tsx';
+
+import MADECCAIStudio
+  from "./components/MADECCAIStudio";
+
 
 function AppContent({
   currentTab,
@@ -62,112 +65,134 @@ function AppContent({
   };
 
   const renderActiveScreen = () => {
-    switch (currentTab) {
-      case 'home':
-        return (
-          <Home 
-            setCurrentTab={setCurrentTab} 
-            setSelectedProjectId={setSelectedProjectId} 
-          />
-        );
-      case 'services':
-        return (
-          <Services 
-            onNavigateToTab={handleNavigateWithState}
-          />
-        );
-      case 'request-a-quote':
-        return (
-          <RequestQuote 
-            onNavigateToTab={handleNavigateWithState}
-            preselectedService={preselectedService}
-          />
-        );
-      case 'schedule-consultation':
-        return (
-          <ScheduleConsultation 
-            onNavigateToTab={handleNavigateWithState}
-          />
-        );
-      case 'about':
-        return <About />;
-      case 'projects':
-        return (
-          <Projects 
-            selectedProjectId={selectedProjectId} 
-            setSelectedProjectId={setSelectedProjectId} 
-          />
-        );
-      case 'blog':
-        return <Blog />;
-      case 'contact':
-        return <Contact />;
-      case 'booking':
-        return (
-          <ScheduleConsultation 
-            onNavigateToTab={handleNavigateWithState}
-          />
-        );
-      case 'budget-calculator':
-        return (
-          <ProjectBudgetCalculator 
-            onNavigateToTab={handleNavigateWithState}
-          />
-        );
-      case 'construction-cost-guide':
-        return (
-          <ConstructionCostGuide 
-            onNavigateToTab={handleNavigateWithState}
-          />
-        );
-      case 'terms':
-        return <LegalPage type="terms" setCurrentTab={setCurrentTab} />;
-      case 'data-deletion':
-        return <DataDeletion />;
-      case 'privacy':
-        return <LegalPage type="privacy" setCurrentTab={setCurrentTab} />;
-      case 'safety':
-        return <LegalPage type="safety" setCurrentTab={setCurrentTab} />;
-      case 'verify':
-        return (
-          <VerifyContract 
-            token={verificationToken} 
-            onBackToHome={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.delete('verify');
-              url.searchParams.delete('verifyToken');
-              window.history.pushState({}, '', url.toString());
-              setCurrentTab('home');
-              setVerificationToken('');
-            }} 
-          />
-        );
-      case 'admin':
-        return (
-          <Admin 
-            dbUser={dbUser} 
-            setDbUser={setDbUser} 
-            setCurrentTab={setCurrentTab} 
-            setVerificationToken={setVerificationToken}
-          />
-        );
-      default:
-        return (
-          <Home 
-            setCurrentTab={setCurrentTab} 
-            setSelectedProjectId={setSelectedProjectId} 
-          />
-        );
-    }
-  };
+  switch (currentTab) {
+    case 'home':
+      return (
+        <Home
+          setCurrentTab={setCurrentTab}
+          setSelectedProjectId={setSelectedProjectId}
+        />
+      );
 
-  return (
-    <div className={`flex flex-col min-h-screen font-sans transition-colors duration-300 ${
+    case 'services':
+      return (
+        <Services
+          onNavigateToTab={handleNavigateWithState}
+        />
+      );
+
+    case 'ai-studio':
+      return <MADECCAIStudio />;
+
+    case 'request-a-quote':
+      return (
+        <RequestQuote
+          onNavigateToTab={handleNavigateWithState}
+          preselectedService={preselectedService}
+        />
+      );
+
+    case 'schedule-consultation':
+      return (
+        <ScheduleConsultation
+          onNavigateToTab={handleNavigateWithState}
+        />
+      );
+
+    case 'about':
+      return <About />;
+
+    case 'projects':
+      return (
+        <Projects
+          selectedProjectId={selectedProjectId}
+          setSelectedProjectId={setSelectedProjectId}
+        />
+      );
+
+    case 'blog':
+      return <Blog />;
+
+    case 'contact':
+      return <Contact />;
+
+    case 'booking':
+      return (
+        <ScheduleConsultation
+          onNavigateToTab={handleNavigateWithState}
+        />
+      );
+
+    case 'budget-calculator':
+      return (
+        <ProjectBudgetCalculator
+          onNavigateToTab={handleNavigateWithState}
+        />
+      );
+
+    case 'construction-cost-guide':
+      return (
+        <ConstructionCostGuide
+          onNavigateToTab={handleNavigateWithState}
+        />
+      );
+
+    case 'terms':
+      return <LegalPage type="terms" setCurrentTab={setCurrentTab} />;
+
+    case 'privacy':
+      return <LegalPage type="privacy" setCurrentTab={setCurrentTab} />;
+
+    case 'safety':
+      return <LegalPage type="safety" setCurrentTab={setCurrentTab} />;
+
+    case 'verify':
+      return (
+        <VerifyContract
+          token={verificationToken}
+          onBackToHome={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('verify');
+            url.searchParams.delete('verifyToken');
+            window.history.pushState({}, '', url.toString());
+            setCurrentTab('home');
+            setVerificationToken('');
+          }}
+        />
+      );
+
+    case 'admin':
+      return (
+        <Admin
+          dbUser={dbUser}
+          setDbUser={setDbUser}
+          setCurrentTab={setCurrentTab}
+          setVerificationToken={setVerificationToken}
+        />
+      );
+
+    default:
+      return (
+        <Home
+          setCurrentTab={setCurrentTab}
+          setSelectedProjectId={setSelectedProjectId}
+        />
+      );
+  }
+};
+
+return (
+  <div
+    className={`flex flex-col min-h-screen font-sans transition-colors duration-300 ${
       theme === 'light'
         ? 'bg-slate-50 text-slate-800 selection:bg-amber-200 selection:text-slate-900'
         : 'bg-[#0A0A0B] text-slate-200 selection:bg-amber-500 selection:text-slate-950'
-    }`}>
-      <SEOHandler currentTab={currentTab} selectedProjectId={selectedProjectId} />
+    }`}
+  >
+    <SEOHandler
+      currentTab={currentTab}
+      selectedProjectId={selectedProjectId}
+    />
       
       {/* Header Navigation Section */}
       <Navbar 
@@ -221,7 +246,6 @@ export default function App() {
     if (path.includes('budget-calculator')) return 'budget-calculator';
     if (path.includes('terms')) return 'terms';
     if (path.includes('privacy')) return 'privacy';
-    if (path.includes('data-deletion') || path.includes('data_deletion')) return 'data-deletion';
     if (path.includes('safety') || path.includes('qhse')) return 'safety';
     if (path.includes('about')) return 'about';
     if (path.includes('projects')) return 'projects';
@@ -374,9 +398,3 @@ export default function App() {
     </LanguageProvider>
   );
 }
-
-
-
-
-
-

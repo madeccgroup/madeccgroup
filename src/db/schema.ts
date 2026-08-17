@@ -1,5 +1,340 @@
-import { pgTable, serial, text, timestamp, integer, boolean, numeric, json } from 'drizzle-orm/pg-core';
+﻿import { pgTable, serial, text, timestamp, integer, boolean, numeric, json, uuid, jsonb, bigint, varchar, index, } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+
+// ============================================================
+// MADECC AI STUDIO
+// ============================================================
+
+export const aiJobs = pgTable(
+  "ai_jobs",
+  {
+    id: uuid("id")
+      .defaultRandom()
+      .primaryKey(),
+
+    userId: text("user_id")
+      .notNull(),
+
+    projectId: text("project_id"),
+
+    type: text("type")
+      .notNull(),
+
+    status: text("status")
+      .notNull()
+      .default("queued"),
+
+    provider: text("provider")
+      .notNull()
+      .default("google"),
+
+    model: text("model"),
+
+    input: jsonb("input"),
+
+    output: jsonb("output"),
+
+    error: text("error"),
+
+    durationMs: integer(
+      "duration_ms"
+    ),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .defaultNow()
+      .notNull(),
+
+    startedAt: timestamp(
+      "started_at",
+      { withTimezone: true }
+    ),
+
+    completedAt: timestamp(
+      "completed_at",
+      { withTimezone: true }
+    ),
+  }
+);
+
+export const aiMedia = pgTable(
+  "ai_media",
+  {
+    id: uuid("id")
+      .defaultRandom()
+      .primaryKey(),
+
+    jobId: uuid("job_id"),
+
+    userId: text("user_id")
+      .notNull(),
+
+    projectId: text("project_id"),
+
+    name: text("name")
+      .notNull(),
+
+    type: text("type")
+      .notNull(),
+
+    mimeType: text("mime_type"),
+
+    size: bigint("size", {
+      mode: "number",
+    }),
+
+    provider: text("provider")
+      .notNull()
+      .default("google"),
+
+    model: text("model"),
+
+    url: text("url"),
+
+    publicId: text(
+      "public_id"
+    ),
+
+    textContent: text(
+      "text_content"
+    ),
+
+    metadata: jsonb("metadata"),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .defaultNow()
+      .notNull(),
+  }
+);
+
+
+// ============================================================
+// AI MEDIA ASSETS
+// Persistent uploaded/generated media asset management
+// ============================================================
+
+export const aiMediaAssets = pgTable(
+  "ai_media_assets",
+  {
+    id: uuid("id")
+      .defaultRandom()
+      .primaryKey(),
+
+    userId: varchar("user_id", { length: 255 })
+      .notNull(),
+
+    projectId: text("project_id"),
+
+    mediaId: uuid("media_id"),
+
+    name: text("name")
+      .notNull(),
+
+    originalName: text("original_name"),
+
+    type: text("type")
+      .notNull(),
+
+    mimeType: text("mime_type"),
+
+    size: bigint("size", {
+      mode: "number",
+    }),
+
+    url: text("url"),
+
+    publicId: text("public_id"),
+
+    provider: text("provider")
+      .notNull()
+      .default("cloudinary"),
+
+    status: text("status")
+      .notNull()
+      .default("active"),
+
+    metadata: jsonb("metadata"),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp(
+      "updated_at",
+      { withTimezone: true }
+    )
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("ai_media_assets_user_id_idx")
+      .on(table.userId),
+
+    projectIdIdx: index("ai_media_assets_project_id_idx")
+      .on(table.projectId),
+
+    mediaIdIdx: index("ai_media_assets_media_id_idx")
+      .on(table.mediaId),
+
+    statusIdx: index("ai_media_assets_status_idx")
+      .on(table.status),
+  })
+);
+
+// ============================================================
+// AI MEDIA EXPORTS
+// Tracks downloadable/exported AI Studio media
+// ============================================================
+
+export const aiMediaExports = pgTable(
+  "ai_media_exports",
+  {
+    id: uuid("id")
+      .defaultRandom()
+      .primaryKey(),
+
+    userId: varchar("user_id", { length: 255 })
+      .notNull(),
+
+    projectId: text("project_id"),
+
+    mediaId: uuid("media_id"),
+
+    assetId: uuid("asset_id"),
+
+    format: text("format")
+      .notNull(),
+
+    filename: text("filename")
+      .notNull(),
+
+    mimeType: text("mime_type"),
+
+    size: bigint("size", {
+      mode: "number",
+    }),
+
+    url: text("url"),
+
+    provider: text("provider")
+      .notNull()
+      .default("cloudinary"),
+
+    status: text("status")
+      .notNull()
+      .default("completed"),
+
+    error: text("error"),
+
+    metadata: jsonb("metadata"),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("ai_media_exports_user_id_idx")
+      .on(table.userId),
+
+    projectIdIdx: index("ai_media_exports_project_id_idx")
+      .on(table.projectId),
+
+    mediaIdIdx: index("ai_media_exports_media_id_idx")
+      .on(table.mediaId),
+
+    assetIdIdx: index("ai_media_exports_asset_id_idx")
+      .on(table.assetId),
+
+    statusIdx: index("ai_media_exports_status_idx")
+      .on(table.status),
+  })
+);
+
+export const aiConversations =
+  pgTable(
+    "ai_conversations",
+    {
+      id: uuid("id")
+        .defaultRandom()
+        .primaryKey(),
+
+      userId: text("user_id")
+        .notNull(),
+
+      projectId: text("project_id"),
+
+      title: text("title")
+        .notNull()
+        .default(
+          "New AI Conversation"
+        ),
+
+      mode: text("mode")
+        .notNull()
+        .default("general"),
+
+      provider: text("provider")
+        .notNull()
+        .default("google"),
+
+      createdAt: timestamp(
+        "created_at",
+        { withTimezone: true }
+      )
+        .defaultNow()
+        .notNull(),
+
+      updatedAt: timestamp(
+        "updated_at",
+        { withTimezone: true }
+      )
+        .defaultNow()
+        .notNull(),
+    }
+  );
+
+export const aiMessages = pgTable(
+  "ai_messages",
+  {
+    id: uuid("id")
+      .defaultRandom()
+      .primaryKey(),
+
+    conversationId:
+      uuid("conversation_id")
+        .notNull(),
+
+    role: text("role")
+      .notNull(),
+
+    content: text("content")
+      .notNull(),
+
+    createdAt: timestamp(
+      "created_at",
+      { withTimezone: true }
+    )
+      .defaultNow()
+      .notNull(),
+  }
+);
+
+
+
+
+
+
 
 // 1. Users table (Admin, Staff, Clients)
 export const users = pgTable('users', {
@@ -260,18 +595,39 @@ export const signedReceipts = pgTable('signed_receipts', {
   receiptNo: text('receipt_no').notNull().unique(),
   clientName: text('client_name').notNull(),
   clientNiu: text('client_niu'),
+  clientEmail: text('client_email'),
   receiptProject: text('receipt_project').notNull(),
   invoiceTotalAmount: text('invoice_total_amount'),
   receiptAmount: text('receipt_amount').notNull(),
   remainingBalance: text('remaining_balance'),
   receiptTaxRate: text('receipt_tax_rate'),
+  currency: text('currency').default('XAF'),
   receiptMethod: text('receipt_method').notNull(),
   receiptMemo: text('receipt_memo'),
   receiptSignatory: text('receipt_signatory').notNull(),
   receiptTypedSign: text('receipt_typed_sign').notNull(),
   drawnCfoSignature: text('drawn_cfo_signature'),
   verificationToken: text('verification_token').notNull().unique(),
+  version: integer('version').default(1).notNull(),
+  status: text('status').default('ISSUED').notNull(),
   signedAt: timestamp('signed_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 17b. Document Export Audit Trail Logs
+export const exportHistoryLogs = pgTable('export_history_logs', {
+  id: serial('id').primaryKey(),
+  userEmail: text('user_email').notNull(),
+  moduleType: text('module_type').notNull(),
+  recordId: text('record_id').notNull(),
+  documentTitle: text('document_title').notNull(),
+  version: text('version').default('1.0').notNull(),
+  format: text('format').notNull(), // 'pdf' | 'docx'
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  status: text('status').notNull(), // 'SUCCESS' | 'FAILED'
+  filename: text('filename').notNull(),
+  errorMessage: text('error_message'),
+  metadata: json('metadata'),
 });
 
 // 18. User sync data (replaces localStorage persistence for themes, proposals, cvs, Cover letters, compliance ledger overrides, kyc etc.)
@@ -1083,7 +1439,7 @@ export const quoteRequests = pgTable('quote_requests', {
   buildingType: text('building_type'), // Bungalow, Duplex, Apartment, Villa, Office, Hotel, Warehouse, School, Hospital, Shop, Factory, Other
   storeys: integer('storeys').default(1),
   floorArea: numeric('floor_area'),
-  floorAreaUnit: text('floor_area_unit').default('m²'),
+  floorAreaUnit: text('floor_area_unit').default('mÂ²'),
   siteStatus: text('site_status'), // Land acquired, Land being acquired, Existing building, Construction started, Existing structure requiring renovation
   projectStage: text('project_stage'), // Idea / Concept, Land acquired, Architectural design available, Structural design available, BOQ available, Ready for tender, Contractor selection, Construction started, Renovation required, Other
   budgetCurrency: text('budget_currency').default('XAF'),
@@ -1463,6 +1819,7 @@ export const reviewerCredentials = pgTable('reviewer_credentials', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
 
 
 

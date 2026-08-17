@@ -9,6 +9,7 @@ import { ArticlesOfAssociationExporter } from './exporters/ArticlesOfAssociation
 import { BlueprintExporter } from './exporters/BlueprintExporter.ts';
 import { SafetyInspectionExporter } from './exporters/SafetyInspectionExporter.ts';
 import { PedagogicalLessonExporter } from './exporters/PedagogicalLessonExporter.ts';
+import { ReceiptExporter } from './exporters/ReceiptExporter.ts';
 
 export class DocumentExportService {
   /**
@@ -28,6 +29,7 @@ export class DocumentExportService {
       'blueprints',
       'safety_inspections',
       'pedagogical_lessons',
+      'receipts',
     ];
 
     if (!validModules.includes(params.moduleType)) {
@@ -42,7 +44,7 @@ export class DocumentExportService {
       warnings.push('Record payload missing from request. Attempting backend record verification...');
     } else {
       // Check record ID integrity match
-      const dataId = String(params.data.recordId || params.data.id || params.data.inspectionCode || params.data.drawingCode || '');
+      const dataId = String(params.data.recordId || params.data.receiptNo || params.data.id || params.data.inspectionCode || params.data.drawingCode || '');
       if (dataId && String(params.recordId) !== dataId) {
         warnings.push(`Record ID mismatch: request ID (${params.recordId}) vs data payload ID (${dataId}). Using verified record ID.`);
       }
@@ -119,6 +121,9 @@ export class DocumentExportService {
           case 'pedagogical_lessons':
             filename = await PedagogicalLessonExporter.exportPDF(recordData);
             break;
+          case 'receipts':
+            filename = await ReceiptExporter.exportPDF(recordData);
+            break;
         }
       } else {
         switch (params.moduleType) {
@@ -136,6 +141,9 @@ export class DocumentExportService {
             break;
           case 'pedagogical_lessons':
             filename = await PedagogicalLessonExporter.exportDOCX(recordData);
+            break;
+          case 'receipts':
+            filename = await ReceiptExporter.exportDOCX(recordData);
             break;
         }
       }
@@ -196,6 +204,41 @@ export class DocumentExportService {
   private static buildFallbackRecordModel(params: ExportRequestParams): any {
     const idStr = String(params.recordId);
     switch (params.moduleType) {
+      case 'receipts': {
+        const subtotal = 4500000;
+        const taxRate = 19.25;
+        const taxAmount = (subtotal * taxRate) / 100;
+        const totalPaid = subtotal + taxAmount;
+        const invTotal = 12500000;
+        const remBal = Math.max(0, invTotal - subtotal);
+        return {
+          recordId: idStr,
+          receiptNo: idStr.startsWith('REC-') ? idStr : `REC-2026-${idStr}`,
+          version: params.recordVersion || '1.0',
+          title: params.documentTitle || `Official Receipt ${idStr}`,
+          clientName: 'Valued Client Profile',
+          clientNiu: 'M120934892301X',
+          projectName: 'General Construction Services',
+          receiptMethod: 'Commercial Bank Direct Transfer / Swift Wire',
+          memo: 'Official financial mobilization payment for construction works.',
+          invoiceTotalAmount: invTotal,
+          receiptAmount: subtotal,
+          taxRate,
+          taxAmount,
+          totalPaidThisReceipt: totalPaid,
+          remainingBalance: remBal,
+          isPaidInFull: remBal <= 0,
+          currency: 'XAF',
+          signatoryName: 'Dr. Amélie Fotso',
+          authorizedOfficer: 'AmelieFotso_MD',
+          verificationToken: `REC-${idStr.replace(/[^A-Z0-9]/gi, '')}`,
+          verificationUrl: `https://madeccgroup.online/?verify=REC-${idStr}`,
+          isDigitallySigned: true,
+          date: new Date().toISOString().split('T')[0],
+          signedAt: new Date().toISOString(),
+          status: 'ISSUED',
+        };
+      }
       case 'civil_works':
         return {
           recordId: idStr,

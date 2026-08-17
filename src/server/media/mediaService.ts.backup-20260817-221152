@@ -1,0 +1,542 @@
+﻿import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import crypto from "node:crypto";
+
+import {
+  videoToAudio,
+} from "./ffmpeg";
+
+import {
+  safeFilename,
+  withExtension,
+} from "./filename";
+
+import {
+  isAllowedMimeType,
+  extensionFromMime,
+} from "./mediaTypes";
+
+
+export type AudioExtractionFormat =
+  | "mp3"
+  | "wav";
+
+
+export interface MediaAssetInput {
+  id: string;
+  name: string;
+  mimeType: string;
+}
+
+
+export interface MediaExportRecordInput {
+  mediaId: string;
+  userId: string;
+  format: string;
+  mimeType: string;
+  filename: string;
+  sizeBytes: number;
+}
+
+
+export interface MediaExportResult {
+  buffer: Buffer;
+  mimeType: string;
+  filename: string;
+}
+
+
+/**
+ * Record an export.
+ *
+ * This function is intentionally kept behind a small adapter so the
+ * media service does not contain database-specific logic.
+ *
+ * Replace the implementation with your existing aiMediaExports
+ * database service when wiring the persistence layer.
+ */
+async function recordExport(
+  input: MediaExportRecordInput
+): Promise<void> {
+  /*
+   * The database persistence layer should be connected here.
+   *
+   * Example:
+   *
+   * await createMediaExport(input);
+   *
+   * Keeping this adapter isolated allows the media transformation
+   * service to remain independent from Drizzle/database details.
+   */
+
+  void input;
+}
+
+
+/**
+ * Extract audio from a video media asset.
+ *
+ * Supported output formats:
+ * - mp3
+ * - wav
+ *
+ * The source asset is supplied as an ArrayBuffer and is written
+ * temporarily to the operating system's temporary directory.
+ *
+ * The generated audio is returned as a Buffer and the temporary
+ * files are always removed in the finally block.
+ */
+export async function extractAudio(
+  asset: MediaAssetInput,
+  arrayBuffer: ArrayBuffer,
+  mediaId: string,
+  userId: string,
+  format: AudioExtractionFormat = "mp3"
+): Promise<MediaExportResult> {
+  if (!asset.id) {
+    throw new Error("Media asset ID is required.");
+  }
+
+  if (!asset.name) {
+    throw new Error("Media asset name is required.");
+  }
+
+  if (!asset.mimeType) {
+    throw new Error("Media asset MIME type is required.");
+  }
+
+  if (!userId) {
+    throw new Error("User ID is required.");
+  }
+
+  if (!mediaId) {
+    throw new Error("Media ID is required.");
+  }
+
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new Error("Media input is empty.");
+  }
+
+  if (!isAllowedMimeType(asset.mimeType)) {
+    throw new Error(
+      `Unsupported media MIME type: ${asset.mimeType}`
+    );
+  }
+
+  if (!asset.mimeType.startsWith("video/")) {
+    throw new Error(
+      `Audio extraction requires a video asset. Received: ${asset.mimeType}`
+    );
+  }
+
+  if (
+    format !== "mp3" &&
+    format !== "wav"
+  ) {
+    throw new Error(
+      `Unsupported audio output format: ${format}`
+    );
+  }
+
+  const tempDirectory = await fs.mkdtemp(
+    path.join(
+      os.tmpdir(),
+      "madecc-media-"
+    )
+  );
+
+  const input = path.join(
+    tempDirectory,
+    `${crypto.randomUUID()}-input.${extensionFromMime(
+      asset.mimeType
+    )}`
+  );
+
+  const output = path.join(
+    tempDirectory,
+    `${crypto.randomUUID()}-output.${format}`
+  );
+
+  try {
+    await fs.writeFile(
+      input,
+      Buffer.from(arrayBuffer)
+    );
+
+    await videoToAudio(
+      input,
+      output,
+      format
+    );
+
+    const buffer =
+      await fs.readFile(output);
+
+    const mimeType =
+      format === "mp3"
+        ? "audio/mpeg"
+        : "audio/wav";
+
+    const filename =
+      withExtension(
+        safeFilename(
+          asset.name
+        ),
+        format
+      );
+
+    await recordExport({
+      mediaId,
+      userId,
+      format,
+      mimeType,
+      filename,
+      sizeBytes: buffer.length,
+    });
+
+    return {
+      buffer,
+      mimeType,
+      filename,
+    };
+  } finally {
+    await fs.rm(
+      tempDirectory,
+      {
+        recursive: true,
+        force: true,
+      }
+    );
+  }
+}
+
+/* ============================================================
+   MADECC MEDIA SERVICE COMPATIBILITY EXPORTS
+   Added automatically by media-system repair operation.
+   ============================================================ */
+import {
+  Document,
+  Packer,
+  Paragraph,
+  HeadingLevel,
+} from "docx";
+import PDFDocument from "pdfkit";
+import { db } from "../../db";import { aiMediaAssets } from "../../db/schema";import { eq, and } from "drizzle-orm";
+function __mediaSafeFilename(value: string): string {
+  return String(value || "madecc-media")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 180) || "madecc-media";
+}
+
+async function __mediaGetAsset(
+  mediaId: string,
+  userId: string
+): Promise<any> {
+  const rows = await db
+    .select()
+    .from(aiMediaAssets)
+    .where(
+      and(
+        eq(aiMediaAssets.id, mediaId),
+        eq(aiMediaAssets.userId, userId),
+        eq(aiMediaAssets.archived, false)
+      )
+    )
+    .limit(1);
+
+  if (!rows.length) {
+    throw new Error("Media asset not found.");
+  }
+
+  return rows[0];
+}
+
+function __mediaTextContent(asset: any): string {
+  const metadata = asset.metadata;
+
+  if (metadata && typeof metadata === "object") {
+    const candidate =
+      metadata.content ??
+      metadata.text ??
+      metadata.generatedText ??
+      metadata.body ??
+      metadata.description;
+
+    if (typeof candidate === "string") {
+      return candidate;
+    }
+  }
+
+  return String(
+    asset.content ??
+    asset.text ??
+    asset.description ??
+    asset.name ??
+    ""
+  );
+}
+
+async function __mediaCreateDocx(
+  title: string,
+  content: string
+): Promise<Buffer> {
+  const paragraphs = content
+    .split(/\r?\n/)
+    .map(
+      (line: string) =>
+        new Paragraph({
+          text: line,
+        })
+    );
+
+  const document = new Document({
+    sections: [
+      {
+        children: [
+          new Paragraph({
+            text: title,
+            heading: HeadingLevel.HEADING_1,
+          }),
+          ...paragraphs,
+        ],
+      },
+    ],
+  });
+
+  return Packer.toBuffer(document);
+}
+
+function __mediaCreatePdf(
+  title: string,
+  content: string
+): Promise<Buffer> {
+  return new Promise(
+    (resolve, reject) => {
+      const chunks: Buffer[] = [];
+
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 50,
+        info: {
+          Title: title,
+          Author: "MADECC Group",
+          Creator: "MADECC AI Studio",
+        },
+      });
+
+      doc.on("data", (chunk: Buffer) => {
+        chunks.push(Buffer.from(chunk));
+      });
+
+      doc.on("end", () => {
+        resolve(Buffer.concat(chunks));
+      });
+
+      doc.on("error", reject);
+
+      doc.fontSize(20).text(title);
+      doc.moveDown();
+      doc.fontSize(10).text(content, {
+        align: "left",
+        lineGap: 5,
+      });
+
+      doc.end();
+    }
+  );
+}
+export async function exportText(
+  mediaId: string,
+  userId: string,
+  format: "txt" | "docx" | "pdf"
+): Promise<{
+  buffer: Buffer;
+  mimeType: string;
+  filename: string;
+}> {
+  const asset = await __mediaGetAsset(
+    mediaId,
+    userId
+  );
+
+  const title =
+    String(
+      asset.name ||
+      asset.originalFilename ||
+      "MADECC AI Media"
+    );
+
+  const content =
+    __mediaTextContent(asset);
+
+  let buffer: Buffer;
+  let mimeType: string;
+
+  if (format === "txt") {
+    buffer = Buffer.from(
+      content,
+      "utf8"
+    );
+    mimeType = "text/plain; charset=utf-8";
+  }
+  else if (format === "docx") {
+    buffer = await __mediaCreateDocx(
+      title,
+      content
+    );
+    mimeType =
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+  else {
+    buffer = await __mediaCreatePdf(
+      title,
+      content
+    );
+    mimeType = "application/pdf";
+  }
+
+  const filename =
+    `${__mediaSafeFilename(title)}.${format}`;
+
+  return {
+    buffer,
+    mimeType,
+    filename,
+  };
+}
+export async function exportAudio(
+  mediaId: string,
+  userId: string,
+  format: "mp3" | "wav"
+): Promise<{
+  buffer: Buffer;
+  mimeType: string;
+  filename: string;
+}> {
+  const asset = await __mediaGetAsset(
+    mediaId,
+    userId
+  );
+
+  if (
+    typeof (globalThis as any).__madeccExtractAudio !==
+    "function"
+  ) {
+    throw new Error(
+      "Audio extraction engine is not available."
+    );
+  }
+
+  const extractAudio =
+    (globalThis as any).__madeccExtractAudio;
+
+  const inputUrl =
+    asset.storageUrl;
+
+  if (!inputUrl) {
+    throw new Error(
+      "Media asset does not have a storage URL."
+    );
+  }
+
+  const response =
+    await fetch(inputUrl);
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to download source media (${response.status}).`
+    );
+  }
+
+  const arrayBuffer =
+    await response.arrayBuffer();
+
+  const tempDir =
+    await import("node:os");
+
+  const fs =
+    await import("node:fs/promises");
+
+  const path =
+    await import("node:path");
+
+  const dir =
+    await fs.mkdtemp(
+      path.join(
+        tempDir.tmpdir(),
+        "madecc-media-"
+      )
+    );
+
+  const input =
+    path.join(
+      dir,
+      `input.${asset.extension || "bin"}`
+    );
+
+  const output =
+    path.join(
+      dir,
+      `output.${format}`
+    );
+
+  try {
+    await fs.writeFile(
+      input,
+      Buffer.from(arrayBuffer)
+    );
+
+    await extractAudio(
+      input,
+      output,
+      format
+    );
+
+    const buffer =
+      await fs.readFile(output);
+
+    return {
+      buffer,
+      mimeType:
+        format === "mp3"
+          ? "audio/mpeg"
+          : "audio/wav",
+      filename:
+        `${__mediaSafeFilename(asset.name || "madecc-audio")}.${format}`,
+    };
+  }
+  finally {
+    await fs.rm(
+      dir,
+      {
+        recursive: true,
+        force: true,
+      }
+    );
+  }
+}
+export async function archiveMedia(
+  mediaId: string,
+  userId: string
+): Promise<void> {
+  await __mediaGetAsset(
+    mediaId,
+    userId
+  );
+
+  await db
+    .update(aiMediaAssets)
+    .set({
+      archived: true,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(aiMediaAssets.id, mediaId),
+        eq(aiMediaAssets.userId, userId)
+      )
+    );
+}
+
