@@ -14,6 +14,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { ReceiptExportModel } from '../../types/receiptTypes.ts';
+import { generateQrCodeBase64, generateBarcodeBase64 } from '../../utils/codeGenerator.ts';
 
 function sanitizeFilename(str: string): string {
   return (str || 'Receipt').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -237,17 +238,19 @@ export class ReceiptExporter {
       doc.setFillColor(254, 252, 232); // Amber-50
       doc.rect(padding, currentY, w - padding * 2, 24, 'FD');
 
-      if (model.qrCodeBase64) {
+      const qrImg = model.qrCodeBase64 || (typeof window !== 'undefined' ? await generateQrCodeBase64(`${window.location.origin}/?verify=${model.verificationToken}`) : '');
+      if (qrImg) {
         try {
-          doc.addImage(model.qrCodeBase64, 'PNG', padding + 3, currentY + 3, 18, 18);
+          doc.addImage(qrImg, 'PNG', padding + 3, currentY + 3, 18, 18);
         } catch (err) {
           console.warn('Could not render QR code in PDF:', err);
         }
       }
 
-      if (model.barcodeBase64) {
+      const barcodeImg = model.barcodeBase64 || (model.receiptNo ? generateBarcodeBase64(model.receiptNo) : '');
+      if (barcodeImg) {
         try {
-          doc.addImage(model.barcodeBase64, 'PNG', w - padding - 48, currentY + 4, 45, 15);
+          doc.addImage(barcodeImg, 'PNG', w - padding - 48, currentY + 4, 45, 15);
         } catch (err) {
           console.warn('Could not render Barcode in PDF:', err);
         }

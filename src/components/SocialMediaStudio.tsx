@@ -60,8 +60,16 @@ import {
   SocialChannelItem,
   generateSocialCalendarPdf,
   generateSocialCalendarDocx,
-  generateSinglePostPdf
+  generateSinglePostPdf,
+  exportPostJsonDossier
 } from '../utils/socialExport.ts';
+import {
+  classifyMedia,
+  extractYouTubeId,
+  sanitizeMediaUrl,
+  FALLBACK_ENGINEERING_IMAGES
+} from '../utils/mediaClassifier.ts';
+import MediaPreviewImage from './MediaPreviewImage.tsx';
 
 export interface ExtendedChannelItem extends SocialChannelItem {
   approvalStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ACTIVE';
@@ -345,6 +353,27 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
   const [publishingDiagnostics, setPublishingDiagnostics] = useState<any>(null);
   const [isDiagnosingPublishing, setIsDiagnosingPublishing] = useState<boolean>(false);
 
+  // --- LOCAL FILE UPLOAD REF & HANDLER ---
+  const mediaFileInputRef = React.useRef<HTMLInputElement>(null);
+  const handleMediaFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isVideo = file.type.startsWith('video/');
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
+        setGeneratedPost((prev: any) => ({
+          ...prev,
+          mediaUrl: dataUrl,
+          mediaType: isVideo ? 'video' : 'image'
+        }));
+        if (showToast) showToast(`✓ Attached local ${isVideo ? 'video' : 'image'}: ${file.name}`, 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // --- SOCIAL POSTS STATE ---
   const [posts, setPosts] = useState<ExtendedPostItem[]>([
     {
@@ -437,6 +466,41 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
     }
   };
 
+  // Load Posts from PostgreSQL Backend API
+  const fetchPostsFromApi = async () => {
+    try {
+      const res = await fetch('/api/marketing/posts');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const formatted: ExtendedPostItem[] = data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            seoTopic: item.seoTopic || item.campaignName || 'Civil Engineering & Quantity Surveying Cameroon',
+            targetPlatforms: item.targetPlatforms || ['facebook', 'instagram', 'youtube'],
+            caption: item.caption || '',
+            hashtags: item.hashtags || '#MADECCGroup #CivilEngineering',
+            ctaText: item.ctaText || 'Contact MADECC Group S.A. | +237 671 063 511',
+            mediaUrl: item.mediaUrl || null,
+            mediaType: item.mediaType || 'image',
+            status: (item.status as any) || 'DRAFT',
+            approvalStatus: (item.approvalStatus as any) || 'APPROVED',
+            version: item.version || 'v1.0',
+            createdAt: item.createdAt,
+            publishedAt: item.publishedAt,
+            scheduledAt: item.scheduledAt,
+            reachEstimate: item.reachEstimate || 5000,
+            engagementCount: item.engagementCount || 0
+          }));
+          setPosts(formatted);
+          persistPosts(formatted);
+        }
+      }
+    } catch (err) {
+      console.warn('[FETCH_POSTS_API_WARN] Using cached posts:', err);
+    }
+  };
+
   const fetchOauthDiagnostics = async () => {
     try {
       const res = await fetch('/api/social/config-status');
@@ -525,6 +589,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
   // Load Local Storage & Check OAuth Redirects & Popup Message Listener
   useEffect(() => {
     fetchChannelsFromApi();
+    fetchPostsFromApi();
     fetchOauthDiagnostics();
     if (currentUser?.role === 'admin') {
       fetchMetaReviewer();
@@ -600,11 +665,11 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
   const handleConnectOAuth = async (provider: string, reconnectChannelId?: number) => {
     addAuditLog('OAUTH_FLOW_INITIATED', `Initiating official OAuth authorization for ${provider}`, 'ACCOUNT', 'SUCCESS');
-    
+
     try {
       const query = reconnectChannelId ? `?reconnect_channel_id=${reconnectChannelId}` : '';
       const res = await fetch(`/api/social/oauth/${provider.toLowerCase()}/url${query}`);
-      
+
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
@@ -829,7 +894,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
         caption: data.caption || 'High-impact civil engineering & construction update by MADECC Group.',
         hashtags: data.hashtags || '#MADECCGroup #CivilEngineering #QuantitySurveying #ConstructionCameroon',
         ctaText: data.ctaText || data.cta || formattedCta,
-        mediaUrl: data.suggestedImageUrl || 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1200&q=80',
+        mediaUrl: sanitizeMediaUrl(data.suggestedImageUrl) || FALLBACK_ENGINEERING_IMAGES[0],
         mediaType: 'image',
         status: 'DRAFT',
         approvalStatus: 'DRAFT',
@@ -859,7 +924,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
         caption: `At MADECC Group S.A., structural precision is our hallmark. Exploring "${topicInput}" across Cameroon & Central Africa.\n\nKey Engineering Takeaway:\n1. Strict compliance with Eurocode 2 & 8 structural codes.\n2. Transparent BOQ cost estimation eliminating site budget overruns.\n3. Turnkey project management from foundation to final commissioning.`,
         hashtags: `#MADECCGroup #${topicInput.replace(/\s+/g, '')} #CivilEngineering #QuantitySurveying #CameroonBuilding #Douala #Yaounde`,
         ctaText: formattedCta,
-        mediaUrl: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1200&q=80',
+        mediaUrl: FALLBACK_ENGINEERING_IMAGES[0],
         mediaType: 'image',
         status: 'DRAFT',
         approvalStatus: 'DRAFT',
@@ -994,14 +1059,96 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
     }
   };
 
-  const handleSaveDraft = () => {
-    if (!generatedPost) return;
-    const updated = [generatedPost, ...posts];
-    persistPosts(updated);
-    setGeneratedPost(null);
-    setTopicInput('');
-    addAuditLog('POST_SAVED_DRAFT', `Saved draft: "${generatedPost.title}"`, 'CONTENT', 'SUCCESS');
-    if (showToast) showToast('Post saved as Draft in Library!', 'success');
+  const handleSaveDraft = async (postToSave?: ExtendedPostItem, isSilent = false): Promise<ExtendedPostItem | null> => {
+    const target = postToSave || generatedPost;
+    if (!target) return null;
+
+    const classification = classifyMedia(target.mediaUrl);
+    const mediaTypeToSave = classification.mediaType === 'youtube' ? 'video' : (classification.mediaType === 'video' ? 'video' : (classification.mediaType === 'image' ? 'image' : target.mediaType || 'image'));
+
+    const payload = {
+      title: target.title || 'Untitled Post',
+      seoTopic: target.seoTopic || 'Civil Engineering & Quantity Surveying Cameroon',
+      targetPlatforms: target.targetPlatforms && target.targetPlatforms.length > 0 ? target.targetPlatforms : targetPlatformsInput,
+      caption: target.caption || '',
+      hashtags: target.hashtags || '#MADECCGroup #CivilEngineering',
+      ctaText: target.ctaText || buildFormattedCta(),
+      mediaUrl: target.mediaUrl || null,
+      mediaType: mediaTypeToSave,
+      status: target.status || 'DRAFT',
+      approvalStatus: target.approvalStatus || 'DRAFT',
+      version: target.version || 'v1.0'
+    };
+
+    try {
+      let savedDbItem: any = null;
+      const isNumericDbId = typeof target.id === 'number' && !isNaN(target.id) && target.id < 1000000000;
+
+      if (isNumericDbId) {
+        const res = await fetch(`/api/marketing/posts/${target.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          savedDbItem = await res.json();
+        }
+      } else {
+        const res = await fetch('/api/marketing/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          savedDbItem = await res.json();
+        }
+      }
+
+      const finalPost: ExtendedPostItem = savedDbItem ? {
+        ...target,
+        ...savedDbItem,
+        id: savedDbItem.id,
+        mediaType: mediaTypeToSave
+      } : {
+        ...target,
+        ...payload,
+        mediaType: mediaTypeToSave
+      };
+
+      setPosts(prev => {
+        const exists = prev.some(p => p.id === finalPost.id || (typeof target.id === 'string' && p.id === target.id));
+        const updated = exists
+          ? prev.map(p => (p.id === finalPost.id || p.id === target.id) ? finalPost : p)
+          : [finalPost, ...prev];
+        persistPosts(updated);
+        return updated;
+      });
+
+      if (generatedPost && (generatedPost.id === target.id || !isNumericDbId)) {
+        setGeneratedPost(finalPost);
+      }
+
+      if (!isSilent) {
+        addAuditLog('POST_SAVED_DRAFT', `Saved post #${finalPost.id}: "${finalPost.title}" to Neon PostgreSQL database`, 'CONTENT', 'SUCCESS');
+        if (showToast) showToast(`✓ Saved to PostgreSQL database (Post #${finalPost.id})`, 'success');
+      }
+
+      return finalPost;
+    } catch (err: any) {
+      console.warn('[SAVE_DRAFT_FALLBACK]', err);
+      const fallbackPost: ExtendedPostItem = {
+        ...target,
+        ...payload,
+        id: target.id || `post-${Date.now()}`
+      };
+      setPosts(prev => {
+        const updated = [fallbackPost, ...prev.filter(p => p.id !== fallbackPost.id)];
+        persistPosts(updated);
+        return updated;
+      });
+      if (!isSilent && showToast) showToast('Saved post locally (offline cache)', 'info');
+      return fallbackPost;
+    }
   };
 
   // RUN PRE-FLIGHT PUBLISHING DIAGNOSTICS
@@ -1069,7 +1216,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
       const newSuccessCount = updatedResults.filter(r => r.status === 'SUCCESS' || r.status === 'PUBLISHED').length;
       const newFailureCount = updatedResults.filter(r => r.status === 'FAILED').length;
-      const newOverallStatus: 'PUBLISHED' | 'PARTIALLY_PUBLISHED' | 'FAILED' = 
+      const newOverallStatus: 'PUBLISHED' | 'PARTIALLY_PUBLISHED' | 'FAILED' =
         newFailureCount === 0 && newSuccessCount > 0 ? 'PUBLISHED' :
         newSuccessCount > 0 && newFailureCount > 0 ? 'PARTIALLY_PUBLISHED' : 'FAILED';
 
@@ -1085,10 +1232,10 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       });
 
       if (post) {
-        const updatedPosts = posts.map(p => p.id === post.id ? { 
-          ...p, 
-          status: newOverallStatus, 
-          publishedAt: newOverallStatus !== 'FAILED' ? new Date().toISOString() : p.publishedAt 
+        const updatedPosts = posts.map(p => p.id === post.id ? {
+          ...p,
+          status: newOverallStatus,
+          publishedAt: newOverallStatus !== 'FAILED' ? new Date().toISOString() : p.publishedAt
         } : p);
         persistPosts(updatedPosts);
       }
@@ -1388,11 +1535,11 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       });
       setShowTestResultModal(true);
 
-      const updated = channels.map(c => c.id === channel.id ? { 
-        ...c, 
-        status: data.success ? 'CONNECTED' : 'EXPIRED', 
-        healthStatus: data.success ? 'HEALTHY' as const : 'REAUTHENTICATION REQUIRED' as const, 
-        lastSynced: 'Just now' 
+      const updated = channels.map(c => c.id === channel.id ? {
+        ...c,
+        status: data.success ? 'CONNECTED' : 'EXPIRED',
+        healthStatus: data.success ? 'HEALTHY' as const : 'REAUTHENTICATION REQUIRED' as const,
+        lastSynced: 'Just now'
       } : c);
       persistChannels(updated);
 
@@ -1681,7 +1828,36 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
     if (showToast) showToast(`Editing post: "${post.title}"`, 'info');
   };
 
-  const handleDuplicatePost = (post: ExtendedPostItem) => {
+  const handleDuplicatePost = async (post: ExtendedPostItem) => {
+    try {
+      const res = await fetch(`/api/marketing/posts/${post.id}/duplicate`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const duplicatedDb = await res.json();
+        const formatted: ExtendedPostItem = {
+          ...post,
+          ...duplicatedDb,
+          id: duplicatedDb.id,
+          title: duplicatedDb.title || `${post.title} (Copy)`,
+          status: 'DRAFT',
+          approvalStatus: 'DRAFT',
+          version: 'v1.0'
+        };
+        setPosts(prev => {
+          const updated = [formatted, ...prev];
+          persistPosts(updated);
+          return updated;
+        });
+        addAuditLog('POST_DUPLICATED', `Duplicated post #${post.id} as #${formatted.id} in Neon PostgreSQL`, 'CONTENT', 'SUCCESS');
+        if (showToast) showToast(`✓ Post cloned as #${formatted.id} (Draft)!`, 'success');
+        return;
+      }
+    } catch (err) {
+      console.warn('[DUPLICATE_POST_FALLBACK]', err);
+    }
+
+    // Local fallback
     const newPost: ExtendedPostItem = {
       ...post,
       id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -1696,12 +1872,23 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
     if (showToast) showToast('Post duplicated in library!', 'success');
   };
 
-  const handleDeletePost = (id: number | string) => {
+  const handleDeletePost = async (id: number | string) => {
     if (window.confirm('Are you sure you want to delete this social media post?')) {
+      try {
+        const isNumeric = typeof id === 'number' || (!isNaN(Number(id)) && Number(id) < 1000000000);
+        if (isNumeric) {
+          await fetch(`/api/marketing/posts/${id}`, {
+            method: 'DELETE'
+          });
+        }
+      } catch (err) {
+        console.warn('[DELETE_POST_API_ERR]', err);
+      }
       const updated = posts.filter(p => p.id !== id);
+      setPosts(updated);
       persistPosts(updated);
       addAuditLog('POST_DELETED', `Deleted post ID ${id}`, 'CONTENT', 'WARNING');
-      if (showToast) showToast('Post deleted', 'info');
+      if (showToast) showToast('Post permanently deleted', 'info');
     }
   };
 
@@ -1719,7 +1906,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
   return (
     <div className="p-4 sm:p-6 bg-slate-900 text-slate-100 min-h-screen space-y-6 font-sans">
-      
+
       {/* HEADER BANNER */}
       <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="absolute -top-10 -right-10 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -1835,7 +2022,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       {/* ==================================================================== */}
       {activeTab === 'creator' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           {/* LEFT PANEL: AI GENERATOR & CTA CONTROLS */}
           <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
@@ -2073,7 +2260,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
             {generatedPost ? (
               <div className="space-y-4 text-xs">
-                
+
                 {/* 1. OVERVIEW & STANDARD EDIT CANVAS */}
                 {previewPlatformTab === 'overview' && (
                   <>
@@ -2121,16 +2308,62 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                       />
                     </div>
 
-                    {/* MEDIA URL */}
+                    {/* MEDIA ATTACHMENT & CLASSIFICATION */}
                     <div>
-                      <label className="text-slate-400 font-bold block mb-1">Media Attachment URL (Image / Video)</label>
-                      <div className="flex gap-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400 font-bold block">Media Attachment (Image / Video / YouTube)</label>
+                        {generatedPost.mediaUrl && (() => {
+                          const classification = classifyMedia(generatedPost.mediaUrl);
+                          return (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold flex items-center gap-1 ${
+                              classification.mediaType === 'youtube'
+                                ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                                : classification.mediaType === 'video'
+                                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                                : classification.mediaType === 'image'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                            }`}>
+                              {classification.mediaType === 'youtube' && <Youtube className="w-3 h-3" />}
+                              {classification.mediaType === 'video' && <Tv className="w-3 h-3" />}
+                              {classification.mediaType === 'image' && <ImageIcon className="w-3 h-3" />}
+                              {classification.mediaType === 'unknown' && <AlertTriangle className="w-3 h-3" />}
+                              {classification.mediaType.toUpperCase()} {classification.fileExtension ? `(${classification.fileExtension})` : ''}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <input
+                        type="file"
+                        ref={mediaFileInputRef}
+                        onChange={handleMediaFileUpload}
+                        accept="image/*,video/*"
+                        className="hidden"
+                      />
+                      <div className="flex flex-wrap gap-2">
                         <input
                           type="text"
+                          placeholder="https://... (Direct image/video URL or YouTube link)"
                           value={generatedPost.mediaUrl || ''}
-                          onChange={(e) => setGeneratedPost({ ...generatedPost, mediaUrl: e.target.value })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-slate-300 font-mono focus:border-indigo-500 focus:outline-none"
+                          onChange={(e) => {
+                            const newUrl = e.target.value;
+                            const cls = classifyMedia(newUrl);
+                            const detectedType = cls.mediaType === 'youtube' || cls.mediaType === 'video' ? 'video' : 'image';
+                            setGeneratedPost({
+                              ...generatedPost,
+                              mediaUrl: newUrl,
+                              mediaType: detectedType
+                            });
+                          }}
+                          className="flex-1 min-w-[200px] bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-slate-300 font-mono text-xs focus:border-indigo-500 focus:outline-none"
                         />
+                        <button
+                          type="button"
+                          onClick={() => mediaFileInputRef.current?.click()}
+                          className="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl font-bold border border-indigo-500/40 shrink-0 text-xs flex items-center gap-1.5 transition-all"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5" /> Upload File
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -2140,13 +2373,68 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                               'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=1200&q=80'
                             ];
                             const randomImg = sampleImgs[Math.floor(Math.random() * sampleImgs.length)];
-                            setGeneratedPost({ ...generatedPost, mediaUrl: randomImg });
+                            setGeneratedPost({ ...generatedPost, mediaUrl: randomImg, mediaType: 'image' });
                           }}
-                          className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold border border-slate-800 shrink-0"
+                          className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold border border-slate-800 shrink-0 text-xs"
                         >
-                          Sample Media
+                          Sample Image
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const ytSample = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+                            setGeneratedPost({ ...generatedPost, mediaUrl: ytSample, mediaType: 'video' });
+                          }}
+                          className="px-3 py-2 bg-red-950/40 hover:bg-red-900/40 text-red-300 rounded-xl font-bold border border-red-800/40 shrink-0 text-xs flex items-center gap-1"
+                        >
+                          <Youtube className="w-3 h-3" /> Sample Video
                         </button>
                       </div>
+
+                      {/* LIVE MEDIA VALIDATION AND PLATFORM COMPATIBILITY WARNINGS */}
+                      {generatedPost.mediaUrl && (() => {
+                        const classification = classifyMedia(generatedPost.mediaUrl);
+                        const selectedPlatforms = generatedPost.targetPlatforms || targetPlatformsInput || [];
+                        const incompatiblePlatforms = selectedPlatforms.filter(p => {
+                          const compat = classification.platformCompatibility[p.toLowerCase()];
+                          return compat && !compat.compatible;
+                        });
+
+                        return (
+                          <div className="mt-2 space-y-2">
+                            {incompatiblePlatforms.length > 0 && (
+                              <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1">
+                                <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Platform Compatibility Notice:
+                                </span>
+                                {incompatiblePlatforms.map(p => (
+                                  <p key={p} className="text-[10px] text-amber-200/90 font-mono">
+                                    • <strong className="uppercase">{p}:</strong> {classification.platformCompatibility[p.toLowerCase()]?.notes}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* EMBEDDED REAL MEDIA PREVIEW IN EDITOR CANVAS */}
+                            <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 p-2 space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                                <span className="flex items-center gap-1 font-bold text-indigo-300">
+                                  {classification.mediaType === 'youtube' ? <Youtube className="w-3.5 h-3.5 text-red-400" /> : classification.mediaType === 'video' ? <Tv className="w-3.5 h-3.5 text-purple-400" /> : <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />}
+                                  {classification.mediaType === 'youtube' ? 'YouTube Stream Player' : classification.mediaType === 'video' ? 'Direct Video Player' : 'Exact Image Render'}
+                                </span>
+                                <span className="text-[9px] text-slate-500 truncate max-w-[200px]">{generatedPost.mediaUrl.substring(0, 40)}...</span>
+                              </div>
+                              <MediaPreviewImage
+                                src={generatedPost.mediaUrl}
+                                alt={generatedPost.title || 'Attached Media'}
+                                className="w-full max-h-56 object-contain rounded-lg"
+                                containerClassName="w-full rounded-lg overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center relative min-h-[140px]"
+                                showFallbackBadge={true}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </>
                 )}
@@ -2190,9 +2478,12 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                     </div>
 
                     {generatedPost.mediaUrl && (
-                      <div className="rounded-lg overflow-hidden border border-slate-800 max-h-56 bg-black">
-                        <img src={generatedPost.mediaUrl} alt="LinkedIn Preview" className="w-full h-full object-cover max-h-56" />
-                      </div>
+                      <MediaPreviewImage
+                        src={generatedPost.mediaUrl}
+                        alt="LinkedIn Preview"
+                        className="w-full max-h-56 object-cover"
+                        containerClassName="rounded-lg overflow-hidden border border-slate-800 max-h-56 bg-black relative"
+                      />
                     )}
 
                     <div className="border-t border-slate-800 pt-2 flex items-center justify-between text-slate-400 text-[11px]">
@@ -2284,9 +2575,12 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                         </p>
 
                         {generatedPost.mediaUrl && (
-                          <div className="rounded-lg overflow-hidden border border-slate-800 max-h-48 bg-black">
-                            <img src={generatedPost.mediaUrl} alt="X Media" className="w-full h-full object-cover max-h-48" />
-                          </div>
+                          <MediaPreviewImage
+                            src={generatedPost.mediaUrl}
+                            alt="X Media"
+                            className="w-full max-h-48 object-cover"
+                            containerClassName="rounded-lg overflow-hidden border border-slate-800 max-h-48 bg-black relative"
+                          />
                         )}
                       </div>
                     </div>
@@ -2323,9 +2617,12 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                     </div>
 
                     {generatedPost.mediaUrl && (
-                      <div className="rounded-lg overflow-hidden border border-slate-800 max-h-56 bg-black">
-                        <img src={generatedPost.mediaUrl} alt="Facebook Preview" className="w-full h-full object-cover max-h-56" />
-                      </div>
+                      <MediaPreviewImage
+                        src={generatedPost.mediaUrl}
+                        alt="Facebook Preview"
+                        className="w-full max-h-56 object-cover"
+                        containerClassName="rounded-lg overflow-hidden border border-slate-800 max-h-56 bg-black relative"
+                      />
                     )}
                   </div>
                 )}
@@ -2346,9 +2643,12 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                     </div>
 
                     {generatedPost.mediaUrl && (
-                      <div className="rounded-lg overflow-hidden border border-slate-800 aspect-square bg-black max-h-64 mx-auto flex items-center justify-center">
-                        <img src={generatedPost.mediaUrl} alt="Instagram Media" className="w-full h-full object-cover" />
-                      </div>
+                      <MediaPreviewImage
+                        src={generatedPost.mediaUrl}
+                        alt="Instagram Media"
+                        className="w-full h-full object-cover"
+                        containerClassName="rounded-lg overflow-hidden border border-slate-800 aspect-square bg-black max-h-64 mx-auto flex items-center justify-center relative"
+                      />
                     )}
 
                     <div className="space-y-1.5 text-xs text-slate-200">
@@ -2430,11 +2730,11 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
                 {/* ACTION BUTTONS BAR */}
                 <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      onClick={handleSaveDraft}
-                      className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl font-bold border border-indigo-500/40 flex items-center gap-1.5"
+                      onClick={() => handleSaveDraft(generatedPost)}
+                      className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl font-bold border border-indigo-500/40 flex items-center gap-1.5 transition-all text-xs"
                     >
                       <CopyCheck className="w-4 h-4" /> Save as Draft
                     </button>
@@ -2442,9 +2742,19 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                     <button
                       type="button"
                       onClick={() => generateSinglePostPdf(generatedPost)}
-                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold border border-slate-800 flex items-center gap-1.5"
+                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold border border-slate-800 flex items-center gap-1.5 transition-all text-xs"
+                      title="Export formatted PDF Dossier with specs, preview, and checklist"
                     >
-                      <FileText className="w-4 h-4 text-rose-400" /> Export Dossier
+                      <FileText className="w-4 h-4 text-rose-400" /> PDF Dossier
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => exportPostJsonDossier(generatedPost)}
+                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold border border-slate-800 flex items-center gap-1.5 transition-all text-xs"
+                      title="Export technical JSON payload for external API testing or archival"
+                    >
+                      <Download className="w-4 h-4 text-amber-400" /> JSON Dossier
                     </button>
                   </div>
 
@@ -2463,11 +2773,13 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                     <button
                       type="button"
                       disabled={isBroadcasting}
-                      onClick={() => {
-                        handleSaveDraft();
-                        handlePublishNow(generatedPost.id);
+                      onClick={async () => {
+                        const saved = await handleSaveDraft(generatedPost, true);
+                        if (saved) {
+                          handlePublishNow(saved.id);
+                        }
                       }}
-                      className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow flex items-center gap-1.5 transition-all disabled:opacity-50"
+                      className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow flex items-center gap-1.5 transition-all disabled:opacity-50 text-xs"
                     >
                       {isBroadcasting ? (
                         <>
@@ -2502,10 +2814,10 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       {/* ==================================================================== */}
       {activeTab === 'library' && (
         <div className="space-y-4">
-          
+
           {/* LIBRARY CONTROLS BAR */}
           <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-            
+
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-64">
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
@@ -2555,9 +2867,9 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post) => (
                 <div key={`post-${post.id}`} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3 flex flex-col justify-between shadow-xl">
-                  
+
                   <div className="space-y-3">
-                    
+
                     {/* TOP PLATFORMS & STATUS BADGE */}
                     <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -2588,9 +2900,12 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                     {/* MEDIA THUMBNAIL & TITLE */}
                     <div className="flex gap-3 items-start">
                       {post.mediaUrl && (
-                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-black shrink-0 border border-slate-800">
-                          <img src={post.mediaUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                        </div>
+                        <MediaPreviewImage
+                          src={post.mediaUrl}
+                          alt="Thumbnail"
+                          className="w-full h-full object-cover"
+                          containerClassName="w-20 h-20 rounded-xl overflow-hidden bg-black shrink-0 border border-slate-800 relative"
+                        />
                       )}
                       <div className="space-y-1 min-w-0 flex-1">
                         <span className="text-[10px] font-mono text-amber-500 uppercase font-bold block">{post.seoTopic}</span>
@@ -2659,17 +2974,33 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                     )}
 
                     <button
+                      onClick={() => handleDuplicatePost(post)}
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold border border-slate-700 flex items-center gap-1 transition-colors"
+                      title="Clone / Duplicate as New Draft"
+                    >
+                      <Copy className="w-3 h-3 text-cyan-400" /> Clone
+                    </button>
+
+                    <button
                       onClick={() => generateSinglePostPdf(post)}
                       className="px-2 py-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 rounded-lg text-[11px] font-bold border border-rose-500/40 flex items-center gap-1 transition-colors"
-                      title="Download PDF Dossier"
+                      title="Download PDF Dossier with specs & preview"
                     >
                       <FileText className="w-3 h-3" /> PDF
                     </button>
 
                     <button
+                      onClick={() => exportPostJsonDossier(post)}
+                      className="px-2 py-1 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 rounded-lg text-[11px] font-bold border border-amber-500/40 flex items-center gap-1 transition-colors"
+                      title="Download Technical JSON Dossier"
+                    >
+                      <Download className="w-3 h-3" /> JSON
+                    </button>
+
+                    <button
                       onClick={() => handleDeletePost(post.id)}
                       className="px-2 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded-lg text-[11px] font-bold border border-red-500/40 flex items-center gap-1 transition-colors"
-                      title="Delete Post"
+                      title="Permanently Delete Post"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -2693,7 +3024,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       {/* ==================================================================== */}
       {activeTab === 'channels' && (
         <div className="space-y-4">
-          
+
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-lg gap-3">
             <div>
               <h2 className="text-sm font-black text-white flex items-center gap-2">
@@ -2848,29 +3179,29 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[11px]">
                   {[
-                    { 
-                      provider: 'Google / YouTube (OAuth + PKCE)', 
-                      var: 'YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET', 
+                    {
+                      provider: 'Google / YouTube (OAuth + PKCE)',
+                      var: 'YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET',
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/youtube/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/youtube/callback` 
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/youtube/callback`
                     },
-                    { 
-                      provider: 'Meta (Facebook & Instagram)', 
-                      var: 'META_CLIENT_ID / META_CLIENT_SECRET', 
+                    {
+                      provider: 'Meta (Facebook & Instagram)',
+                      var: 'META_CLIENT_ID / META_CLIENT_SECRET',
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/facebook/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/facebook/callback` 
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/facebook/callback`
                     },
-                    { 
-                      provider: 'TikTok Business (PKCE)', 
-                      var: 'TIKTOK_CLIENT_ID / TIKTOK_CLIENT_SECRET', 
+                    {
+                      provider: 'TikTok Business (PKCE)',
+                      var: 'TIKTOK_CLIENT_ID / TIKTOK_CLIENT_SECRET',
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/tiktok/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/tiktok/callback` 
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/tiktok/callback`
                     },
-                    { 
-                      provider: 'WhatsApp Business API', 
-                      var: 'WHATSAPP_CLIENT_ID / WHATSAPP_CLIENT_SECRET', 
+                    {
+                      provider: 'WhatsApp Business API',
+                      var: 'WHATSAPP_CLIENT_ID / WHATSAPP_CLIENT_SECRET',
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/whatsapp/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/whatsapp/callback` 
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/whatsapp/callback`
                     }
                   ].map((item, idx) => (
                     <div key={idx} className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg space-y-1.5">
@@ -2878,7 +3209,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                         <span className="text-amber-400 font-bold">{item.provider}</span>
                         <span className="text-slate-500 text-[9px]">Env: {item.var}</span>
                       </div>
-                      
+
                       <div className="space-y-1">
                         <div className="text-[10px] text-emerald-400 flex items-center justify-between font-sans font-semibold">
                           <span>Official Production Callback:</span>
@@ -2932,7 +3263,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
               const isMenuOpen = openActionMenuId === chan.id;
               return (
                 <div key={`chan-${chan.id}`} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3.5 shadow-xl relative">
-                  
+
                   {/* TOP HEADER & ACTIONS DROPDOWN MENU */}
                   <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-3">
                     <div className="flex items-center gap-2.5">
@@ -2957,7 +3288,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                       {/* DROPDOWN MENU PANEL */}
                       {isMenuOpen && (
                         <div className="absolute right-0 mt-1 w-52 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-30 overflow-hidden text-xs py-1 divide-y divide-slate-800">
-                          
+
                           <div className="py-1">
                             <button
                               onClick={() => {
@@ -3958,9 +4289,26 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
             {/* PER-DESTINATION BREAKDOWN LIST */}
             <div className="space-y-2.5">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                Destination Status & Error Resolution
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                  Destination Status & Live Post Links
+                </span>
+                {broadcastResultModal.results?.some(r => (r.status === 'SUCCESS' || r.status === 'PUBLISHED') && r.externalUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      broadcastResultModal.results
+                        ?.filter(r => (r.status === 'SUCCESS' || r.status === 'PUBLISHED') && r.externalUrl)
+                        .forEach(r => {
+                          if (r.externalUrl) window.open(r.externalUrl, '_blank', 'noopener,noreferrer');
+                        });
+                    }}
+                    className="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/40 flex items-center gap-1.5 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Open All Live Destinations
+                  </button>
+                )}
+              </div>
 
               <div className="space-y-2">
                 {broadcastResultModal.results?.map((res, idx) => {
@@ -4000,7 +4348,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                               <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
                                 isSuccess ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
                               }`}>
-                                {isSuccess ? '✓ Published' : '✕ Action Required'}
+                                {isSuccess ? '✓ Published Live' : '✕ Action Required'}
                               </span>
                             </div>
                             <span className="text-[10px] text-slate-500 font-mono">
@@ -4016,9 +4364,9 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                               href={res.externalUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-[11px] font-bold rounded-lg border border-emerald-500/40 flex items-center gap-1 transition-colors"
+                              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
                             >
-                              <ExternalLink className="w-3 h-3" /> View Live
+                              <ExternalLink className="w-3.5 h-3.5" /> View Post Live →
                             </a>
                           )}
 
@@ -4493,8 +4841,8 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                   type="button"
                   onClick={handleToggleReviewerStatus}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    metaReviewerStatus?.disabled 
-                      ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30' 
+                    metaReviewerStatus?.disabled
+                      ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30'
                       : 'bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-500/30'
                   }`}
                 >

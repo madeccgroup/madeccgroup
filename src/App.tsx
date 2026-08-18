@@ -29,10 +29,6 @@ import LegalPage from './components/LegalPage.tsx';
 import { ThemeProvider, useTheme } from './lib/ThemeContext.tsx';
 import { LanguageProvider } from './lib/LanguageContext.tsx';
 
-import MADECCAIStudio
-  from "./components/MADECCAIStudio";
-
-
 function AppContent({
   currentTab,
   setCurrentTab,
@@ -65,144 +61,120 @@ function AppContent({
   };
 
   const renderActiveScreen = () => {
-  switch (currentTab) {
-    case 'home':
-      return (
-        <Home
-          setCurrentTab={setCurrentTab}
-          setSelectedProjectId={setSelectedProjectId}
-        />
-      );
+    switch (currentTab) {
+      case 'home':
+        return (
+          <Home
+            setCurrentTab={setCurrentTab}
+            setSelectedProjectId={setSelectedProjectId}
+          />
+        );
+      case 'services':
+        return (
+          <Services
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'request-a-quote':
+        return (
+          <RequestQuote
+            onNavigateToTab={handleNavigateWithState}
+            preselectedService={preselectedService}
+          />
+        );
+      case 'schedule-consultation':
+        return (
+          <ScheduleConsultation
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'about':
+        return <About />;
+      case 'projects':
+        return (
+          <Projects
+            selectedProjectId={selectedProjectId}
+            setSelectedProjectId={setSelectedProjectId}
+          />
+        );
+      case 'blog':
+        return <Blog />;
+      case 'contact':
+        return <Contact />;
+      case 'booking':
+        return (
+          <ScheduleConsultation
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'budget-calculator':
+        return (
+          <ProjectBudgetCalculator
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'construction-cost-guide':
+        return (
+          <ConstructionCostGuide
+            onNavigateToTab={handleNavigateWithState}
+          />
+        );
+      case 'terms':
+        return <LegalPage type="terms" setCurrentTab={setCurrentTab} />;
+      case 'privacy':
+        return <LegalPage type="privacy" setCurrentTab={setCurrentTab} />;
+      case 'safety':
+        return <LegalPage type="safety" setCurrentTab={setCurrentTab} />;
+      case 'verify':
+        return (
+          <VerifyContract
+            token={verificationToken}
+            onBackToHome={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('verify');
+              url.searchParams.delete('verifyToken');
+              window.history.pushState({}, '', url.toString());
+              setCurrentTab('home');
+              setVerificationToken('');
+            }}
+          />
+        );
+      case 'admin':
+        return (
+          <Admin
+            dbUser={dbUser}
+            setDbUser={setDbUser}
+            setCurrentTab={setCurrentTab}
+            setVerificationToken={setVerificationToken}
+          />
+        );
+      default:
+        return (
+          <Home
+            setCurrentTab={setCurrentTab}
+            setSelectedProjectId={setSelectedProjectId}
+          />
+        );
+    }
+  };
 
-    case 'services':
-      return (
-        <Services
-          onNavigateToTab={handleNavigateWithState}
-        />
-      );
-
-    case 'ai-studio':
-      return <MADECCAIStudio />;
-
-    case 'request-a-quote':
-      return (
-        <RequestQuote
-          onNavigateToTab={handleNavigateWithState}
-          preselectedService={preselectedService}
-        />
-      );
-
-    case 'schedule-consultation':
-      return (
-        <ScheduleConsultation
-          onNavigateToTab={handleNavigateWithState}
-        />
-      );
-
-    case 'about':
-      return <About />;
-
-    case 'projects':
-      return (
-        <Projects
-          selectedProjectId={selectedProjectId}
-          setSelectedProjectId={setSelectedProjectId}
-        />
-      );
-
-    case 'blog':
-      return <Blog />;
-
-    case 'contact':
-      return <Contact />;
-
-    case 'booking':
-      return (
-        <ScheduleConsultation
-          onNavigateToTab={handleNavigateWithState}
-        />
-      );
-
-    case 'budget-calculator':
-      return (
-        <ProjectBudgetCalculator
-          onNavigateToTab={handleNavigateWithState}
-        />
-      );
-
-    case 'construction-cost-guide':
-      return (
-        <ConstructionCostGuide
-          onNavigateToTab={handleNavigateWithState}
-        />
-      );
-
-    case 'terms':
-      return <LegalPage type="terms" setCurrentTab={setCurrentTab} />;
-
-    case 'privacy':
-      return <LegalPage type="privacy" setCurrentTab={setCurrentTab} />;
-
-    case 'safety':
-      return <LegalPage type="safety" setCurrentTab={setCurrentTab} />;
-
-    case 'verify':
-      return (
-        <VerifyContract
-          token={verificationToken}
-          onBackToHome={() => {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('verify');
-            url.searchParams.delete('verifyToken');
-            window.history.pushState({}, '', url.toString());
-            setCurrentTab('home');
-            setVerificationToken('');
-          }}
-        />
-      );
-
-    case 'admin':
-      return (
-        <Admin
-          dbUser={dbUser}
-          setDbUser={setDbUser}
-          setCurrentTab={setCurrentTab}
-          setVerificationToken={setVerificationToken}
-        />
-      );
-
-    default:
-      return (
-        <Home
-          setCurrentTab={setCurrentTab}
-          setSelectedProjectId={setSelectedProjectId}
-        />
-      );
-  }
-};
-
-return (
-  <div
-    className={`flex flex-col min-h-screen font-sans transition-colors duration-300 ${
+  return (
+    <div className={`flex flex-col min-h-screen font-sans transition-colors duration-300 ${
       theme === 'light'
         ? 'bg-slate-50 text-slate-800 selection:bg-amber-200 selection:text-slate-900'
         : 'bg-[#0A0A0B] text-slate-200 selection:bg-amber-500 selection:text-slate-950'
-    }`}
-  >
-    <SEOHandler
-      currentTab={currentTab}
-      selectedProjectId={selectedProjectId}
-    />
-      
+    }`}>
+      <SEOHandler currentTab={currentTab} selectedProjectId={selectedProjectId} />
+
       {/* Header Navigation Section */}
-      <Navbar 
-        currentTab={currentTab} 
+      <Navbar
+        currentTab={currentTab}
         setCurrentTab={(tab) => {
           setCurrentTab(tab);
           if (tab !== 'projects') setSelectedProjectId(null); // Reset selection
-        }} 
-        dbUser={dbUser} 
-        setDbUser={setDbUser} 
+        }}
+        dbUser={dbUser}
+        setDbUser={setDbUser}
         loadingAuth={loadingAuth}
       />
 
@@ -219,11 +191,11 @@ return (
       </main>
 
       {/* Footer Navigation section */}
-      <Footer 
+      <Footer
         setCurrentTab={(tab) => {
           setCurrentTab(tab);
           if (tab !== 'projects') setSelectedProjectId(null); // Reset selection
-        }} 
+        }}
       />
 
       {/* Floating Interactive Live Hub widget */}

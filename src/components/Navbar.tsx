@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 // @ts-ignore
 import logoImg from '../assets/images/madecc_logo_1783370981722.jpg';
-import { 
-  auth, 
-  googleAuthProvider 
+import {
+  auth,
+  googleAuthProvider
 } from '../lib/firebase.ts';
 import { signInWithPopup, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useTheme } from '../lib/ThemeContext.tsx';
 import { useLanguage } from '../lib/LanguageContext.tsx';
-import { 
-  HardHat, 
-  Menu, 
-  X, 
-  User as UserIcon, 
-  LogOut, 
-  Key, 
-  ChevronDown, 
+import {
+  HardHat,
+  Menu,
+  X,
+  User as UserIcon,
+  LogOut,
+  Key,
+  ChevronDown,
   ShieldCheck,
   AlertCircle,
   Sun,
@@ -34,12 +34,12 @@ interface NavbarProps {
   loadingAuth: boolean;
 }
 
-export default function Navbar({ 
-  currentTab, 
-  setCurrentTab, 
-  dbUser, 
-  setDbUser, 
-  loadingAuth 
+export default function Navbar({
+  currentTab,
+  setCurrentTab,
+  dbUser,
+  setDbUser,
+  loadingAuth
 }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
@@ -65,7 +65,7 @@ export default function Navbar({
     setLoginError(null);
     try {
       sessionStorage.setItem('admin_token', key);
-      
+
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${key}`
@@ -137,7 +137,7 @@ export default function Navbar({
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const token = await userCredential.user.getIdToken();
-      
+
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -158,7 +158,7 @@ export default function Navbar({
       }
     } catch (error: any) {
       console.error('Email password login failed:', error);
-      
+
       // Fallback: If Firebase failed with auth/operation-not-allowed or user-not-found, try reviewer-login endpoint as secondary check
       try {
         const revRes = await fetch('/api/auth/reviewer-login', {
@@ -205,17 +205,17 @@ export default function Navbar({
     }
   };
 
-const menuItems = [
-  { id: 'home', label: t('nav_home') },
-  { id: 'services', label: 'Services' },
-  { id: 'ai-studio', label: 'AI Studio' },
-  { id: 'projects', label: t('nav_projects') },
-  { id: 'request-a-quote', label: 'Request a Quote' },
-  { id: 'budget-calculator', label: 'Budget Calculator' },
-  { id: 'construction-cost-guide', label: 'Cost Guide' },
-  { id: 'about', label: t('nav_about') },
-  { id: 'contact', label: t('nav_contact') },
-];
+  const menuItems = [
+    { id: 'home', label: t('nav_home') },
+    { id: 'services', label: 'Services' },
+    { id: 'projects', label: t('nav_projects') },
+    { id: 'request-a-quote', label: 'Request a Quote' },
+    { id: 'budget-calculator', label: 'Budget Calculator' },
+    { id: 'construction-cost-guide', label: 'Cost Guide' },
+    { id: 'about', label: t('nav_about') },
+    { id: 'contact', label: t('nav_contact') },
+  ];
+
   return (
     <nav className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
       theme === 'light'
@@ -224,25 +224,25 @@ const menuItems = [
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          
+
           {/* Logo Branding */}
-          <div 
-            className="flex items-center gap-3 cursor-pointer" 
+          <div
+            className="flex items-center gap-3 cursor-pointer"
             onClick={() => setCurrentTab('home')}
             id="nav-logo"
           >
             <div className={`h-12 w-12 rounded-xl flex items-center justify-center overflow-hidden border shadow-inner ${
               theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800/80'
             }`}>
-              <img 
-                src={logoImg} 
+              <img
+                src={logoImg}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   if (target.src !== '/logo.png') {
                     target.src = '/logo.png';
                   }
                 }}
-                alt="MADECC Group Logo" 
+                alt="MADECC Group Logo"
                 className="h-full w-full object-contain"
                 referrerPolicy="no-referrer"
               />
@@ -272,8 +272,8 @@ const menuItems = [
                     setMenuOpen(false);
                   }}
                   className={`px-4 py-2 rounded-md font-sans text-sm font-medium transition-colors ${
-                    currentTab === item.id 
-                      ? 'text-amber-400 bg-slate-800/60' 
+                    currentTab === item.id
+                      ? 'text-amber-400 bg-slate-800/60'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
                   }`}
                   id={`nav-link-${item.id}`}
@@ -310,13 +310,13 @@ const menuItems = [
 
             {/* Auth section */}
             <div className={`border-l pl-6 flex items-center gap-3 ${theme === 'light' ? 'border-slate-200' : 'border-slate-800'}`}>
-              
+
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
                 className={`p-2 rounded-lg transition-colors ${
-                  theme === 'light' 
-                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500' 
+                  theme === 'light'
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500'
                     : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400'
                 }`}
                 aria-label="Toggle visual theme"
@@ -333,8 +333,8 @@ const menuItems = [
               <button
                 onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}
                 className={`p-2 rounded-lg transition-colors text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1 cursor-pointer select-none ${
-                  theme === 'light' 
-                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500 border border-slate-200' 
+                  theme === 'light'
+                    ? 'hover:bg-slate-100 text-slate-600 hover:text-amber-500 border border-slate-200'
                     : 'hover:bg-slate-800/60 text-slate-300 hover:text-amber-400 border border-slate-800'
                 }`}
                 aria-label="Toggle Language"
@@ -369,7 +369,7 @@ const menuItems = [
                           Role: {dbUser.role}
                         </span>
                       </div>
-                      
+
                       <div className="py-1 border-b border-slate-700/50">
                         {(dbUser.role === 'admin' || dbUser.role === 'staff' || dbUser.role === 'social_media_reviewer') && (
                           <button
@@ -447,8 +447,8 @@ const menuItems = [
                 setMenuOpen(false);
               }}
               className={`w-full text-left px-4 py-3 rounded-md font-sans text-base font-medium block ${
-                currentTab === item.id 
-                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500' 
+                currentTab === item.id
+                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500'
                   : 'text-slate-300 hover:text-white hover:bg-slate-900'
               }`}
             >
@@ -463,8 +463,8 @@ const menuItems = [
                 setMenuOpen(false);
               }}
               className={`w-full text-left px-4 py-3 rounded-md font-sans text-base font-medium flex items-center gap-2 ${
-                currentTab === 'admin' 
-                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500' 
+                currentTab === 'admin'
+                  ? 'text-amber-400 bg-slate-900 border-l-4 border-amber-500'
                   : 'text-slate-300 hover:text-white hover:bg-slate-900'
               }`}
             >
@@ -525,7 +525,7 @@ const menuItems = [
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-in zoom-in-95 duration-200" id="signin-modal">
             {/* Close Button */}
-            <button 
+            <button
               onClick={() => setLoginModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
               aria-label="Close dialog"
@@ -684,4 +684,3 @@ const menuItems = [
     </nav>
   );
 }
-

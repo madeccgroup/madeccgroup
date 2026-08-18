@@ -285,7 +285,7 @@ export async function generateSocialCalendarDocx(posts: SocialPostItem[], channe
 }
 
 // ============================================================================
-// 3. A4 PDF EXPORT: SINGLE POST DOSSIER
+// 3. A4 PDF EXPORT: SINGLE POST DOSSIER (ENGINEERING & MARKETING SPECIFICATION)
 // ============================================================================
 export function generateSinglePostPdf(post: SocialPostItem): void {
   const doc = new jsPDF({
@@ -294,64 +294,166 @@ export function generateSinglePostPdf(post: SocialPostItem): void {
     format: 'a4'
   });
 
-  doc.setFillColor(15, 23, 42);
-  doc.rect(0, 0, 210, 28, 'F');
-  doc.setFillColor(217, 119, 6);
-  doc.rect(0, 28, 210, 2, 'F');
+  const slate900 = [15, 23, 42];
+  const amber600 = [217, 119, 6];
+  const slate600 = [71, 85, 105];
+
+  // Header Banner
+  doc.setFillColor(slate900[0], slate900[1], slate900[2]);
+  doc.rect(0, 0, 210, 26, 'F');
+  doc.setFillColor(amber600[0], amber600[1], amber600[2]);
+  doc.rect(0, 26, 210, 2, 'F');
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('MADECC GROUP S.A. - SOCIAL MEDIA POST DOSSIER', 14, 15);
+  doc.setFontSize(13);
+  doc.text('MADECC GROUP S.A. — CORPORATE BROADCAST DOSSIER', 14, 12);
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Post ID: #${post.id} | Platforms: ${(post.targetPlatforms || []).join(', ').toUpperCase()} | Status: ${post.status}`, 14, 22);
+  doc.text(`Official Central Africa Marketing & SEO Asset Record | Ref: #DOC-${post.id}`, 14, 18);
+  doc.text(`Issued: ${new Date().toLocaleString('en-GB')} | Douala, Cameroon`, 14, 22);
 
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text(`SEO Title: ${post.title}`, 14, 38);
+  // Metadata Table
+  const metaRows = [
+    ['Post ID', `#${post.id}`, 'Current Status', post.status || 'DRAFT'],
+    ['Campaign Topic', post.seoTopic || post.title || 'General Engineering Update', 'Target Outlets', (post.targetPlatforms || []).join(', ').toUpperCase() || 'MULTI-CHANNEL'],
+    ['Media Type', (post.mediaType || 'image').toUpperCase(), 'Scheduled / Published', post.scheduledAt ? new Date(post.scheduledAt).toLocaleString('en-GB') : (post.publishedAt ? new Date(post.publishedAt).toLocaleString('en-GB') : 'Immediate')]
+  ];
 
-  doc.setFontSize(9);
+  autoTable(doc, {
+    startY: 32,
+    body: metaRows,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2 },
+    columnStyles: {
+      0: { fontStyle: 'bold', fillColor: [241, 245, 249], cellWidth: 32 },
+      1: { cellWidth: 63 },
+      2: { fontStyle: 'bold', fillColor: [241, 245, 249], cellWidth: 35 },
+      3: { cellWidth: 50, fontStyle: 'bold' }
+    }
+  });
+
+  let currentY = (doc as any).lastAutoTable.finalY + 8;
+
+  // Title Section
+  doc.setTextColor(slate900[0], slate900[1], slate900[2]);
   doc.setFont('helvetica', 'bold');
-  doc.text('Published Caption / Copywriting:', 14, 48);
+  doc.setFontSize(11);
+  doc.text('1. Post Headline & SEO Title', 14, currentY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(30, 41, 59);
+  doc.text(post.title || 'Untitled Post', 14, currentY + 5);
+
+  currentY += 14;
+
+  // Published Caption
+  doc.setTextColor(slate900[0], slate900[1], slate900[2]);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('2. Marketing Copy & Technical Content', 14, currentY);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  const splitCaption = doc.splitTextToSize(post.caption, 180);
-  doc.text(splitCaption, 14, 54);
+  doc.setTextColor(51, 65, 85);
+  const splitCaption = doc.splitTextToSize(post.caption || 'No copy text provided.', 182);
+  doc.text(splitCaption, 14, currentY + 5);
 
-  let currentY = 54 + splitCaption.length * 5 + 6;
+  currentY = currentY + 5 + (splitCaption.length * 4.5) + 6;
 
-  if (post.hashtags) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('Target Hashtags:', 14, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(37, 99, 235);
-    const splitHash = doc.splitTextToSize(post.hashtags, 180);
-    doc.text(splitHash, 14, currentY + 5);
-    currentY += splitHash.length * 5 + 8;
-  }
-
+  // Standardized CTAs
   if (post.ctaText) {
-    doc.setTextColor(15, 23, 42);
+    doc.setTextColor(slate900[0], slate900[1], slate900[2]);
     doc.setFont('helvetica', 'bold');
-    doc.text('Call to Action (CTA):', 14, currentY);
+    doc.setFontSize(10);
+    doc.text('3. Verified Call to Action (CTA) & Executive Contacts', 14, currentY);
+
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(217, 119, 6);
-    doc.text(post.ctaText, 14, currentY + 5);
-    currentY += 12;
+    doc.setFontSize(8.5);
+    doc.setTextColor(180, 83, 9);
+    const splitCta = doc.splitTextToSize(post.ctaText, 182);
+    doc.text(splitCta, 14, currentY + 5);
+    currentY += 5 + (splitCta.length * 4.2) + 6;
   }
 
+  // Hashtags
+  if (post.hashtags) {
+    doc.setTextColor(slate900[0], slate900[1], slate900[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('4. SEO Hashtags & Keyword Distribution', 14, currentY);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(37, 99, 235);
+    const splitHash = doc.splitTextToSize(post.hashtags, 182);
+    doc.text(splitHash, 14, currentY + 5);
+    currentY += 5 + (splitHash.length * 4.2) + 6;
+  }
+
+  // Media Attachment
   if (post.mediaUrl) {
-    doc.setTextColor(15, 23, 42);
+    doc.setTextColor(slate900[0], slate900[1], slate900[2]);
     doc.setFont('helvetica', 'bold');
-    doc.text('Attached Media Link:', 14, currentY);
+    doc.setFontSize(10);
+    doc.text('5. Verified Media Asset URL', 14, currentY);
+
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(post.mediaUrl, 14, currentY + 5);
+    const splitMedia = doc.splitTextToSize(post.mediaUrl, 182);
+    doc.text(splitMedia, 14, currentY + 5);
+    currentY += 5 + (splitMedia.length * 4) + 6;
   }
 
-  doc.save(`MADECC_Social_Post_${post.id}_${Date.now()}.pdf`);
+  // Page Footer
+  const totalPages = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7.5);
+    doc.setTextColor(slate600[0], slate600[1], slate600[2]);
+    doc.text(`MADECC GROUP S.A. | Civil Engineering & BOQ Masterclass | Page ${i} of ${totalPages}`, 14, 288);
+    doc.text('Confidential Internal Engineering & Marketing Record', 130, 288);
+  }
+
+  doc.save(`MADECC_Dossier_Post_${post.id}_${Date.now()}.pdf`);
+}
+
+/**
+ * Technical JSON Dossier Download
+ */
+export function exportPostJsonDossier(post: SocialPostItem): void {
+  const dossier = {
+    dossierType: 'MADECC_SOCIAL_BROADCAST_DOSSIER',
+    version: '2.0-hardened',
+    exportedAt: new Date().toISOString(),
+    issuer: 'MADECC Group S.A. Cameroon',
+    post: {
+      id: post.id,
+      title: post.title,
+      topic: post.seoTopic,
+      targetPlatforms: post.targetPlatforms,
+      caption: post.caption,
+      hashtags: post.hashtags,
+      ctaText: post.ctaText,
+      mediaUrl: post.mediaUrl,
+      mediaType: post.mediaType || 'image',
+      status: post.status,
+      scheduledAt: post.scheduledAt,
+      publishedAt: post.publishedAt,
+      createdAt: post.createdAt
+    },
+    organization: {
+      name: 'MADECC Group S.A.',
+      domains: ['madeccgroup.online', 'madeccgroup.com'],
+      primaryWhatsApp: '+237 671 063 511',
+      secondaryContact: '+237 683 316 486',
+      standards: ['Eurocode 2', 'Eurocode 8', 'NF EN 1990']
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(dossier, null, 2)], { type: 'application/json' });
+  saveAs(blob, `MADECC_Dossier_Post_${post.id}_${Date.now()}.json`);
 }
