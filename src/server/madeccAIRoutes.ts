@@ -1,4 +1,4 @@
-﻿import os from "node:os";
+import os from "node:os";
 import {
   Router,
   Request,
@@ -47,12 +47,18 @@ const router =
 
 const uploadDir = path.join(os.tmpdir(), "madecc-ai");
 
-const aiMediaDirectoryReady = fs.mkdir(
-  uploadDir,
-  {
-    recursive: true,
-  }
-);
+/*
+ * Netlify Functions run in a serverless filesystem.
+ *
+ * Multer initializes its disk storage synchronously, so the
+ * temporary directory MUST exist before multer() is created.
+ *
+ * os.tmpdir() gives us the runtime temporary directory instead
+ * of attempting to write into the deployed /var/task directory.
+ */
+fs.mkdirSync(uploadDir, {
+  recursive: true,
+});
 
 const maxServerUploadMB =
   Number(

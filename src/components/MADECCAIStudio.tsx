@@ -5,6 +5,8 @@ import React, {
   useState,
 } from "react";
 
+import { getAuthToken } from "../lib/firebase";
+
 /**
  * Upload directly from browser to Cloudinary.
  * The API secret NEVER reaches the browser.
@@ -13,10 +15,13 @@ const uploadFileDirectToCloudinary = async (
   file: File,
   onProgress?: (percent: number) => void
 ) => {
-  const token =
-    typeof getAuthToken === "function"
-      ? await getAuthToken()
-      : null;
+  const token = await getAuthToken();
+
+  if (!token) {
+    throw new Error(
+      "Authentication required. Please sign in again."
+    );
+  }
 
   const signatureResponse = await fetch(
     "/api/cloudinary-signature",
