@@ -1,165 +1,158 @@
-﻿import React, {
-
-  /**
-   * Upload directly from browser to Cloudinary.
-   * The API secret NEVER reaches the browser.
-   */
-  const uploadFileDirectToCloudinary = async (
-    file: File,
-    onProgress?: (percent: number) => void
-  ) => {
-    const token =
-      typeof getAuthToken === "function"
-        ? await getAuthToken()
-        : null;
-
-    const signatureResponse = await fetch(
-      "/api/cloudinary-signature",
-      {
-        method: "GET",
-        credentials: "include",
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : {},
-      }
-    );
-
-    if (!signatureResponse.ok) {
-      throw new Error(
-        "Unable to obtain Cloudinary upload signature."
-      );
-    }
-
-    const signedTicket =
-      await signatureResponse.json();
-
-    if (
-      !signedTicket.signature ||
-      !signedTicket.cloudName ||
-      !signedTicket.apiKey ||
-      !signedTicket.timestamp
-    ) {
-      throw new Error(
-        "Cloudinary upload signature response is incomplete."
-      );
-    }
-
-    const formData = new FormData();
-
-    formData.append("file", file);
-    formData.append(
-      "api_key",
-      signedTicket.apiKey
-    );
-    formData.append(
-      "timestamp",
-      String(signedTicket.timestamp)
-    );
-    formData.append(
-      "signature",
-      signedTicket.signature
-    );
-    formData.append(
-      "folder",
-      signedTicket.folder ||
-        "madecc/ai-studio"
-    );
-
-    const uploadUrl =
-      `https://api.cloudinary.com/v1_1/` +
-      `${signedTicket.cloudName}/auto/upload`;
-
-    const result = await new Promise<any>(
-      (resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        xhr.open("POST", uploadUrl);
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const percent = Math.round(
-              (event.loaded / event.total) * 100
-            );
-
-            onProgress?.(percent);
-          }
-        };
-
-        xhr.onload = () => {
-          if (
-            xhr.status < 200 ||
-            xhr.status >= 300
-          ) {
-            reject(
-              new Error(
-                `Cloudinary upload failed (${xhr.status}).`
-              )
-            );
-            return;
-          }
-
-          try {
-            const data =
-              JSON.parse(xhr.responseText);
-
-            if (!data.secure_url) {
-              reject(
-                new Error(
-                  "Cloudinary upload succeeded but returned no secure_url."
-                )
-              );
-              return;
-            }
-
-            resolve(data);
-          } catch {
-            reject(
-              new Error(
-                "Cloudinary returned an invalid upload response."
-              )
-            );
-          }
-        };
-
-        xhr.onerror = () => {
-          reject(
-            new Error(
-              "Cloudinary upload failed due to a network error."
-            )
-          );
-        };
-
-        xhr.onabort = () => {
-          reject(
-            new Error(
-              "Cloudinary upload was cancelled."
-            )
-          );
-        };
-
-        xhr.send(formData);
-      }
-    );
-
-    return {
-      secureUrl: result.secure_url,
-      publicId: result.public_id,
-      resourceType: result.resource_type,
-      format: result.format,
-      bytes: result.bytes,
-      originalFilename:
-        result.original_filename,
-    };
-  };
-
+import React, {
   ChangeEvent,
   useEffect,
   useRef,
   useState,
 } from "react";
 
+/**
+ * Upload directly from browser to Cloudinary.
+ * The API secret NEVER reaches the browser.
+ */
+const uploadFileDirectToCloudinary = async (
+  file: File,
+  onProgress?: (percent: number) => void
+) => {
+  const token =
+    typeof getAuthToken === "function"
+      ? await getAuthToken()
+      : null;
+
+  const signatureResponse = await fetch(
+    "/api/cloudinary-signature",
+    {
+      method: "GET",
+      credentials: "include",
+      headers: token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {},
+    }
+  );
+
+  if (!signatureResponse.ok) {
+    throw new Error(
+      "Unable to obtain Cloudinary upload signature."
+    );
+  }
+
+  const signedTicket =
+    await signatureResponse.json();
+
+  if (
+    !signedTicket.signature ||
+    !signedTicket.cloudName ||
+    !signedTicket.apiKey ||
+    !signedTicket.timestamp
+  ) {
+    throw new Error(
+      "Cloudinary upload signature response is incomplete."
+    );
+  }
+
+  const formData = new FormData();
+
+  formData.append("file", file);
+  formData.append("api_key", signedTicket.apiKey);
+  formData.append(
+    "timestamp",
+    String(signedTicket.timestamp)
+  );
+  formData.append(
+    "signature",
+    signedTicket.signature
+  );
+  formData.append(
+    "folder",
+    signedTicket.folder || "madecc/ai-studio"
+  );
+
+  const uploadUrl =
+    `https://api.cloudinary.com/v1_1/` +
+    `${signedTicket.cloudName}/auto/upload`;
+
+  const result = await new Promise<any>(
+    (resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.open("POST", uploadUrl);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round(
+            (event.loaded / event.total) * 100
+          );
+
+          onProgress?.(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        if (
+          xhr.status < 200 ||
+          xhr.status >= 300
+        ) {
+          reject(
+            new Error(
+              `Cloudinary upload failed (${xhr.status}).`
+            )
+          );
+          return;
+        }
+
+        try {
+          const data = JSON.parse(xhr.responseText);
+
+          if (!data.secure_url) {
+            reject(
+              new Error(
+                "Cloudinary upload succeeded but returned no secure_url."
+              )
+            );
+            return;
+          }
+
+          resolve(data);
+        } catch {
+          reject(
+            new Error(
+              "Cloudinary returned an invalid upload response."
+            )
+          );
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(
+          new Error(
+            "Cloudinary upload failed due to a network error."
+          )
+        );
+      };
+
+      xhr.onabort = () => {
+        reject(
+          new Error(
+            "Cloudinary upload was cancelled."
+          )
+        );
+      };
+
+      xhr.send(formData);
+    }
+  );
+
+  return {
+    secureUrl: result.secure_url,
+    publicId: result.public_id,
+    resourceType: result.resource_type,
+    format: result.format,
+    bytes: result.bytes,
+    originalFilename:
+      result.original_filename,
+  };
+};
 type StudioTab =
   | "chat"
   | "video"
@@ -189,42 +182,42 @@ const tabs: {
   {
     id: "chat",
     label: "AI Chat",
-    icon: "âœ¦",
+    icon: "✦",
   },
   {
     id: "video",
     label: "Video",
-    icon: "ðŸŽ¬",
+    icon: "🎬",
   },
   {
     id: "audio",
     label: "Audio",
-    icon: "ðŸ”Š",
+    icon: "🔊",
   },
   {
     id: "media",
     label: "Media",
-    icon: "ðŸ–¼",
+    icon: "🖼",
   },
   {
     id: "documents",
     label: "Documents",
-    icon: "ðŸ“„",
+    icon: "📄",
   },
   {
     id: "drawings",
-    label: "Drawings â†’ BOQ",
-    icon: "ðŸ—",
+    label: "Drawings → BOQ",
+    icon: "🏗",
   },
   {
     id: "transcribe",
     label: "Transcribe",
-    icon: "ðŸŽ™",
+    icon: "🎙",
   },
   {
     id: "global",
     label: "Global",
-    icon: "ðŸŒ",
+    icon: "🌍",
   },
 ];
 
@@ -885,11 +878,11 @@ export default function MADECCAIStudio() {
 
       <div className="madecc-ai-top">
         <div className="madecc-ai-title">
-          âœ¦ MADECC AI Studio
+          ✦ MADECC AI Studio
         </div>
 
         <div className="madecc-ai-subtitle">
-          Create â€¢ Transform â€¢ Analyze â€¢ Automate
+          Create • Transform • Analyze • Automate
         </div>
       </div>
 
@@ -1114,7 +1107,7 @@ export default function MADECCAIStudio() {
                   loading
                 }
               >
-                âœ¦ Ask MADECC AI
+                ✦ Ask MADECC AI
               </button>
             )}
 
@@ -1130,7 +1123,7 @@ export default function MADECCAIStudio() {
                     loading
                   }
                 >
-                  ðŸŽ¬ Generate Video
+                  🎬 Generate Video
                 </button>
 
                 <button
@@ -1139,7 +1132,7 @@ export default function MADECCAIStudio() {
                     fileRef.current?.click()
                   }
                 >
-                  ðŸŽ¥ Analyze Video
+                  🎥 Analyze Video
                 </button>
               </>
             )}
@@ -1155,7 +1148,7 @@ export default function MADECCAIStudio() {
                   loading
                 }
               >
-                ðŸ”Š Generate Voice
+                🔊 Generate Voice
               </button>
             )}
 
@@ -1171,7 +1164,7 @@ export default function MADECCAIStudio() {
                     loading
                   }
                 >
-                  ðŸŽ¨ Generate Image
+                  🎨 Generate Image
                 </button>
 
                 <button
@@ -1180,7 +1173,7 @@ export default function MADECCAIStudio() {
                     fileRef.current?.click()
                   }
                 >
-                  ðŸ–¼ Analyze Image
+                  🖼 Analyze Image
                 </button>
               </>
             )}
@@ -1193,7 +1186,7 @@ export default function MADECCAIStudio() {
                   fileRef.current?.click()
                 }
               >
-                ðŸŽ™ Upload Audio
+                🎙 Upload Audio
               </button>
             )}
 
@@ -1205,7 +1198,7 @@ export default function MADECCAIStudio() {
                   fileRef.current?.click()
                 }
               >
-                ðŸ“„ Analyze Document
+                📄 Analyze Document
               </button>
             )}
 
@@ -1217,7 +1210,7 @@ export default function MADECCAIStudio() {
                   fileRef.current?.click()
                 }
               >
-                ðŸ— Generate BOQ
+                🏗 Generate BOQ
               </button>
             )}
 
@@ -1232,7 +1225,7 @@ export default function MADECCAIStudio() {
                   loading
                 }
               >
-                ðŸŒ Translate
+                🌍 Translate
               </button>
             )}
           </div>
@@ -1271,7 +1264,7 @@ export default function MADECCAIStudio() {
                 borderRadius:10,
               }}
             >
-              â³ MADECC AI is
+              ⏳ MADECC AI is
               processing your
               request...
             </div>
@@ -1279,7 +1272,7 @@ export default function MADECCAIStudio() {
 
           {error && (
             <div className="madecc-ai-error">
-              âš  {error}
+              ⚠ {error}
             </div>
           )}
 
@@ -1347,7 +1340,7 @@ export default function MADECCAIStudio() {
                         )
                       }
                     >
-                      â¬‡ Download TXT
+                      ⬇ Download TXT
                     </button>
                   </div>
                 </>
@@ -1370,7 +1363,7 @@ export default function MADECCAIStudio() {
                       )
                     }
                   >
-                    â¬‡ Download Transcript
+                    ⬇ Download Transcript
                   </button>
                 </>
               )}
@@ -1392,7 +1385,7 @@ export default function MADECCAIStudio() {
                       )
                     }
                   >
-                    â¬‡ Download Analysis
+                    ⬇ Download Analysis
                   </button>
                 </>
               )}
@@ -1422,7 +1415,7 @@ export default function MADECCAIStudio() {
                       )
                     }
                   >
-                    â¬‡ Download BOQ JSON
+                    ⬇ Download BOQ JSON
                   </button>
                 </div>
               )}

@@ -1,5 +1,4 @@
-﻿import { createCloudinarySignedUploadTicket } from "./server/cloudinary/cloudinarySigner";
-import { registerMediaRoutes } from "./server/media/mediaRoutes";
+import { createCloudinarySignedUploadTicket } from "./src/server/cloudinary/cloudinarySigner";
 import { registerMediaRoutes } from "./src/server/media/mediaRoutes";
 import express from 'express';
 import path from 'path';
@@ -394,12 +393,12 @@ async function deleteFileFromCloud(fileUrl: string | null | undefined) {
 }
 
 function validateEnvironmentVariables() {
-  console.log('ðŸ” [ENVIRONMENT AUDIT] Auditing system environment configuration...');
+  console.log('🔍 [ENVIRONMENT AUDIT] Auditing system environment configuration...');
   const required = ['DATABASE_URL'];
   const missingRequired = required.filter(key => !process.env[key]);
   
   if (missingRequired.length > 0) {
-    console.error(`âŒ [FATAL CONFIG ERROR] Missing required environment variables: ${missingRequired.join(', ')}`);
+    console.error(`❌ [FATAL CONFIG ERROR] Missing required environment variables: ${missingRequired.join(', ')}`);
     console.error('The application cannot boot without a valid DATABASE_URL connection string.');
     process.exit(1);
   }
@@ -409,28 +408,28 @@ function validateEnvironmentVariables() {
   const hasCloudinary = !!(cloudName && apiKey && apiSecret);
 
   if (!hasSupabase && !hasCloudinary) {
-    console.warn('âš ï¸  [CONFIG WARNING] Neither Supabase nor Cloudinary cloud storage is fully configured.');
+    console.warn('⚠️  [CONFIG WARNING] Neither Supabase nor Cloudinary cloud storage is fully configured.');
     console.warn('File uploads will fallback to local disk storage, which is ephemeral in cloud hosting (e.g. Cloud Run).');
   } else {
     if (hasSupabase) {
-      console.log('âœ… [CONFIG AUDIT] Supabase Cloud Storage: ACTIVE');
+      console.log('✅ [CONFIG AUDIT] Supabase Cloud Storage: ACTIVE');
     }
     if (hasCloudinary) {
-      console.log('âœ… [CONFIG AUDIT] Cloudinary Media Engine: ACTIVE');
+      console.log('✅ [CONFIG AUDIT] Cloudinary Media Engine: ACTIVE');
     }
   }
 
   const geminiKey = getGeminiApiKey();
   if (!geminiKey) {
-    console.warn('âš ï¸  [CONFIG WARNING] GEMINI_API_KEY is not defined in server environment. AI Assistant & generative features will run in offline template fallback mode.');
+    console.warn('⚠️  [CONFIG WARNING] GEMINI_API_KEY is not defined in server environment. AI Assistant & generative features will run in offline template fallback mode.');
   } else {
-    console.log('âœ… [CONFIG AUDIT] Gemini AI Assistant Engine: Configured (Validating on first request via @google/genai)');
+    console.log('✅ [CONFIG AUDIT] Gemini AI Assistant Engine: Configured (Validating on first request via @google/genai)');
   }
 
   if (!(process.env.SMTP_USER && process.env.SMTP_PASS)) {
-    console.warn('âš ï¸  [CONFIG WARNING] SMTP_USER/SMTP_PASS are not defined. E-mail dispatchers will fallback to console logging.');
+    console.warn('⚠️  [CONFIG WARNING] SMTP_USER/SMTP_PASS are not defined. E-mail dispatchers will fallback to console logging.');
   } else {
-    console.log('âœ… [CONFIG AUDIT] SMTP Email Transporter: ACTIVE');
+    console.log('✅ [CONFIG AUDIT] SMTP Email Transporter: ACTIVE');
   }
 }
 
@@ -1233,7 +1232,7 @@ Answer customer inquiries professionally, explaining materials, safety complianc
             subject: 'APPLICATION FOR THE POST OF SENIOR MATHEMATICS & PHYSICS TEACHER',
             salutation: 'Dear Sir/Madam,',
             bodyParagraphs: [
-              `I am writing to express my strong interest in the Senior Mathematics and Physics teaching vacancy at your esteemed institution. Having followed your schoolâ€™s remarkable academic achievements and commitment to STEM education, I am eager to contribute my pedagogical expertise and passion for educational excellence to your faculty.`,
+              `I am writing to express my strong interest in the Senior Mathematics and Physics teaching vacancy at your esteemed institution. Having followed your school’s remarkable academic achievements and commitment to STEM education, I am eager to contribute my pedagogical expertise and passion for educational excellence to your faculty.`,
               `With over eight years of teaching experience, including serving as a Head of Department, I have successfully designed student-centered curriculum frameworks that make complex concepts in calculus, trigonometry, and Newtonian mechanics highly accessible. In my previous role, I guided my classes to a record-breaking 94% pass rate in national examinations.`,
               `Beyond instruction, I am highly committed to fostering a supportive, inclusive learning environment. I have successfully organized region-wide STEM forums, pioneered student coaching circles, and mentored junior educators in implementing digital interactive simulators.`,
               `Thank you for your time and consideration of my application. I look forward to the opportunity to discuss how my teaching credentials align with the academic aspirations of your institution.`
@@ -1514,7 +1513,7 @@ Additional highlights / Custom instructions from applicant:
     scopeOfActivity: string
   ) {
     const activeName = companyName || 'MADECC CIVIL WORKS SARL';
-    const activeForm = legalForm || 'SARL (SociÃ©tÃ© Ã  ResponsabilitÃ© LimitÃ©e)';
+    const activeForm = legalForm || 'SARL (Société à Responsabilité Limitée)';
     const activeJurisdiction = jurisdiction || 'Cameroon (OHADA Uniform Act) & Worldwide';
     const activeOffice = headOffice || 'Akwa Boulevard, Douala, Cameroon';
     const activeCapital = shareCapital || '10,000,000 FCFA';
@@ -1534,8 +1533,8 @@ Additional highlights / Custom instructions from applicant:
         },
         {
           number: 2,
-          title: "ARTICLE 2: REGISTERED OFFICE (SIÃˆGE SOCIAL) AND DOMICILE",
-          content: `**2.1. Purpose & Scope:** Establishing the official address for statutory notices, tax declarations, and legal jurisdictions.\n\n**2.2. Legal Authority:** OHADA AUDSCGIE Articles 24 to 26 and Cameroonian tax residence statutes.\n\n**2.3. Location:** The registered office is located at: ${activeOffice}.\n\n**2.4. Procedures for Transfer:** The registered office designates the legal forum for any notification, administrative filing, or judicial action. The General Manager (GÃ©rant) is authorized to transfer the registered office within the same city or territory by simple management decision. A transfer to a different city or region requires approval from the shareholders through an Extraordinary General Meeting (EGM) and subsequent update of the Trade and Personal Property Credit Register (RCCM).\n\n**2.5. Record Keeping:** All official letters, court writs, and regulatory notifications received at the registered office must be recorded in an incoming mail ledger overseen by the Company Secretary.`
+          title: "ARTICLE 2: REGISTERED OFFICE (SIÈGE SOCIAL) AND DOMICILE",
+          content: `**2.1. Purpose & Scope:** Establishing the official address for statutory notices, tax declarations, and legal jurisdictions.\n\n**2.2. Legal Authority:** OHADA AUDSCGIE Articles 24 to 26 and Cameroonian tax residence statutes.\n\n**2.3. Location:** The registered office is located at: ${activeOffice}.\n\n**2.4. Procedures for Transfer:** The registered office designates the legal forum for any notification, administrative filing, or judicial action. The General Manager (Gérant) is authorized to transfer the registered office within the same city or territory by simple management decision. A transfer to a different city or region requires approval from the shareholders through an Extraordinary General Meeting (EGM) and subsequent update of the Trade and Personal Property Credit Register (RCCM).\n\n**2.5. Record Keeping:** All official letters, court writs, and regulatory notifications received at the registered office must be recorded in an incoming mail ledger overseen by the Company Secretary.`
         },
         {
           number: 3,
@@ -1544,7 +1543,7 @@ Additional highlights / Custom instructions from applicant:
         },
         {
           number: 4,
-          title: "ARTICLE 4: CORPORATE DURATION (DURÃ‰E)",
+          title: "ARTICLE 4: CORPORATE DURATION (DURÉE)",
           content: `**4.1. Purpose & Scope:** Defining the legal lifespan of the company and rules for extension or early dissolution.\n\n**4.2. Legal Authority:** OHADA AUDSCGIE Article 28.\n\n**4.3. Lifespan:** The company is established for a duration of ninety-nine (99) years starting from its formal registration in the RCCM of Cameroon.\n\n**4.4. Procedures for Extension:** At least one (1) year prior to the expiration of the company's term, the General Manager must convene an Extraordinary General Meeting of shareholders to decide whether the company's duration should be extended. This decision must be made in accordance with the voting requirements of an EGM and filed with the notary public and the RCCM.\n\n**4.5. Failures and Penalties:** If the Manager fails to convene this meeting, any shareholder may petition the President of the competent commercial court to appoint a corporate representative to hold the meeting, with costs borne by the company.`
         },
         {
@@ -1554,18 +1553,18 @@ Additional highlights / Custom instructions from applicant:
         },
         {
           number: 6,
-          title: "ARTICLE 6: STATUTORY MANAGEMENT & LIMITATIONS OF POWER (GÃ‰RANCE)",
-          content: `**6.1. Purpose & Scope:** Governing the executive management of the company and limiting the powers of the GÃ©rant.\n\n**6.2. Legal Authority:** OHADA AUDSCGIE Articles 323 to 328.\n\n**6.3. Appointment:** The company is managed and legally bound by its initial General Manager (GÃ©rant): ${activeManager}, appointed for an indefinite term, unless removed by the shareholders.\n\n**6.4. Scope of Authority:** The GÃ©rant has the broadest executive powers to act in all circumstances in the name of the company and conduct civil works operations. However, the Manager's authority is subject to board-approved limits.\n\n**6.5. Mandated Limitations of Power:** The GÃ©rant is strictly prohibited from executing borrowing agreements exceeding 50% of the company's share capital, or selling substantial corporate real estate and assets, without the prior written authorization of the shareholders in a General Meeting. Violations of these limitations shall constitute grounds for immediate dismissal and personal liability for damages.`
+          title: "ARTICLE 6: STATUTORY MANAGEMENT & LIMITATIONS OF POWER (GÉRANCE)",
+          content: `**6.1. Purpose & Scope:** Governing the executive management of the company and limiting the powers of the Gérant.\n\n**6.2. Legal Authority:** OHADA AUDSCGIE Articles 323 to 328.\n\n**6.3. Appointment:** The company is managed and legally bound by its initial General Manager (Gérant): ${activeManager}, appointed for an indefinite term, unless removed by the shareholders.\n\n**6.4. Scope of Authority:** The Gérant has the broadest executive powers to act in all circumstances in the name of the company and conduct civil works operations. However, the Manager's authority is subject to board-approved limits.\n\n**6.5. Mandated Limitations of Power:** The Gérant is strictly prohibited from executing borrowing agreements exceeding 50% of the company's share capital, or selling substantial corporate real estate and assets, without the prior written authorization of the shareholders in a General Meeting. Violations of these limitations shall constitute grounds for immediate dismissal and personal liability for damages.`
         },
         {
           number: 7,
           title: "ARTICLE 7: SHAREHOLDERS' GENERAL MEETINGS (VOTING & NOTICES)",
-          content: `**7.1. Purpose & Legal Authority:** Governing all collective decisions of the company's shareholders. Governed strictly under OHADA AUDSCGIE Articles 546 to 561.\n\n**7.2. Annual General Meeting (AGM) Mandates:**\n- 7.2.1. Held mandatorily within six (6) months of the close of each financial year (by June 30th).\n- 7.2.2. Responsibilities: Approval of the annual financial statements; appointment or removal of directors and statutory managers; appointment of external auditors; declaration of dividends; approval of strategic projects and major construction contracts exceeding 50% of capital; and authorizations for capital increases.\n\n**7.3. Extraordinary General Meeting (EGM) Mandates:**\n- 7.3.1. Convened by the GÃ©rant, the statutory auditor, or shareholders representing at least twenty percent (20%) of the share capital in emergency circumstances.\n- 7.3.2. Responsibilities: Authorizing mergers, acquisitions, splits, spin-offs, early voluntary liquidation, amendments to these Articles of Association, sale of substantial corporate real estate or capital assets, and borrowing beyond approved limits.\n\n**7.4. Notice of Meetings & Documents:**\n- 7.4.1. Notice Period: Written notification delivered by hand against signature, registered post with acknowledgment of receipt, or official electronic mail (email) with read-receipt, sent at least fifteen (15) calendar days prior to the meeting date.\n- 7.4.2. Supporting Documents: Convocations must contain a precise Agenda and must be accompanied by draft resolutions, financial statements, the General Manager's report, and the Auditor's report.\n\n**7.5. Quorums, Adjournments & Voting Rights:**\n- 7.5.1. AGM Quorum: On first call, representing at least one-quarter (25%) of the shares. On second call, no quorum is required. Resolutions are passed by a simple majority of votes cast (50% + 1 vote).\n- 7.5.2. EGM Quorum: On first call, representing at least one-half (50%) of the share capital. On second call, representing at least one-quarter (25%) of the share capital. Resolutions require a two-thirds (66.67%) majority of votes present or represented.\n- 7.5.3. Voting Rights: Strictly "one share, one vote". Voting may be executed in person, by proxy to another shareholder, or through secure electronic voting. Ballots may be cast by show of hands, or secret ballot upon request of any shareholder. The Chairman shall have a casting vote only where expressly authorized.\n\n**7.6. Minutes & Record Keeping:** All deliberations must be recorded in formal Minutes (ProcÃ¨s-verbaux), signed by the General Manager/Chairman and the secretary of the assembly, and permanently stored in a sequential, numbered corporate minutes register (Registre des dÃ©libÃ©rations) preserved at the registered office. Failure to maintain correct records shall incur administrative penalties of 500,000 FCFA per instance.`
+          content: `**7.1. Purpose & Legal Authority:** Governing all collective decisions of the company's shareholders. Governed strictly under OHADA AUDSCGIE Articles 546 to 561.\n\n**7.2. Annual General Meeting (AGM) Mandates:**\n- 7.2.1. Held mandatorily within six (6) months of the close of each financial year (by June 30th).\n- 7.2.2. Responsibilities: Approval of the annual financial statements; appointment or removal of directors and statutory managers; appointment of external auditors; declaration of dividends; approval of strategic projects and major construction contracts exceeding 50% of capital; and authorizations for capital increases.\n\n**7.3. Extraordinary General Meeting (EGM) Mandates:**\n- 7.3.1. Convened by the Gérant, the statutory auditor, or shareholders representing at least twenty percent (20%) of the share capital in emergency circumstances.\n- 7.3.2. Responsibilities: Authorizing mergers, acquisitions, splits, spin-offs, early voluntary liquidation, amendments to these Articles of Association, sale of substantial corporate real estate or capital assets, and borrowing beyond approved limits.\n\n**7.4. Notice of Meetings & Documents:**\n- 7.4.1. Notice Period: Written notification delivered by hand against signature, registered post with acknowledgment of receipt, or official electronic mail (email) with read-receipt, sent at least fifteen (15) calendar days prior to the meeting date.\n- 7.4.2. Supporting Documents: Convocations must contain a precise Agenda and must be accompanied by draft resolutions, financial statements, the General Manager's report, and the Auditor's report.\n\n**7.5. Quorums, Adjournments & Voting Rights:**\n- 7.5.1. AGM Quorum: On first call, representing at least one-quarter (25%) of the shares. On second call, no quorum is required. Resolutions are passed by a simple majority of votes cast (50% + 1 vote).\n- 7.5.2. EGM Quorum: On first call, representing at least one-half (50%) of the share capital. On second call, representing at least one-quarter (25%) of the share capital. Resolutions require a two-thirds (66.67%) majority of votes present or represented.\n- 7.5.3. Voting Rights: Strictly "one share, one vote". Voting may be executed in person, by proxy to another shareholder, or through secure electronic voting. Ballots may be cast by show of hands, or secret ballot upon request of any shareholder. The Chairman shall have a casting vote only where expressly authorized.\n\n**7.6. Minutes & Record Keeping:** All deliberations must be recorded in formal Minutes (Procès-verbaux), signed by the General Manager/Chairman and the secretary of the assembly, and permanently stored in a sequential, numbered corporate minutes register (Registre des délibérations) preserved at the registered office. Failure to maintain correct records shall incur administrative penalties of 500,000 FCFA per instance.`
         },
         {
           number: 8,
           title: "ARTICLE 8: TRANSFER, TRANSMISSION, AND PLEDGING OF SHARES",
-          content: `**8.1. Purpose & Legal Authority:** Regulating any changes in share ownership to maintain corporate stability and protect shareholders' assets under OHADA AUDSCGIE Articles 317 to 322.\n\n**8.2. Right of First Refusal (Pre-emption Right):** Existing shareholders enjoy an absolute right of first refusal. Any shareholder desiring to transfer shares to a non-shareholder third party must submit a written request via registered post to the General Manager, specifying the name of the transferee, the number of shares, and the agreed price. The General Manager shall notify all shareholders within seven (7) business days. Shareholders have thirty (30) calendar days from receipt to exercise their pre-emption rights proportionally.\n\n**8.3. Board Approval (Consent Clause):** Any transfer of shares to a non-shareholder third party requires mandatory prior approval by the General Meeting of shareholders representing at least three-quarters (75%) of the company's capital.\n\n**8.4. Valuation of Shares:** In the event of a dispute over the fair value of shares, the price shall be determined by an independent certified accountant/valuation expert (Expert-Comptable AgrÃ©Ã© CEMAC) appointed by mutual agreement of the parties or, failing that, by the President of the competent commercial court of Cameroon.\n\n**8.5. Share Certificates & Transfer Register:** Shares are nominative and represented by Share Certificates signed by the General Manager. All transactions must be recorded in the company's physical and digital Share Transfer Register (Registre des transferts de parts). If lost or destroyed, a replacement certificate is issued only after a 30-day public notice period and submission of a sworn indemnity bond.\n\n**8.6. Transmission upon Death of a Shareholder:** Heirs, successions, and executors do not automatically become active voting partners. The company's operations shall continue. Heirs must submit certified probate documents and be formally approved by the remaining shareholders within ninety (90) days. Executor powers are limited to estate preservation until approval.\n\n**8.7. Bankruptcy & Insolvency:** In the event of bankruptcy of a shareholder, the company reserves the right to purchase the bankrupt shareholder's shares at fair market value (determined by an expert) to prevent creditors from seizing voting controls.\n\n**8.8. Compliance Restrictions & Penalties:** Transfers that would create severe conflicts of interest, breach national security laws, violate Cameroonian public procurement regulations, or breach OHADA maximum shareholding guidelines are strictly prohibited and void *ab initio*. Violators shall be penalized via temporary suspension of dividend rights.`
+          content: `**8.1. Purpose & Legal Authority:** Regulating any changes in share ownership to maintain corporate stability and protect shareholders' assets under OHADA AUDSCGIE Articles 317 to 322.\n\n**8.2. Right of First Refusal (Pre-emption Right):** Existing shareholders enjoy an absolute right of first refusal. Any shareholder desiring to transfer shares to a non-shareholder third party must submit a written request via registered post to the General Manager, specifying the name of the transferee, the number of shares, and the agreed price. The General Manager shall notify all shareholders within seven (7) business days. Shareholders have thirty (30) calendar days from receipt to exercise their pre-emption rights proportionally.\n\n**8.3. Board Approval (Consent Clause):** Any transfer of shares to a non-shareholder third party requires mandatory prior approval by the General Meeting of shareholders representing at least three-quarters (75%) of the company's capital.\n\n**8.4. Valuation of Shares:** In the event of a dispute over the fair value of shares, the price shall be determined by an independent certified accountant/valuation expert (Expert-Comptable Agréé CEMAC) appointed by mutual agreement of the parties or, failing that, by the President of the competent commercial court of Cameroon.\n\n**8.5. Share Certificates & Transfer Register:** Shares are nominative and represented by Share Certificates signed by the General Manager. All transactions must be recorded in the company's physical and digital Share Transfer Register (Registre des transferts de parts). If lost or destroyed, a replacement certificate is issued only after a 30-day public notice period and submission of a sworn indemnity bond.\n\n**8.6. Transmission upon Death of a Shareholder:** Heirs, successions, and executors do not automatically become active voting partners. The company's operations shall continue. Heirs must submit certified probate documents and be formally approved by the remaining shareholders within ninety (90) days. Executor powers are limited to estate preservation until approval.\n\n**8.7. Bankruptcy & Insolvency:** In the event of bankruptcy of a shareholder, the company reserves the right to purchase the bankrupt shareholder's shares at fair market value (determined by an expert) to prevent creditors from seizing voting controls.\n\n**8.8. Compliance Restrictions & Penalties:** Transfers that would create severe conflicts of interest, breach national security laws, violate Cameroonian public procurement regulations, or breach OHADA maximum shareholding guidelines are strictly prohibited and void *ab initio*. Violators shall be penalized via temporary suspension of dividend rights.`
         },
         {
           number: 9,
@@ -1580,17 +1579,17 @@ Additional highlights / Custom instructions from applicant:
         {
           number: 11,
           title: "ARTICLE 11: CORPORATE GOVERNANCE & EXECUTIVE MANAGEMENT",
-          content: `**11.1. Purpose & Scope:** Establishing a robust, dual-tier corporate governance framework to steer strategic direction and operations.\n\n**11.2. Board of Directors:** Composed of three (3) to twelve (12) members appointed by the AGM for a term of four (4) years. The Board is responsible for defining the strategic direction of the company, approving tenders exceeding 500,000,000 FCFA, and supervising executive management.\n\n**11.3. Managing Director (Directeur GÃ©nÃ©ral):** Appointed by the Board of Directors to execute daily operations, manage engineering sites, sign commercial agreements, and represent the company vis-Ã -vis clients and authorities.\n\n**11.4. Company Secretary (SecrÃ©taire GÃ©nÃ©ral):** Responsible for statutory compliance, legal filings, organizing general meetings, ensuring that directors are kept fully informed of their legal duties under Cameroonian and OHADA laws, and preserving physical and digital corporate records.`
+          content: `**11.1. Purpose & Scope:** Establishing a robust, dual-tier corporate governance framework to steer strategic direction and operations.\n\n**11.2. Board of Directors:** Composed of three (3) to twelve (12) members appointed by the AGM for a term of four (4) years. The Board is responsible for defining the strategic direction of the company, approving tenders exceeding 500,000,000 FCFA, and supervising executive management.\n\n**11.3. Managing Director (Directeur Général):** Appointed by the Board of Directors to execute daily operations, manage engineering sites, sign commercial agreements, and represent the company vis-à-vis clients and authorities.\n\n**11.4. Company Secretary (Secrétaire Général):** Responsible for statutory compliance, legal filings, organizing general meetings, ensuring that directors are kept fully informed of their legal duties under Cameroonian and OHADA laws, and preserving physical and digital corporate records.`
         },
         {
           number: 12,
           title: "ARTICLE 12: PUBLIC PROCUREMENT, TENDER PROCEDURES, AND FIDIC CONTRACTS",
-          content: `**12.1. Scope & Applicability:** All public contracts, infrastructure tenders, and private engineering agreements under Cameroon MINMAP guidelines.\n\n**12.2. FIDIC Adherence:** All international and high-value domestic construction agreements must utilize standard international construction templates, specifically the International Federation of Consulting Engineers (FIDIC) standard forms (Red, Yellow, or Silver Books depending on the project structure).\n\n**12.3. Joint Ventures (JV) and Consortia:** Participation in tenders through JVs or consortia must be backed by a comprehensive Joint Venture Agreement detailing the division of civil engineering works, percentage of financial participation, mutual indemnities, and joint and several liability (responsabilitÃ© solidaire) before Cameroonian authorities.\n\n**12.4. Subcontractors and Consultants:** All subcontractors, consultants, architects, and surveyors must be vetted through a rigorous pre-qualification procurement policy, ensuring compliance with HSE norms, technical capacity, and financial solvency.`
+          content: `**12.1. Scope & Applicability:** All public contracts, infrastructure tenders, and private engineering agreements under Cameroon MINMAP guidelines.\n\n**12.2. FIDIC Adherence:** All international and high-value domestic construction agreements must utilize standard international construction templates, specifically the International Federation of Consulting Engineers (FIDIC) standard forms (Red, Yellow, or Silver Books depending on the project structure).\n\n**12.3. Joint Ventures (JV) and Consortia:** Participation in tenders through JVs or consortia must be backed by a comprehensive Joint Venture Agreement detailing the division of civil engineering works, percentage of financial participation, mutual indemnities, and joint and several liability (responsabilité solidaire) before Cameroonian authorities.\n\n**12.4. Subcontractors and Consultants:** All subcontractors, consultants, architects, and surveyors must be vetted through a rigorous pre-qualification procurement policy, ensuring compliance with HSE norms, technical capacity, and financial solvency.`
         },
         {
           number: 13,
           title: "ARTICLE 13: SITE OPERATIONS, HSE, AND DEFECTS LIABILITY",
-          content: `**13.1. Purpose & Scope:** Establishing standards for physical engineering works, worker safety, and client construction guarantees.\n\n**13.2. Occupational Health, Safety, and Environment (HSE):** The company enforces a zero-accident policy across all active construction sites. Daily site safety briefings, mandatory certified Personal Protective Equipment (PPE), and continuous safety inspections are mandatory.\n\n**13.3. Environmental Protection:** All civil projects must conduct a prior Environmental Impact Assessment (EIA) in compliance with Cameroonian environmental legislation and secure the necessary building permits.\n\n**13.4. Defects Liability Period (DLP) & Warranties:** The company formally guarantees its constructions. Every project shall incorporate a Defects Liability Period of twelve (12) months during which all engineering and technical defects must be repaired at the company's cost.\n\n**13.5. Garanti DÃ©cennal (Ten-Year Structural Guarantee):** In accordance with Article 1792 of the Civil Code in force in Cameroon, the company maintains a strict ten-year structural guarantee covering the complete stability and solid foundation of all built infrastructures.`
+          content: `**13.1. Purpose & Scope:** Establishing standards for physical engineering works, worker safety, and client construction guarantees.\n\n**13.2. Occupational Health, Safety, and Environment (HSE):** The company enforces a zero-accident policy across all active construction sites. Daily site safety briefings, mandatory certified Personal Protective Equipment (PPE), and continuous safety inspections are mandatory.\n\n**13.3. Environmental Protection:** All civil projects must conduct a prior Environmental Impact Assessment (EIA) in compliance with Cameroonian environmental legislation and secure the necessary building permits.\n\n**13.4. Defects Liability Period (DLP) & Warranties:** The company formally guarantees its constructions. Every project shall incorporate a Defects Liability Period of twelve (12) months during which all engineering and technical defects must be repaired at the company's cost.\n\n**13.5. Garanti Décennal (Ten-Year Structural Guarantee):** In accordance with Article 1792 of the Civil Code in force in Cameroon, the company maintains a strict ten-year structural guarantee covering the complete stability and solid foundation of all built infrastructures.`
         },
         {
           number: 14,
@@ -1605,7 +1604,7 @@ Additional highlights / Custom instructions from applicant:
         {
           number: 16,
           title: "ARTICLE 16: DISPUTE RESOLUTION, ARBITRATION, AND GOVERNING LAW",
-          content: `**16.1. Purpose & Scope:** Regulating conflicts between shareholders, or between the company and third-party developers.\n\n**16.2. Governing Law:** These Articles, corporate operations, and construction contracts are governed by and construed in accordance with the laws of the Republic of Cameroon and the OHADA Uniform Acts.\n\n**16.3. Amicable Settlement (Mediation):** Any dispute arising from these Articles or corporate operations shall first be submitted to mandatory amicable mediation before a certified corporate mediator within thirty (30) days.\n\n**16.4. Arbitration:** Failing amicable resolution, the dispute shall be finally settled under the Rules of Arbitration of the GICAM Arbitration Center (Centre d'Arbitrage du GICAM) in Douala, or the Common Court of Justice and Arbitration (CCJA) of OHADA in Abidjan, CÃ´te d'Ivoire. Deliberations shall be held in French or English.\n\n**16.5. Force Majeure:** Neither party nor the company shall be liable for delays or failures resulting from acts of God, war, severe civil unrest, regional lockouts, or extreme natural disasters beyond control.`
+          content: `**16.1. Purpose & Scope:** Regulating conflicts between shareholders, or between the company and third-party developers.\n\n**16.2. Governing Law:** These Articles, corporate operations, and construction contracts are governed by and construed in accordance with the laws of the Republic of Cameroon and the OHADA Uniform Acts.\n\n**16.3. Amicable Settlement (Mediation):** Any dispute arising from these Articles or corporate operations shall first be submitted to mandatory amicable mediation before a certified corporate mediator within thirty (30) days.\n\n**16.4. Arbitration:** Failing amicable resolution, the dispute shall be finally settled under the Rules of Arbitration of the GICAM Arbitration Center (Centre d'Arbitrage du GICAM) in Douala, or the Common Court of Justice and Arbitration (CCJA) of OHADA in Abidjan, Côte d'Ivoire. Deliberations shall be held in French or English.\n\n**16.5. Force Majeure:** Neither party nor the company shall be liable for delays or failures resulting from acts of God, war, severe civil unrest, regional lockouts, or extreme natural disasters beyond control.`
         }
       ],
       signoff: `Done in good faith and executed by the initial founders on this date.\n\nGeneral Manager: ${activeManager}\nRepresentative Stamp: MADECC COMPLIANCE LEDGER SEAL`
@@ -1659,23 +1658,23 @@ Generate a structured JSON object containing:
    
 The articles MUST include:
 - ARTICLE 1: LEGAL FORM AND DENOMINATION
-- ARTICLE 2: REGISTERED OFFICE (SIÃˆGE SOCIAL)
+- ARTICLE 2: REGISTERED OFFICE (SIÈGE SOCIAL)
 - ARTICLE 3: CORPORATE PURPOSE (OBJET SOCIAL) AND TECHNICAL SPECIALIZATIONS
-- ARTICLE 4: CORPORATE DURATION (DURÃ‰E)
+- ARTICLE 4: CORPORATE DURATION (DURÉE)
 - ARTICLE 5: SHARE CAPITAL AND SHARES DISTRIBUTION
-- ARTICLE 6: STATUTORY MANAGEMENT & LIMITS OF AUTHORITY (GÃ‰RANCE)
+- ARTICLE 6: STATUTORY MANAGEMENT & LIMITS OF AUTHORITY (GÉRANCE)
 - ARTICLE 7: SHAREHOLDERS' GENERAL MEETINGS (VOTING & NOTICES) (detailed rules on notices, quorums, AGMs/EGMs, and voting rights)
 - ARTICLE 8: TRANSFER AND TRANSMISSION OF SHARES (including Right of First Refusal, Board Consent, and transmission upon death or bankruptcy)
 - ARTICLE 9: ACCOUNTS, FINANCE, AUDIT AND PROFIT DISTRIBUTION (including SYSCOHADA standards, internal controls, statutory audit, equipment replacement reserves, and dividends)
 - ARTICLE 10: DISSOLUTION, LIQUIDATION AND DISPUTE RESOLUTION (including voluntary/involuntary dissolution, liquidator powers, and priority of debt settlement)
 - ARTICLE 11: CORPORATE GOVERNANCE & EXECUTIVE MANAGEMENT (Board of Directors, Managing Director, Company Secretary)
 - ARTICLE 12: PUBLIC PROCUREMENT, TENDER PROCEDURES, AND FIDIC CONTRACTS (FIDIC Books, Joint Ventures, subcontractor pre-qualification)
-- ARTICLE 13: SITE OPERATIONS, HSE, AND DEFECTS LIABILITY (HSE policy, environmental impact, 12-month Defects Liability, 10-year Garant DÃ©cennal)
+- ARTICLE 13: SITE OPERATIONS, HSE, AND DEFECTS LIABILITY (HSE policy, environmental impact, 12-month Defects Liability, 10-year Garant Décennal)
 - ARTICLE 14: INSURANCE, BANKING AND BORROWING POWERS (CAR insurance, banking, performance bonds)
 - ARTICLE 15: PROFESSIONAL ETHICS, ANTI-CORRUPTION & ESG (zero-tolerance bribery, Whistleblower protection, Conflicts of Interest, ESG)
 - ARTICLE 16: DISPUTE RESOLUTION, ARBITRATION, AND GOVERNING LAW (Mediation, GICAM / CCJA Arbitration, Force Majeure)
 
-4. "signoff" - A polite closing execution clause and stamp block (e.g., "Executed in Douala/YaoundÃ©, Cameroon...").
+4. "signoff" - A polite closing execution clause and stamp block (e.g., "Executed in Douala/Yaoundé, Cameroon...").
 
 Maintain strict professional legal vocabulary, incorporating standard notary-grade language and corporate rules. Ensure the capital, shares, and managers are fully integrated.`;
 
@@ -1774,9 +1773,9 @@ The technical scope of work for this project has been fully audited and enhanced
         return JSON.stringify({
           items: [
             { id: "1", item: "1.1", description: "Site Mobilization & Preliminary Studies (Soil Tests, Topography)", unit: "LS", qty: 1, rate: 2500000, total: 2500000 },
-            { id: "2", item: "1.2", description: "Excavation and Earthworks (Excavator CAT 320D)", unit: "mÂ³", qty: 1500, rate: 8500, total: 12750000 },
-            { id: "3", item: "1.3", description: "Reinforced Concrete Foundation (HA 12/14/16 Steel, Portland Cement)", unit: "mÂ³", qty: 320, rate: 185000, total: 59200000 },
-            { id: "4", item: "1.4", description: "Masonry work & Superstructure (Hollow Blocks 20x20x40)", unit: "mÂ²", qty: 2400, rate: 22000, total: 52800000 },
+            { id: "2", item: "1.2", description: "Excavation and Earthworks (Excavator CAT 320D)", unit: "m³", qty: 1500, rate: 8500, total: 12750000 },
+            { id: "3", item: "1.3", description: "Reinforced Concrete Foundation (HA 12/14/16 Steel, Portland Cement)", unit: "m³", qty: 320, rate: 185000, total: 59200000 },
+            { id: "4", item: "1.4", description: "Masonry work & Superstructure (Hollow Blocks 20x20x40)", unit: "m²", qty: 2400, rate: 22000, total: 52800000 },
             { id: "5", item: "1.5", description: "High-Efficiency Solar Power Installation (30kVA Hybrid System)", unit: "Set", qty: 1, rate: 18500000, total: 18500000 },
             { id: "6", item: "1.6", description: "Plumbing, Drainage, and Borehole Drilling (120m Depth)", unit: "LS", qty: 1, rate: 12000000, total: 12000000 },
             { id: "7", item: "1.7", description: "HSE Supervision & PPE Kits for Site Workers", unit: "LS", qty: 1, rate: 4500000, total: 4500000 }
@@ -1874,7 +1873,7 @@ Generate a structured JSON response containing:
    - "id": A unique string ID (e.g. "1")
    - "item": A standard numbering system string (e.g., "1.1", "1.2")
    - "description": Realistic description of civil works, mobilization, materials, or installations
-   - "unit": Valid civil works units (e.g., "mÂ³", "mÂ²", "LM", "LS", "Tons", "Set")
+   - "unit": Valid civil works units (e.g., "m³", "m²", "LM", "LS", "Tons", "Set")
    - "qty": Realistic numeric quantity
    - "rate": Realistic unit price in FCFA (or applicable currency)
    - "total": The calculated total (qty * rate)
@@ -2433,7 +2432,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         'Far North': 1.18,
         'Adamawa': 1.10,
         'East': 1.08,
-        'YaoundÃ©': 1.00,
+        'Yaoundé': 1.00,
         'Douala': 0.96,
         'Garoua': 1.12,
         'Bafoussam': 1.03,
@@ -2441,7 +2440,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         'Kribi': 1.05,
         'Limbe': 1.06,
         'Maroua': 1.18,
-        'NgaoundÃ©rÃ©': 1.10,
+        'Ngaoundéré': 1.10,
         'Ebolowa': 1.05,
         'Bertoua': 1.08
       };
@@ -2489,7 +2488,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
 
       const area = parseFloat(totalFloorAreaM2);
       if (isNaN(area) || area <= 0) {
-        return res.status(400).json({ error: 'Valid positive total floor area (mÂ²) is required.' });
+        return res.status(400).json({ error: 'Valid positive total floor area (m²) is required.' });
       }
 
       // Regional adjustment lookup
@@ -2497,7 +2496,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
       const regionalMultipliers: Record<string, number> = {
         'Centre': 1.00, 'Littoral': 0.96, 'South': 1.05, 'West': 1.03,
         'North-West': 1.08, 'South-West': 1.08, 'North': 1.12, 'Far North': 1.18,
-        'Adamawa': 1.10, 'East': 1.08, 'YaoundÃ©': 1.00, 'Douala': 0.96, 'Garoua': 1.12
+        'Adamawa': 1.10, 'East': 1.08, 'Yaoundé': 1.00, 'Douala': 0.96, 'Garoua': 1.12
       };
       const regionalFactor = regionalMultipliers[regionKey] || 1.00;
 
@@ -2510,7 +2509,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
       };
       const standardFactor = standardMultipliers[constructionStandard] || 1.00;
 
-      // Project type base rate per mÂ² (XAF)
+      // Project type base rate per m² (XAF)
       const projectTypeBaseRates: Record<string, number> = {
         'Residential House': 210000,
         'Duplex': 245000,
@@ -2616,7 +2615,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         preferredContactMethod: preferredContactMethod || 'WhatsApp',
         projectType: projectType || 'Residential House',
         customProjectType: customProjectType || null,
-        location: location || 'YaoundÃ©',
+        location: location || 'Yaoundé',
         region: regionKey,
         totalFloorAreaM2: area.toString(),
         numberOfFloors: floorsNum,
@@ -2714,7 +2713,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
 
       // Send SMTP email notification to admin (kreboya603@gmail.com)
       const emailSubject = `[MADECC Group] New Client Budget Estimate Request: ${estimateReference}`;
-      const emailText = `A client has requested a professional BOQ & quotation for estimate ${estimateReference}:\n\nClient Name: ${clientName}\nEmail: ${clientEmail}\nPhone: ${clientPhone}\nContact Method: ${preferredContactMethod}\nProject: ${record.projectType} (${record.totalFloorAreaM2} mÂ² in ${record.location})\nEstimated Budget: XAF ${Number(record.estimatedBudgetExpected).toLocaleString()}\nTimeline: ${projectTimeline || 'Immediate'}\n\nPlease review in the Admin Dashboard.`;
+      const emailText = `A client has requested a professional BOQ & quotation for estimate ${estimateReference}:\n\nClient Name: ${clientName}\nEmail: ${clientEmail}\nPhone: ${clientPhone}\nContact Method: ${preferredContactMethod}\nProject: ${record.projectType} (${record.totalFloorAreaM2} m² in ${record.location})\nEstimated Budget: XAF ${Number(record.estimatedBudgetExpected).toLocaleString()}\nTimeline: ${projectTimeline || 'Immediate'}\n\nPlease review in the Admin Dashboard.`;
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
           <h2 style="color: #f59e0b; border-bottom: 2px solid #f59e0b; padding-bottom: 12px; margin-top: 0;">New Project Estimate Lead</h2>
@@ -2723,7 +2722,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
           <p><strong>Client Phone:</strong> ${clientPhone || 'Not provided'}</p>
           <p><strong>Client Email:</strong> ${clientEmail || 'Not provided'}</p>
           <p><strong>Preferred Contact:</strong> ${preferredContactMethod}</p>
-          <p><strong>Project:</strong> ${record.projectType} &bull; ${record.totalFloorAreaM2} mÂ² in ${record.location}</p>
+          <p><strong>Project:</strong> ${record.projectType} &bull; ${record.totalFloorAreaM2} m² in ${record.location}</p>
           <p><strong>Calculated Budget:</strong> <span style="font-weight: bold; color: #16a34a; font-size: 18px;">XAF ${Number(record.estimatedBudgetExpected).toLocaleString()}</span></p>
           <p><strong>Project Timeline:</strong> ${projectTimeline || 'Not specified'}</p>
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
@@ -2764,8 +2763,8 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
 
       // Create new Project
       const newProj = await db.insert(projects).values({
-        title: `${est.projectType} â€” ${est.clientName || 'Client Project'} (${est.location})`,
-        description: `Project created from Public Budget Estimate ${est.estimateReference}. Floor area: ${est.totalFloorAreaM2} mÂ², Standard: ${est.constructionStandard}`,
+        title: `${est.projectType} — ${est.clientName || 'Client Project'} (${est.location})`,
+        description: `Project created from Public Budget Estimate ${est.estimateReference}. Floor area: ${est.totalFloorAreaM2} m², Standard: ${est.constructionStandard}`,
         budget: est.estimatedBudgetExpected,
         location: est.location,
         status: 'planning',
@@ -2924,7 +2923,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
       }
 
       const regionalFactors: Record<string, { multiplier: number; city: string; note: string }> = {
-        'Centre': { multiplier: 1.00, city: 'YaoundÃ©', note: 'Central baseline quarry & national distribution hub.' },
+        'Centre': { multiplier: 1.00, city: 'Yaoundé', note: 'Central baseline quarry & national distribution hub.' },
         'Littoral': { multiplier: 0.96, city: 'Douala', note: 'Port city advantage for cement, steel & imported tiles.' },
         'South': { multiplier: 1.05, city: 'Kribi / Ebolowa', note: 'Port expansion & coastal transport factor.' },
         'West': { multiplier: 1.03, city: 'Bafoussam / Dschang', note: 'Aggregate quarry availability & mountain transit.' },
@@ -2932,7 +2931,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         'South-West': { multiplier: 1.08, city: 'Limbe / Buea', note: 'Coastal proximity & volcanic sand availability.' },
         'North': { multiplier: 1.12, city: 'Garoua', note: 'Northern rail/road freight & cement transport factor.' },
         'Far North': { multiplier: 1.18, city: 'Maroua', note: 'Long-haul freight & seasonal logistics.' },
-        'Adamawa': { multiplier: 1.10, city: 'NgaoundÃ©rÃ©', note: 'Railhead distribution center.' },
+        'Adamawa': { multiplier: 1.10, city: 'Ngaoundéré', note: 'Railhead distribution center.' },
         'East': { multiplier: 1.08, city: 'Bertoua', note: 'Timber proximity & eastern transit road.' }
       };
 
@@ -2957,7 +2956,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         servicesIndex: 103.8,
         trendVsPreviousMonth: '+1.4%',
         trendVsPreviousYear: '+4.8%',
-        statusMessage: 'Official MADECC Price Index calculated against baseline rate version MADECC-RATES-2026-08 across key urban centers (YaoundÃ©, Douala, Garoua).'
+        statusMessage: 'Official MADECC Price Index calculated against baseline rate version MADECC-RATES-2026-08 across key urban centers (Yaoundé, Douala, Garoua).'
       };
 
       res.json({
@@ -3039,7 +3038,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
           building_type TEXT,
           storeys INTEGER DEFAULT 1,
           floor_area NUMERIC,
-          floor_area_unit TEXT DEFAULT 'mÂ²',
+          floor_area_unit TEXT DEFAULT 'm²',
           site_status TEXT,
           project_stage TEXT,
           budget_currency TEXT DEFAULT 'XAF',
@@ -3094,7 +3093,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
         ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS building_type TEXT;
         ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS storeys INTEGER DEFAULT 1;
         ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS floor_area NUMERIC;
-        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS floor_area_unit TEXT DEFAULT 'mÂ²';
+        ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS floor_area_unit TEXT DEFAULT 'm²';
         ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS site_status TEXT;
         ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS project_stage TEXT;
         ALTER TABLE quote_requests ADD COLUMN IF NOT EXISTS budget_currency TEXT DEFAULT 'XAF';
@@ -3147,7 +3146,7 @@ Provide an outstanding, comprehensive technical document styled beautifully in M
 
   // Helpers for Building HTML Emails for Quote Requests
   function buildQuoteRequestAdminHtml(qr: any, servicesList: string, submittedDateStr: string) {
-    const adminSubject = `New Construction Quote Request â€” ${qr.referenceNumber}`;
+    const adminSubject = `New Construction Quote Request — ${qr.referenceNumber}`;
     return {
       adminSubject,
       adminText: `
@@ -3163,7 +3162,7 @@ Project Name: ${qr.projectName}
 Project Type: ${qr.projectType}
 Services Requested: ${servicesList}
 Building Type: ${qr.buildingType || 'N/A'} (${qr.storeys || 1} Storeys)
-Floor Area: ${qr.floorArea || 'N/A'} ${qr.floorAreaUnit || 'mÂ²'}
+Floor Area: ${qr.floorArea || 'N/A'} ${qr.floorAreaUnit || 'm²'}
 Location: ${qr.region} Region (${qr.city || 'N/A'}, ${qr.neighborhood || 'N/A'})
 Address: ${qr.siteAddress || 'N/A'}
 
@@ -3232,7 +3231,7 @@ Source: ${qr.source || 'Website Direct'}
                 <tr><td style="color: #64748b; font-weight: 600;">Project Category:</td><td style="color: #0f172a;">${qr.projectType}</td></tr>
                 <tr><td style="color: #64748b; font-weight: 600;">Services Requested:</td><td style="color: #d97706; font-weight: 700;">${servicesList}</td></tr>
                 <tr><td style="color: #64748b; font-weight: 600;">Building Type:</td><td style="color: #0f172a;">${qr.buildingType || 'N/A'} (${qr.storeys || 1} Storeys)</td></tr>
-                <tr><td style="color: #64748b; font-weight: 600;">Floor Area:</td><td style="color: #0f172a;">${qr.floorArea || 'N/A'} ${qr.floorAreaUnit || 'mÂ²'}</td></tr>
+                <tr><td style="color: #64748b; font-weight: 600;">Floor Area:</td><td style="color: #0f172a;">${qr.floorArea || 'N/A'} ${qr.floorAreaUnit || 'm²'}</td></tr>
                 <tr><td style="color: #64748b; font-weight: 600;">Location:</td><td style="color: #0f172a;">${qr.region} Region (${qr.city || 'N/A'}${qr.neighborhood ? ', ' + qr.neighborhood : ''})</td></tr>
                 <tr><td style="color: #64748b; font-weight: 600;">Site Address:</td><td style="color: #0f172a;">${qr.siteAddress || 'N/A'}</td></tr>
               </table>
@@ -3265,7 +3264,7 @@ Source: ${qr.source || 'Website Direct'}
             </div>
 
             <div style="background-color: #f1f5f9; padding: 18px 32px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #64748b;">
-              MADECC Group &bull; B.P. 15421 Douala &amp; YaoundÃ©, Republic of Cameroon<br/>
+              MADECC Group &bull; B.P. 15421 Douala &amp; Yaoundé, Republic of Cameroon<br/>
               Civil Engineering, Technical Audits &amp; Construction Management
             </div>
           </div>
@@ -3276,7 +3275,7 @@ Source: ${qr.source || 'Website Direct'}
   }
 
   function buildQuoteRequestClientHtml(qr: any, servicesList: string, submittedDateStr: string) {
-    const clientSubject = `MADECC Group â€” Project Enquiry Received â€” ${qr.referenceNumber}`;
+    const clientSubject = `MADECC Group — Project Enquiry Received — ${qr.referenceNumber}`;
     return {
       clientSubject,
       clientText: `
@@ -3300,7 +3299,7 @@ Important Note: This acknowledgement confirms receipt of your enquiry. It is not
 Contact Information:
 Email: contact@madecc.com
 Phone / WhatsApp: +237 671 063 511
-MADECC Group â€” Douala & YaoundÃ©, Cameroon
+MADECC Group — Douala & Yaoundé, Cameroon
       `.trim(),
       clientHtml: `
         <!DOCTYPE html>
@@ -3380,7 +3379,7 @@ MADECC Group â€” Douala & YaoundÃ©, Cameroon
 
               <div style="font-size: 12px; color: #475569; line-height: 1.6;">
                 <strong style="color: #0f172a; display: block; margin-bottom: 4px;">MADECC Group Civil Engineering &amp; Construction Management</strong>
-                Douala (Rue Joss, Bonanjo) &amp; YaoundÃ© (Bastos), Republic of Cameroon<br/>
+                Douala (Rue Joss, Bonanjo) &amp; Yaoundé (Bastos), Republic of Cameroon<br/>
                 Email: <a href="mailto:contact@madecc.com" style="color: #2563eb; text-decoration: none; font-weight: 600;">contact@madecc.com</a> | Tel / WhatsApp: <strong style="color: #0f172a;">+237 671 063 511</strong>
               </div>
             </div>
@@ -3558,7 +3557,7 @@ MADECC Group â€” Douala & YaoundÃ©, Cameroon
   function generateAntiBotChallenge(): { challengeId: string; equation: string; expiresAt: string } {
     const challengeId = `CHAL-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
     
-    // Equations of form ax + bx Â± c = d where x is integer
+    // Equations of form ax + bx ± c = d where x is integer
     const presets = [
       { a: 15, b: 5, c: 10, sign: '-', x: 5 }, // 15x + 5x - 10 = 90
       { a: 12, b: 8, c: 20, sign: '-', x: 5 }, // 12x + 8x - 20 = 80
@@ -3827,7 +3826,7 @@ MADECC Group â€” Douala & YaoundÃ©, Cameroon
         buildingType: buildingType || null,
         storeys: storeys ? Number(storeys) : 1,
         floorArea: floorArea ? String(floorArea) : null,
-        floorAreaUnit: floorAreaUnit || 'mÂ²',
+        floorAreaUnit: floorAreaUnit || 'm²',
         siteStatus: siteStatus || null,
         projectStage: projectStage || null,
         budgetCurrency: budgetCurrency || 'XAF',
@@ -4163,7 +4162,7 @@ MADECC Group â€” Douala & YaoundÃ©, Cameroon
       }).returning();
 
       // Send SMTP email notification to kreboya603@gmail.com
-      const ratingStars = 'â˜…'.repeat(parseInt(rating)) + 'â˜†'.repeat(5 - parseInt(rating));
+      const ratingStars = '★'.repeat(parseInt(rating)) + '☆'.repeat(5 - parseInt(rating));
       const emailSubject = `[MADECC Group] New Client Review Pending Approval`;
       const emailText = `A new client review has been submitted on the website:\n\nAuthor: ${authorName}\nRating: ${rating} / 5\nProject: ${projectName || 'General'}\n\nReview:\n"${text}"\n\nPlease log in to the Admin Dashboard to approve this review.`;
       const emailHtml = `
@@ -4300,7 +4299,7 @@ Client Notes: ${notes || 'None'}
 Your response must:
 1. Address the client warmly by name.
 2. Acknowledge the specific service booked (${serviceName}) and confirm that we have received their reservation request.
-3. State that our local booking desk in Cameroon (YaoundÃ© / Douala) is currently reviewing the scheduling and that our lead consultant will reach out shortly to officially confirm the booking slot or suggest alternative slots if necessary.
+3. State that our local booking desk in Cameroon (Yaoundé / Douala) is currently reviewing the scheduling and that our lead consultant will reach out shortly to officially confirm the booking slot or suggest alternative slots if necessary.
 4. Keep the tone professional, reassuring, well-structured, and helpful.
 5. End with a polite sign-off from "MADECC Consultation Booking Desk".
 
@@ -4513,7 +4512,7 @@ Your response must:
 1. Address the client warmly by name.
 2. Acknowledge and summarize their interest/request to show we've understood.
 3. Keep the tone encouraging, highly professional, structured, and informative.
-4. Mention that our local engineering office in Cameroon (YaoundÃ© / Douala) has received their submission, and a human senior engineer or architect will contact them within 24 hours.
+4. Mention that our local engineering office in Cameroon (Yaoundé / Douala) has received their submission, and a human senior engineer or architect will contact them within 24 hours.
 5. Provide a realistic, reassuring, and helpful response.
 6. End with a polite sign-off from "MADECC Client Services Team".
 
@@ -4759,7 +4758,7 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
         },
         {
           question: 'What regions in Cameroon and Central Africa does MADECC operate in?',
-          answer: 'MADECC covers projects across all 10 regions of Cameroon (Douala, YaoundÃ©, Kribi, Bafoussam, Bamenda, Garoua, etc.) and selected Central African regional hubs (CEMAC region).',
+          answer: 'MADECC covers projects across all 10 regions of Cameroon (Douala, Yaoundé, Kribi, Bafoussam, Bamenda, Garoua, etc.) and selected Central African regional hubs (CEMAC region).',
           categoryId: catGeneral,
           categoryName: 'General Enquiries',
           tags: ['location', 'regions', 'coverage'],
@@ -5781,8 +5780,8 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
 
 ---
 
-### PART 1 â€“ LESSON INFORMATION
-* **School Name:** Government Technical High School (GTHS) YaoundÃ© / Douala
+### PART 1 – LESSON INFORMATION
+* **School Name:** Government Technical High School (GTHS) Yaoundé / Douala
 * **Academic Year:** 2026/2027
 * **Term / Sequence / Week:** Term 1 | Sequence 1 | Week 2
 * **Subject / Specialization:** ${actualSubject} | Building Construction (F4BA)
@@ -5793,14 +5792,14 @@ Do NOT write any email subject lines or metadata. Output ONLY the clean HTML ema
 
 ---
 
-### PART 2 â€“ CURRICULUM ALIGNMENT
+### PART 2 – CURRICULUM ALIGNMENT
 * **Competency:** Mastery of foundation types, excavating protocols, and workshop health and safety.
 * **Expected Learning Outcomes:** Learners will identify strip, pad, and raft foundations, select proper excavation tools, and apply personal protective equipment (PPE) correctly.
 * **SDGs Aligned:** Goal 9: Industry, Innovation, and Infrastructure & Goal 8: Decent Work and Economic Growth.
 
 ---
 
-### PART 3 â€“ LEARNING OBJECTIVES
+### PART 3 – LEARNING OBJECTIVES
 By the end of this lesson, learners will be able to:
 1. Define a "foundation" in building construction and explain its primary load-bearing purpose.
 2. Differentiate between Strip Foundations and Pad Foundations with clear hand-drawn structural sketches.
@@ -5810,7 +5809,7 @@ By the end of this lesson, learners will be able to:
 
 ---
 
-### PART 4 â€“ KEY VOCABULARY
+### PART 4 – KEY VOCABULARY
 | Term | Definition | Practical Example |
 | :--- | :--- | :--- |
 | **Foundation** | The lower structural part of a building that transmits loads safely to the soil. | A reinforced concrete pad under a structural pillar. |
@@ -5819,7 +5818,7 @@ By the end of this lesson, learners will be able to:
 
 ---
 
-### PART 5 â€“ REQUIRED MATERIALS
+### PART 5 – REQUIRED MATERIALS
 * **Teacher Resources:** Standard CBA curriculum guides, foundation models, chalk, whiteboard markers.
 * **Student Resources:** Textbooks, technical drawing instruments, notebooks.
 * **Workshop Equipment & Construction Tools:** Shovels, pickaxes, spirit levels, wheelbarrows, measuring tapes.
@@ -5827,14 +5826,14 @@ By the end of this lesson, learners will be able to:
 
 ---
 
-### PART 6 â€“ LESSON INTRODUCTION (Hook)
-**Activity (5-10 Minutes):** Show the class a photo of a collapsed foundation wall or a local structural failure in YaoundÃ© or Douala caused by poor soil testing and lack of foundations.
+### PART 6 – LESSON INTRODUCTION (Hook)
+**Activity (5-10 Minutes):** Show the class a photo of a collapsed foundation wall or a local structural failure in Yaoundé or Douala caused by poor soil testing and lack of foundations.
 * **Teacher Script:** *"Class, look at this residential building that collapsed. What went wrong? Why do some buildings stand for 100 years, while others sink into the wet clay soil of Wouri?"*
 * **Expected Student Response:** *"Sir, the ground was too soft!"* or *"The concrete foundation was too weak or missing!"*
 
 ---
 
-### PART 7 â€“ DIRECT INSTRUCTION
+### PART 7 – DIRECT INSTRUCTION
 #### Stage 1: Purpose of Foundations (20 Mins)
 A foundation must distribute the dead load (self-weight) and live load (occupants, wind) over a large area to prevent soil shear failure and settlement.
 * **Safety First:** Excavations deeper than 1.5 meters must be shored (timbered) to prevent burial accidents under collapsing soil walls.
@@ -5846,33 +5845,33 @@ A foundation must distribute the dead load (self-weight) and live load (occupant
 
 ---
 
-### PART 8 â€“ GUIDED PRACTICE
+### PART 8 – GUIDED PRACTICE
 The teacher divides the class into groups of 5 in the school workshop or yard. Each group is given a tape measure and peg lines to set out a 1.2m x 1.2m pad foundation footprint.
 * **Teacher Prompt:** *"Ensure your diagonals are perfectly equal! Use the 3:4:5 rule for a perfect 90-degree corner."*
 
 ---
 
-### PART 9 â€“ INDEPENDENT PRACTICE
+### PART 9 – INDEPENDENT PRACTICE
 **Individual Task (20 Mins):** Calculate the total excavation volume for a row of 6 column pads, each measuring 1.5m length, 1.5m width, and 1.2m depth.
 * **Marking Criteria:**
-  - Correct formula: Volume = L Ã— W Ã— D (2 Marks)
-  - Calculation: 1.5 Ã— 1.5 Ã— 1.2 = 2.7 cubic meters per pad (2 Marks)
-  - Total Volume: 2.7 Ã— 6 = 16.2 mÂ³ (1 Mark)
+  - Correct formula: Volume = L × W × D (2 Marks)
+  - Calculation: 1.5 × 1.5 × 1.2 = 2.7 cubic meters per pad (2 Marks)
+  - Total Volume: 2.7 × 6 = 16.2 m³ (1 Mark)
 
 ---
 
-### PART 10 â€“ DIFFERENTIATION
+### PART 10 – DIFFERENTIATION
 * **Struggling Learners:** Paired with peers, given pre-calculated layout models.
 * **Advanced Learners:** Tasked with estimating the number of bags of Portland cement required for a 1:2:4 concrete mix ratio.
 
 ---
 
-### PART 11 â€“ FORMATIVE ASSESSMENT
+### PART 11 – FORMATIVE ASSESSMENT
 Observe student peg layout accuracy. Ask rapid-fire questions: *"What PPE protects your feet from stepping on rusty nails?"* (Expected: Safety boots with steel toes).
 
 ---
 
-### PART 12 â€“ EXIT TICKET
+### PART 12 – EXIT TICKET
 1. **Question:** Name the foundation type used for load-bearing brick walls.
    * **Answer:** Strip Foundation.
 2. **Question:** Why do we place shoring in wet trenches?
@@ -5880,7 +5879,7 @@ Observe student peg layout accuracy. Ask rapid-fire questions: *"What PPE protec
 
 ---
 
-### PART 13 â€“ HOMEWORK / PROJECT
+### PART 13 – HOMEWORK / PROJECT
 Observe a construction site in your neighborhood. Draw a sketch of their foundation trench and note down if workers are wearing proper helmets and safety boots. Write a 100-word field report.`;
 
     const presentationJSON = [
@@ -6038,19 +6037,19 @@ Look around your school building. Identify where the heavy pillars meet the grou
 ---
 
 ### PART C: PRACTICAL CALCULATION EXERCISE
-An engineering project in YaoundÃ© requires the excavation of 10 isolated column pad foundations. Each foundation excavation must be:
+An engineering project in Yaoundé requires the excavation of 10 isolated column pad foundations. Each foundation excavation must be:
 * Length = 1.2 meters
 * Width = 1.2 meters
 * Depth = 1.5 meters
 
 **Task:**
 1. Calculate the excavation volume of **one** pad footing.
-   * *Formula:* Volume = L Ã— W Ã— D
+   * *Formula:* Volume = L × W × D
    * *My Work:* __________________________________________________
-   * *Answer:* ____________________ mÂ³
+   * *Answer:* ____________________ m³
 2. Calculate the **total** excavation volume for all 10 footings.
    * *My Work:* __________________________________________________
-   * *Answer:* ____________________ mÂ³
+   * *Answer:* ____________________ m³
 
 ---
 
@@ -6076,8 +6075,8 @@ An engineering project in YaoundÃ© requires the excavation of 10 isolated colu
 4. Shoring / Timbering
 
 #### Part C Answers:
-1. Volume = 1.2m Ã— 1.2m Ã— 1.5m = 2.16 mÂ³ per footing.
-2. Total Volume = 2.16 mÂ³ Ã— 10 = 21.6 mÂ³.
+1. Volume = 1.2m × 1.2m × 1.5m = 2.16 m³ per footing.
+2. Total Volume = 2.16 m³ × 10 = 21.6 m³.
 
 #### Part D Answers:
 1. C) Steel-toed boots
@@ -6130,7 +6129,7 @@ An engineering project in YaoundÃ© requires the excavation of 10 isolated colu
 3. Define the term **Blinding Layer** (blinding concrete) and explain its primary function before placing reinforcing steel bars. [2 Marks]
 
 #### 3. Practical Scenario-Based Problem (1 Question x 9 Marks)
-*Scenario:* You are the site supervisor for a new classroom block construction in YaoundÃ©. The design requires isolated reinforced concrete columns.
+*Scenario:* You are the site supervisor for a new classroom block construction in Yaoundé. The design requires isolated reinforced concrete columns.
 1. Determine which type of foundation is needed for these columns. [2 Marks]
 2. Calculate the exact soil volume to be excavated for 8 pad foundations, where each pad trench measures 1.2m x 1.2m with a depth of 1.0m. [4 Marks]
 3. State three mandatory Personal Protective Equipment (PPE) items your workers must wear during this excavation phase. [3 Marks]
@@ -6154,8 +6153,8 @@ An engineering project in YaoundÃ© requires the excavation of 10 isolated colu
 #### Part 3 (Scenario Answers)
 1. **Foundation Type:** Isolated Pad Foundation. (2 Marks)
 2. **Calculation:** 
-   - Volume of one pad = L Ã— W Ã— D = 1.2m Ã— 1.2m Ã— 1.0m = 1.44 mÂ³ (2 Marks)
-   - Total Volume = 1.44 mÂ³ Ã— 8 pads = 11.52 mÂ³ (2 Marks)
+   - Volume of one pad = L × W × D = 1.2m × 1.2m × 1.0m = 1.44 m³ (2 Marks)
+   - Total Volume = 1.44 m³ × 8 pads = 11.52 m³ (2 Marks)
 3. **PPE:** Hard hat (helmet), steel-toed safety boots, and high-visibility vest or gloves. (3 Marks, 1 Mark per item)`;
 
     return {
@@ -6202,7 +6201,7 @@ An engineering project in YaoundÃ© requires the excavation of 10 isolated colu
 ## 2. PEDAGOGICAL OBJECTIVES
 By the end of this lecture, students will be able to:
 1. Explain the primary load-bearing functions of foundations in ${actualSubject}.
-2. Compare soil bearing capacities in Douala (coastal marine clays) versus YaoundÃ© (lateritic clay-loams).
+2. Compare soil bearing capacities in Douala (coastal marine clays) versus Yaoundé (lateritic clay-loams).
 3. Demonstrate correct PPE and hazard mitigation techniques on site.
 
 ---
@@ -6212,14 +6211,14 @@ By the end of this lecture, students will be able to:
 ### Introduction & The Hook (15 minutes)
 "Good morning, future builders and civil engineers. Welcome back to our **${actualSubject}** lecture. Today we are tackling a critical topic under the MINESEC curriculum: **${actualTopic}**. 
 
-Before we write anything on the board, let me ask you: Have you walked down the streets of YaoundÃ© or Douala and seen some walls with wide, diagonal cracks? Why does that happen? 
+Before we write anything on the board, let me ask you: Have you walked down the streets of Yaoundé or Douala and seen some walls with wide, diagonal cracks? Why does that happen? 
 Yes, because the foundation was not adapted to the soil, or the excavation depth was insufficient! 
-A building is only as safe as its base. If you construct a multi-story building in the clayey wetlands of BonabÃ©ri in Douala without a raft foundation, it will sink. If you build on the rocky slopes of Mount Messa in YaoundÃ© without anchoring, it will slide. Today, you will learn the exact science to prevent this!"
+A building is only as safe as its base. If you construct a multi-story building in the clayey wetlands of Bonabéri in Douala without a raft foundation, it will sink. If you build on the rocky slopes of Mount Messa in Yaoundé without anchoring, it will slide. Today, you will learn the exact science to prevent this!"
 
 ### Core Concept: Soil Profiles in Cameroon (20 minutes)
 "Let's look at soil bearing capacity. 
-* In **Douala (coastal zones)**, we have fine, sandy, marine clays. The bearing capacity is extremely low (often below 50 kN/mÂ²). High water table means we must pump out water continuously.
-* In **YaoundÃ© (high plateau)**, we have lateritic soils. These are red clay-loams with good bearing capacity (up to 150-200 kN/mÂ²) when dry, but they become highly slippery when wet.
+* In **Douala (coastal zones)**, we have fine, sandy, marine clays. The bearing capacity is extremely low (often below 50 kN/m²). High water table means we must pump out water continuously.
+* In **Yaoundé (high plateau)**, we have lateritic soils. These are red clay-loams with good bearing capacity (up to 150-200 kN/m²) when dry, but they become highly slippery when wet.
 * In **Maroua / Garoua (sahelian/northern zones)**, we have swell-shrink black cotton soils (vertisols). When it rains, they expand; in the dry season, they crack deeply.
 
 *Teacher Action: Draw a vertical profile of soil on the blackboard showing topsoil, subsoil, and bedrocks.*"
@@ -6228,7 +6227,7 @@ A building is only as safe as its base. If you construct a multi-story building 
 "We have two main categories of foundations:
 1. **Shallow Foundations (Fondations Superficielles):** 
    - **Strip Foundations (Semelles filantes):** Continuous strip under walls. Used for load-bearing blockwork.
-   - **Pad Foundations (Semelles isolÃ©es):** Single concrete pads under reinforced concrete columns. Perfect for framed structures in solid YaoundÃ© clays.
+   - **Pad Foundations (Semelles isolées):** Single concrete pads under reinforced concrete columns. Perfect for framed structures in solid Yaoundé clays.
    - **Raft/Mat Foundations (Radiers):** A continuous reinforced concrete slab covering the entire build area. Used for soft soils like Douala wetlands to distribute loads evenly.
 2. **Deep Foundations (Fondations Profondes):**
    - **Piles (Pieux):** Concrete columns driven deep down to solid bedrock (e.g. used for major ports in Kribi)."
@@ -6239,7 +6238,7 @@ A building is only as safe as its base. If you construct a multi-story building 
 
 ### Checkpoint 1: Soil Selection
 * **Teacher:** "If you are hired to supervise a construction site in Limbe, near the volcanic coast, and you find muddy black sandy soil, which foundation would you propose for a 2-story family villa?"
-* **Expected Student Answer:** "A raft foundation (radier gÃ©nÃ©ral) or short piles, because the soil is too weak for single pad foundations and might settle unevenly."
+* **Expected Student Answer:** "A raft foundation (radier général) or short piles, because the soil is too weak for single pad foundations and might settle unevenly."
 * **Follow-up:** "Excellent! Why not strip? Because strip foundations will settle unevenly and tear the walls apart."
 
 ### Checkpoint 2: Excavation Hazard Mitigation
@@ -6250,9 +6249,9 @@ A building is only as safe as its base. If you construct a multi-story building 
 
 ## 5. COMMON STUDENT MISCONCEPTIONS
 1. *Misconception:* "All concrete is the same."
-   - *Clarification:* Absolutely not! Foundation concrete must be highly durable and dense, typically using **CIMENCAM or CIMAF CPA-45 (Class 42.5 or 52.5) cement** with a batching ratio of 350 kg/mÂ³ for reinforced elements (1 bag cement, 2 wheelbarrows sand, 3 wheelbarrows gravel/concassÃ©).
+   - *Clarification:* Absolutely not! Foundation concrete must be highly durable and dense, typically using **CIMENCAM or CIMAF CPA-45 (Class 42.5 or 52.5) cement** with a batching ratio of 350 kg/m³ for reinforced elements (1 bag cement, 2 wheelbarrows sand, 3 wheelbarrows gravel/concassé).
 2. *Misconception:* "Water in a trench is fine; just pour concrete in."
-   - *Clarification:* Water dilutes the cement-to-water ratio of the fresh concrete, destroying its compressive strength. The trench must be completely dewatered (pumped dry) or a lean concrete blinding layer (bÃ©ton de propretÃ©) poured first.
+   - *Clarification:* Water dilutes the cement-to-water ratio of the fresh concrete, destroying its compressive strength. The trench must be completely dewatered (pumped dry) or a lean concrete blinding layer (béton de propreté) poured first.
 
 ---
 
@@ -6279,34 +6278,34 @@ A building is only as safe as its base. If you construct a multi-story building 
 *Instructions: Select the single most accurate, technically sound option. Write your answer clearly.*
 
 ### Question 1 [1 Mark]
-In coastal Douala regions (e.g. Akwa, BonabÃ©ri) characterized by waterlogged sandy-clay soils, which foundation type is most technically and economically sound to prevent differential settlement for a residential villa?
+In coastal Douala regions (e.g. Akwa, Bonabéri) characterized by waterlogged sandy-clay soils, which foundation type is most technically and economically sound to prevent differential settlement for a residential villa?
 - A) Standard concrete strip foundation (semelle filante)
-- B) Independent pad foundations (semelles isolÃ©es) without ground beams
-- C) Reinforced concrete raft foundation (radier gÃ©nÃ©ral) [1 Mark]
+- B) Independent pad foundations (semelles isolées) without ground beams
+- C) Reinforced concrete raft foundation (radier général) [1 Mark]
 - D) Direct blockwork on compacted soil
 *Answer:* **C**
 *Explanation:* Raft foundations act as a continuous slab that distributes structural loads evenly across a large surface area, neutralizing localized weak spots in clay/sand.
 
 ### Question 2 [1 Mark]
 What is the standard cement batching ratio prescribed by Cameroon MINESEC civil engineering guidelines for reinforced concrete foundation columns and pads?
-- A) 150 kg/mÂ³ (light concrete)
-- B) 350 kg/mÂ³ using Class 42.5R cement (e.g. CIMENCAM/CIMAF) [1 Mark]
-- C) 500 kg/mÂ³ (highly rich mortar)
-- D) 250 kg/mÂ³ without gravel
+- A) 150 kg/m³ (light concrete)
+- B) 350 kg/m³ using Class 42.5R cement (e.g. CIMENCAM/CIMAF) [1 Mark]
+- C) 500 kg/m³ (highly rich mortar)
+- D) 250 kg/m³ without gravel
 *Answer:* **B**
-*Explanation:* 350 kg/mÂ³ is the structural standard for reinforced foundations, ensuring optimal compressive strength and durability against moisture.
+*Explanation:* 350 kg/m³ is the structural standard for reinforced foundations, ensuring optimal compressive strength and durability against moisture.
 
 ### Question 3 [1 Mark]
-During the excavation of a trench deeper than 1.5 meters in muddy YaoundÃ© laterite, what technique MUST be used to prevent landslides and cave-ins of the trench walls?
+During the excavation of a trench deeper than 1.5 meters in muddy Yaoundé laterite, what technique MUST be used to prevent landslides and cave-ins of the trench walls?
 - A) Watering the walls to keep them wet
-- B) Timbering and strutting (blindage et Ã©tayage) [1 Mark]
+- B) Timbering and strutting (blindage et étayage) [1 Mark]
 - C) Speeding up the hand digging process
 - D) Leaving the trench completely open without warning signs
 *Answer:* **B**
 *Explanation:* Timbering provides mechanical support to unstable trench faces, preventing collapsing forces from trapping workers.
 
 ### Question 4 [1 Mark]
-What is the primary function of "Lean Concrete" (BÃ©ton de propretÃ©) poured at the bottom of an excavated foundation trench?
+What is the primary function of "Lean Concrete" (Béton de propreté) poured at the bottom of an excavated foundation trench?
 - A) To carry the main weight of the columns
 - B) To provide a level, clean surface and prevent soil from mixing with structural concrete [1 Mark]
 - C) To act as a waterproof barrier without cement
@@ -6328,14 +6327,14 @@ Which of the following describes a "differential settlement" hazard in civil eng
 ## SECTION B: TECHNICAL SHORT-ANSWER QUESTIONS [6 Marks]
 
 ### Question 6 [2 Marks]
-Explain the difference in soil bearing capacity between a dry lateritic clay soil (common in YaoundÃ©) and a water-saturated marine clay soil (common in Douala). Mention how water saturation affects shear strength.
+Explain the difference in soil bearing capacity between a dry lateritic clay soil (common in Yaoundé) and a water-saturated marine clay soil (common in Douala). Mention how water saturation affects shear strength.
 *Answer Key & Marks Allocation:*
 - **1 Mark:** Explaining that dry lateritic soil has high bearing capacity/shear strength because cohesive particles are compact and dry, while marine clay is fine and saturated with water.
 - **1 Mark:** Explaining that water acts as a lubricant between clay mineral plates, increasing pore water pressure, which dramatically reduces the soil's effective shear strength and bearing capacity.
 
 ### Question 7 [2 Marks]
-Sketch and label a standard reinforced concrete **Pad Foundation (Semelle IsolÃ©e)** showing:
-1. Ground Blinding Layer (BÃ©ton de propretÃ©)
+Sketch and label a standard reinforced concrete **Pad Foundation (Semelle Isolée)** showing:
+1. Ground Blinding Layer (Béton de propreté)
 2. Column Reinforcement Starter Bars (Attentes)
 3. Reinforced Concrete Base Pad
 *Answer Key & Marks Allocation:*
@@ -6346,7 +6345,7 @@ Sketch and label a standard reinforced concrete **Pad Foundation (Semelle IsolÃ
 State two safety checks a Site Supervisor must perform before authorizing laborers to enter an open trench for foundation formwork installation.
 *Answer Key & Marks Allocation:*
 - **1 Mark:** Check for wall stability, presence of cracks, or signs of earth sliding.
-- **1 Mark:** Verification that excavated soil piles (dÃ©blais) are stored at least 1.0 meter away from the trench edge to prevent collapse.
+- **1 Mark:** Verification that excavated soil piles (déblais) are stored at least 1.0 meter away from the trench edge to prevent collapse.
 
 ---
 
@@ -6356,32 +6355,32 @@ State two safety checks a Site Supervisor must perform before authorizing labore
 You are appointed as the Lead Site Superintendent for a community health center project in Bafoussam. The design calls for **12 independent concrete pad foundations**, each measuring **1.2m x 1.2m with a thickness of 0.3m**. The soil is stable clayey-silt. 
 
 #### Task 1: Materials Calculation [4.5 Marks]
-Calculate the total volume of structural concrete required to pour all 12 pads. Then, using standard Cameroon batching of **350 kg/mÂ³** (where 1 mÂ³ concrete requires: 7 bags of cement, 400 liters of sand, 800 liters of gravel), determine the exact quantities of:
-1. Volume of concrete (mÂ³)
+Calculate the total volume of structural concrete required to pour all 12 pads. Then, using standard Cameroon batching of **350 kg/m³** (where 1 m³ concrete requires: 7 bags of cement, 400 liters of sand, 800 liters of gravel), determine the exact quantities of:
+1. Volume of concrete (m³)
 2. Bags of cement (50kg bags)
-3. Volume of sand required (mÂ³)
-4. Volume of gravel required (mÂ³)
+3. Volume of sand required (m³)
+4. Volume of gravel required (m³)
 
 *Answer Key & Marks Allocation:*
 1. **Concrete Volume calculation:** 
-   - Volume of 1 pad = 1.2 x 1.2 x 0.3 = 0.432 mÂ³ [1 Mark]
-   - Total volume for 12 pads = 0.432 x 12 = 5.184 mÂ³ [0.5 Mark]
+   - Volume of 1 pad = 1.2 x 1.2 x 0.3 = 0.432 m³ [1 Mark]
+   - Total volume for 12 pads = 0.432 x 12 = 5.184 m³ [0.5 Mark]
 2. **Cement bags:**
-   - 5.184 mÂ³ x 7 bags/mÂ³ = 36.288 bags â‰ˆ 37 bags (rounded up) [1 Mark]
+   - 5.184 m³ x 7 bags/m³ = 36.288 bags ≈ 37 bags (rounded up) [1 Mark]
 3. **Sand volume:**
-   - 5.184 mÂ³ x 0.4 mÂ³ = 2.074 mÂ³ [1 Mark]
+   - 5.184 m³ x 0.4 m³ = 2.074 m³ [1 Mark]
 4. **Gravel volume:**
-   - 5.184 mÂ³ x 0.8 mÂ³ = 4.147 mÂ³ [1 Mark]
+   - 5.184 m³ x 0.8 m³ = 4.147 m³ [1 Mark]
 
 #### Task 2: Site Layout & Safety Plan [4.5 Marks]
 Explain the specific layout procedure for these pad foundations, and write down 3 critical PPE items that all excavation laborers must wear on site, explaining the structural hazard each item protects against.
 
 *Answer Key & Marks Allocation:*
-- **1.5 Marks:** Layout procedure: Establish profile boards (chaises d'implantation), run alignment lines (cordeaux) along column grids, drop plumb bob (fil Ã  plomb) to mark center points, and trace pit borders using lime powder (chaux).
+- **1.5 Marks:** Layout procedure: Establish profile boards (chaises d'implantation), run alignment lines (cordeaux) along column grids, drop plumb bob (fil à plomb) to mark center points, and trace pit borders using lime powder (chaux).
 - **3.0 Marks:** 3 PPE Items & Hazards protected:
   1. **Safety Helmet (Casque):** Protects against falling stones, soil clods, or timber struts collapsing from above into the pit. [1 Mark]
-  2. **Steel-Toed Boots (Chaussures de sÃ©curitÃ© Ã  coque):** Protects feet against sharp reinforcement wires, stepping on nails from formwork, or impact from heavy excavation spades. [1 Mark]
-  3. **High-Visibility Vest (Gilet de haute visibilitÃ©):** Protects workers inside deep pits by making them clearly visible to excavator or wheelbarrow operators. [1 Mark]
+  2. **Steel-Toed Boots (Chaussures de sécurité à coque):** Protects feet against sharp reinforcement wires, stepping on nails from formwork, or impact from heavy excavation spades. [1 Mark]
+  3. **High-Visibility Vest (Gilet de haute visibilité):** Protects workers inside deep pits by making them clearly visible to excavator or wheelbarrow operators. [1 Mark]
 
 ---
 
@@ -7274,7 +7273,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
               boqId: newBoq.id,
               itemNumber: item.itemNumber || `${newSec.sectionCode}${itIdx + 1}`,
               description: item.description || '',
-              unit: item.unit || 'mÂ²',
+              unit: item.unit || 'm²',
               quantity: item.quantity,
               unitRate: item.unitRate,
               amount: item.amount,
@@ -7446,7 +7445,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
                 boqId: id,
                 itemNumber: item.itemNumber || `${newSec.sectionCode}${itIdx + 1}`,
                 description: item.description || '',
-                unit: item.unit || 'mÂ²',
+                unit: item.unit || 'm²',
                 quantity: item.quantity,
                 unitRate: item.unitRate,
                 amount: item.amount,
@@ -7831,15 +7830,15 @@ Return the extracted values as a JSON object matching this schema. Be highly des
     { code: 'in', name: 'Inch', category: 'Length' },
     { code: 'yd', name: 'Yard', category: 'Length' },
     // Area
-    { code: 'mmÂ²', name: 'Square Millimeter', category: 'Area' },
-    { code: 'cmÂ²', name: 'Square Centimeter', category: 'Area' },
-    { code: 'mÂ²', name: 'Square Meter', category: 'Area', isDefault: true },
+    { code: 'mm²', name: 'Square Millimeter', category: 'Area' },
+    { code: 'cm²', name: 'Square Centimeter', category: 'Area' },
+    { code: 'm²', name: 'Square Meter', category: 'Area', isDefault: true },
     { code: 'ha', name: 'Hectare', category: 'Area' },
-    { code: 'ftÂ²', name: 'Square Foot', category: 'Area' },
+    { code: 'ft²', name: 'Square Foot', category: 'Area' },
     // Volume
-    { code: 'mmÂ³', name: 'Cubic Millimeter', category: 'Volume' },
-    { code: 'cmÂ³', name: 'Cubic Centimeter', category: 'Volume' },
-    { code: 'mÂ³', name: 'Cubic Meter', category: 'Volume', isDefault: true },
+    { code: 'mm³', name: 'Cubic Millimeter', category: 'Volume' },
+    { code: 'cm³', name: 'Cubic Centimeter', category: 'Volume' },
+    { code: 'm³', name: 'Cubic Meter', category: 'Volume', isDefault: true },
     { code: 'litre', name: 'Litre', category: 'Volume' },
     { code: 'L', name: 'Litre (L)', category: 'Volume' },
     { code: 'gal', name: 'Gallon', category: 'Volume' },
@@ -8042,8 +8041,8 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           title: 'Substructure & Foundation',
           sectionCode: 'A',
           items: [
-            { itemNumber: 'A1', description: 'Excavation in trench', unit: 'mÂ³', quantity: '100', unitRate: '5000' },
-            { itemNumber: 'A2', description: 'Concrete footing 30MPa', unit: 'mÂ³', quantity: '40', unitRate: '120000' }
+            { itemNumber: 'A1', description: 'Excavation in trench', unit: 'm³', quantity: '100', unitRate: '5000' },
+            { itemNumber: 'A2', description: 'Concrete footing 30MPa', unit: 'm³', quantity: '40', unitRate: '120000' }
           ]
         }
       ], 5, 5, 10, 19.25);
@@ -8072,7 +8071,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
         boqId: testId,
         itemNumber: 'A1',
         description: 'Excavation',
-        unit: 'mÂ³',
+        unit: 'm³',
         quantity: '100',
         unitRate: '5000',
         amount: '500000'
@@ -8243,7 +8242,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
         return res.status(400).json({ error: 'Only APPROVED BOQs can be sent to clients.' });
       }
 
-      const emailSubject = subject || `MADECC Group â€” Bill of Quantities / Estimate â€” [${boq.projectName}]`;
+      const emailSubject = subject || `MADECC Group — Bill of Quantities / Estimate — [${boq.projectName}]`;
       const documentLink = pdfUrl || boq.pdfUrl || '#';
 
       const emailHtml = `
@@ -8357,7 +8356,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
   });
 
   // =========================================================
-  // PHASE 2 â€“ ENTERPRISE CONSTRUCTION ERP API ENDPOINTS
+  // PHASE 2 – ENTERPRISE CONSTRUCTION ERP API ENDPOINTS
   // =========================================================
 
   // 1. MASTER COST LIBRARY & SUPPLIER CATALOGUES
@@ -8572,7 +8571,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
   });
 
   // =========================================================
-  // PHASE 4 â€“ ENTERPRISE STAFF HR, RBAC & PROVISIONING API
+  // PHASE 4 – ENTERPRISE STAFF HR, RBAC & PROVISIONING API
   // =========================================================
 
   let staffTablesChecked = false;
@@ -8764,7 +8763,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           position: 'Technical Director & Chief Structural Engineer',
           salary: '1750000',
           allowances: '300000',
-          bank: 'UBA YaoundÃ© Central - Acc #002819401',
+          bank: 'UBA Yaoundé Central - Acc #002819401',
           reg: 'ONIGC Reg #3812',
           skills: ['Eurocode EN 1992', 'Structural Audits', '3D BIM Modelling', 'Finite Element Analysis'],
           certifications: ['ONIGC PE Registered', 'Chartered Structural Engineer'],
@@ -8812,7 +8811,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           position: 'Senior HR & Talent Operations Manager',
           salary: '1150000',
           allowances: '180000',
-          bank: 'Ecobank YaoundÃ© - Acc #005829102',
+          bank: 'Ecobank Yaoundé - Acc #005829102',
           reg: 'HRCI Certified Senior HR',
           skills: ['CNPS Compliance', 'Labor Law Governance', 'RBAC Security Audits', 'Payroll Management'],
           certifications: ['Senior SHRM Professional', 'HRCI Certified Specialist'],
@@ -8892,7 +8891,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           position: 'Health, Safety & Environmental (HSE) Inspection Manager',
           salary: '1050000',
           allowances: '170000',
-          bank: 'Afriland YaoundÃ© - Acc #002910482',
+          bank: 'Afriland Yaoundé - Acc #002910482',
           reg: 'NEBOSH Certified Auditor',
           skills: ['ISO 45001 Compliance', 'Site Safety Inspections', 'Environmental Risk Mitigation', 'Incident Auditing'],
           certifications: ['NEBOSH Diploma', 'ISO 14001 Auditor'],
@@ -8908,7 +8907,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           position: 'BIM & Automated Quantity Take-Off Specialist',
           salary: '1120000',
           allowances: '180000',
-          bank: 'BICEC YaoundÃ© - Acc #001948201',
+          bank: 'BICEC Yaoundé - Acc #001948201',
           reg: 'Autodesk Certified Professional',
           skills: ['Revit 3D BIM', 'Civil 3D Alignment', 'Laser Point Cloud Processing', 'Automated BOQ Extraction'],
           certifications: ['Autodesk BIM Specialist', 'ONIGC Associate'],
@@ -8924,7 +8923,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           position: 'Enterprise ERP Systems Administrator & Financial Auditor',
           salary: '1250000',
           allowances: '200000',
-          bank: 'SGBC YaoundÃ© - Acc #004928103',
+          bank: 'SGBC Yaoundé - Acc #004928103',
           reg: 'CISA Certified Information Systems Auditor',
           skills: ['PostgreSQL ERP Auditing', 'Financial Reconciliation', 'RBAC Matrix Controls', 'System Logs'],
           certifications: ['CISA Auditor', 'SAP Financial Specialist'],
@@ -8944,7 +8943,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
           fullName: s.fullName,
           department: s.department,
           position: s.position,
-          assignedProjects: ['Douala Bridge Phase 2', 'Sanaga Deepwater Terminal', 'YaoundÃ© Smart City HQ'],
+          assignedProjects: ['Douala Bridge Phase 2', 'Sanaga Deepwater Terminal', 'Yaoundé Smart City HQ'],
           assignedPermissions: s.permissions,
           status: s.status,
           createdBy: 'Adminmadeccgroup',
@@ -9646,7 +9645,7 @@ Return the extracted values as a JSON object matching this schema. Be highly des
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + (expiryDays ? parseInt(expiryDays) : 7));
 
-      const shareSubject = `MADECC Group â€” Construction Engineering Report Shared: ${projectTitle || 'Project'}`;
+      const shareSubject = `MADECC Group — Construction Engineering Report Shared: ${projectTitle || 'Project'}`;
       const emailBodyHtml = `
         <div style="font-family: Arial, sans-serif; background-color: #0b1329; padding: 24px; color: #e2e8f0;">
           <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 32px;">
@@ -9762,13 +9761,13 @@ Always include a brief liability note stating that outputs are AI-assisted desig
         fallbackReply += `**Eurocode EN 1992-1-1 Structural Design Check:**\n`;
         fallbackReply += `- **Design Ultimate Bending Moment (MEd):** 124.85 kNm\n`;
         fallbackReply += `- **Design Shear Force (VEd):** 90.80 kN\n`;
-        fallbackReply += `- **Required Tension Reinforcement (As,req):** 685 mmÂ²\n`;
-        fallbackReply += `- **Recommended Rebar Provision:** 4 High Yield T16 bars (804 mmÂ² provided) with R8 links @ 150mm c/c.\n`;
+        fallbackReply += `- **Required Tension Reinforcement (As,req):** 685 mm²\n`;
+        fallbackReply += `- **Recommended Rebar Provision:** 4 High Yield T16 bars (804 mm² provided) with R8 links @ 150mm c/c.\n`;
         fallbackReply += `- **Compliance Status:** **PASS (EN 1992-1-1 Section 6.1)**\n`;
       } else if (prompt.toLowerCase().includes('schedule') || prompt.toLowerCase().includes('gantt') || prompt.toLowerCase().includes('cpm')) {
         fallbackReply += `**Construction Programme & CPM Schedule Analysis:**\n`;
         fallbackReply += `- **Total Planned Duration:** 180 Days (6 Months)\n`;
-        fallbackReply += `- **Critical Path Sequence:** ACT-101 (Mobilization) âž” ACT-102 (Excavation) âž” ACT-103 (Footings) âž” ACT-105 (First Floor Slab) âž” ACT-107 (Roofing)\n`;
+        fallbackReply += `- **Critical Path Sequence:** ACT-101 (Mobilization) ➔ ACT-102 (Excavation) ➔ ACT-103 (Footings) ➔ ACT-105 (First Floor Slab) ➔ ACT-107 (Roofing)\n`;
         fallbackReply += `- **Current Completion Progress:** 42% Complete (On Schedule, SPI = 1.02)\n`;
       } else {
         fallbackReply += `Engineering analysis processed for **${pName}**.\n\n`;
@@ -9928,7 +9927,7 @@ Always include a brief liability note stating that outputs are AI-assisted desig
     }
 
     try {
-      let systemInstruction = `You are a legendary AI-powered Senior Curriculum Specialist, Technical Education Expert, Civil Engineer, Building Construction Lecturer, and Instructional Designer with over 40 years of active teaching experience in Cameroon Technical Secondary Schools and Technical LycÃ©es (under the Ministry of Secondary Education - MINESEC). You prepare your materials exactly like Claude: with massive depth, exhaustive coverage, highly detailed technical procedures, actual construction site schematics in ASCII/text, real-world calculation steps, exact tool specifications, and rigorous occupational health and safety standards.
+      let systemInstruction = `You are a legendary AI-powered Senior Curriculum Specialist, Technical Education Expert, Civil Engineer, Building Construction Lecturer, and Instructional Designer with over 40 years of active teaching experience in Cameroon Technical Secondary Schools and Technical Lycées (under the Ministry of Secondary Education - MINESEC). You prepare your materials exactly like Claude: with massive depth, exhaustive coverage, highly detailed technical procedures, actual construction site schematics in ASCII/text, real-world calculation steps, exact tool specifications, and rigorous occupational health and safety standards.
 Your task is to generate a comprehensive, curriculum-compliant lesson package for technical secondary schools in Cameroon based on the input parameters provided.
 Your lesson plan MUST strictly follow the Competency-Based Approach (CBA) mandated by the Cameroon Ministry of Secondary Education (MINESEC) and look like the work of an elite master teacher who leaves absolutely zero details out. No shortcuts, no placeholders like "(insert details here)", and no simple summaries.
 Make sure every section is fully populated with rich, highly-technical text (not simple bullet points). Write massive paragraph sections containing civil engineering mechanics, soil consolidation theories, concrete technology calculations (cement bag calculation, hydration reactions, aggregates grading curves, water-cement ratios), and standard structural engineering codes (like Eurocodes or British Standards adapted in Cameroon).
@@ -10104,13 +10103,13 @@ Additional Custom Requests or Pedagogy Focus:
     }
 
     try {
-      let systemInstruction = `You are a legendary expert Senior Civil Engineering Lecturer, Curriculum Developer, and Structural Engineer with over 40 years of active teaching and site supervision experience in Cameroon Technical LycÃ©es and Technical High Schools under the MINESEC curriculum.
+      let systemInstruction = `You are a legendary expert Senior Civil Engineering Lecturer, Curriculum Developer, and Structural Engineer with over 40 years of active teaching and site supervision experience in Cameroon Technical Lycées and Technical High Schools under the MINESEC curriculum.
 Your task is to generate an exceptionally detailed, comprehensive, and exhaustive "Ready-to-Teach Lecture Manual" based on the provided CBA Lesson Plan, Topic, Grade, and Subject. Under no circumstances should you provide a short summary or mere bullet-point outlines. The output must represent a complete, masterclass-level publication written in professional, textbook-grade technical language.
 
 The lecture manual MUST be written in extremely thorough Markdown and cover every sub-concept exhaustively, structured as follows:
 1. **LECTURE TIMELINE & DETAILED PACE** (A complete, timed breakdown, e.g., 10 mins Hook, 40 mins Direct teaching on structural mechanics, 30 mins Interactive site workshop simulations, 10 mins Assessment & Wrap-up)
 2. **TEACHER SCRIPT / COMPREHENSIVE DIRECT INSTRUCTION** (Extensive, word-for-word explanations containing high technical detail. Include structural engineering formulas, mechanical behavior of building elements, exact cement hydration and mixing chemistry, concrete technology, sand/gravel sieve analysis concepts, and details on structural forces: tension, compression, shear, torsion, bending moments. Provide complete blackboard/drawing descriptions using detailed text-based ASCII sketches where possible)
-3. **PRACTICAL CAMEROONIAN SITE EXAMPLES & SOIL MECHANICS** (Include extensive real-world case studies detailing the extreme differences in soil bearing capacities across Cameroon: coastal marine swampy clays of Douala/BonabÃ©ri/Limbe, red plastic lateritic clays of YaoundÃ©, swell-shrink black cotton vertisols of Maroua/Garoua, and volcanic soils of Fako. Reference local building materials such as CIMENCAM/CIMAF/MIRA cements, local brick factories like MIPROMALO, and timber classifications including Bubinga, Iroko, Sapelli, Moabi)
+3. **PRACTICAL CAMEROONIAN SITE EXAMPLES & SOIL MECHANICS** (Include extensive real-world case studies detailing the extreme differences in soil bearing capacities across Cameroon: coastal marine swampy clays of Douala/Bonabéri/Limbe, red plastic lateritic clays of Yaoundé, swell-shrink black cotton vertisols of Maroua/Garoua, and volcanic soils of Fako. Reference local building materials such as CIMENCAM/CIMAF/MIRA cements, local brick factories like MIPROMALO, and timber classifications including Bubinga, Iroko, Sapelli, Moabi)
 4. **CLASSROOM INTERACTIVE PARTICIPATION CHECKPOINTS & DISCUSSIONS** (A series of challenging questions to pose to technical students, including anticipated incorrect or weak answers, step-by-step corrective teacher guide prompts, and comprehensive follow-up explanations)
 5. **COMMON STUDENT MISCONCEPTIONS UNPACKED** (Identify and thoroughly debunk common errors made by students, detailing the scientific or physical mechanics reasons why their assumptions are incorrect)
 6. **PACING GUIDE & VETERAN TEACHER TIPS** (High-level tactical classroom management advice on how to respond to advanced questions, assist struggling students, and keep students fully engaged for the entire duration)
@@ -10157,7 +10156,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
 
     try {
       let systemInstruction = `You are a legendary curriculum assessment developer, Principal Examiner, and Senior Civil Engineer for the Cameroon Ministry of Secondary Education (MINESEC) with over 40 years of academic experience designing national exams.
-Your task is to generate an exceptionally detailed, highly rigorous, and comprehensive "Competency-Based Topic Quiz & Marks Allocation Paper" based on the provided topic, grade, subject, and lesson plan. The quiz must read like an elite national technical certificate paper (such as the CAP or Probatoire or BaccalaurÃ©at Technique).
+Your task is to generate an exceptionally detailed, highly rigorous, and comprehensive "Competency-Based Topic Quiz & Marks Allocation Paper" based on the provided topic, grade, subject, and lesson plan. The quiz must read like an elite national technical certificate paper (such as the CAP or Probatoire or Baccalauréat Technique).
 
 The quiz MUST strictly comply with Cameroon MINESEC CBA assessment guidelines and contain the following components, fully written out without summaries:
 1. **5 Complex Multiple-Choice Questions (MCQs)** [1 Mark each, Total 5 Marks]: Each question must have four highly technical options, with one clear correct answer. Include scenarios testing structural failures, concrete curing physics, and soil-loading conditions.
@@ -10300,9 +10299,9 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
               startDate: new Date(contracts[0].signedAt).toISOString().split('T')[0],
               completionDate: new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0],
               progressPercentage: 60,
-              preparedBy: 'Eng. DieudonnÃ© Kemgne',
+              preparedBy: 'Eng. Dieudonné Kemgne',
               checkedBy: 'Marcus Ndip',
-              approvedBy: 'Dr. AmÃ©lie Fotso',
+              approvedBy: 'Dr. Amélie Fotso',
               description: 'Official Civil Works project contract agreement and site specification.',
               items: [
                 { itemNumber: '1.0', description: 'Site Excavation & Foundation Works', unit: 'm3', quantity: 180, rate: 15000, amount: 2700000 },
@@ -10351,22 +10350,22 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
               version: docs[0].version || '1.0',
               adoptionDate: new Date(docs[0].createdAt).toISOString().split('T')[0],
               shareholders: [
-                { name: 'Eng. DieudonnÃ© Kemgne', shares: 500, percentage: 50 },
-                { name: 'Dr. AmÃ©lie Fotso', shares: 500, percentage: 50 },
+                { name: 'Eng. Dieudonné Kemgne', shares: 500, percentage: 50 },
+                { name: 'Dr. Amélie Fotso', shares: 500, percentage: 50 },
               ],
               articles: [
                 {
                   articleNumber: 1,
-                  title: 'Forme Juridique & RÃ©nomination',
+                  title: 'Forme Juridique & Rénomination',
                   clauses: [
-                    { clauseNumber: '1.1', content: 'Il est formÃ© entre les propriÃ©taires des parts ci-aprÃ¨s crÃ©Ã©es une SociÃ©tÃ© Ã  ResponsabilitÃ© LimitÃ©e rÃ©gie par l Acte Uniforme OHADA.' }
+                    { clauseNumber: '1.1', content: 'Il est formé entre les propriétaires des parts ci-après créées une Société à Responsabilité Limitée régie par l Acte Uniforme OHADA.' }
                   ]
                 },
                 {
                   articleNumber: 2,
                   title: 'Objet Social',
                   clauses: [
-                    { clauseNumber: '2.1', content: 'La sociÃ©tÃ© a pour objet les travaux BTP, le gÃ©nie civil, les Ã©tudes de structures, l amÃ©nagement urbain et la fourniture de matÃ©riaux.' }
+                    { clauseNumber: '2.1', content: 'La société a pour objet les travaux BTP, le génie civil, les études de structures, l aménagement urbain et la fourniture de matériaux.' }
                   ]
                 }
               ]
@@ -10427,12 +10426,12 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
               recordId: String(plans[0].id),
               subject: plans[0].subjectId || 'Civil Engineering',
               topic: plans[0].lessonId || 'Lesson Plan',
-              classLevel: plans[0].gradeLevel || 'Form 5 / 1Ã¨re F4',
+              classLevel: plans[0].gradeLevel || 'Form 5 / 1ère F4',
               duration: plans[0].lessonDuration || '2 Hours',
               syllabusUnit: 'Unit 1: Structural Calculation',
               cbaGoal: 'Master Eurocode 2 reinforced concrete design methodologies.',
               schoolName: 'Government Technical High School',
-              teacherName: 'Eng. DieudonnÃ© Kemgne',
+              teacherName: 'Eng. Dieudonné Kemgne',
               lessonNumber: 1,
               term: plans[0].term || 'Term 1',
               academicYear: plans[0].academicYear || '2025/2026',
@@ -10522,9 +10521,9 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
           contractorName: 'MADECC Group Construction',
           siteLocation: 'Douala, Cameroon',
           progressPercentage: 50,
-          preparedBy: 'Eng. DieudonnÃ© Kemgne',
+          preparedBy: 'Eng. Dieudonné Kemgne',
           checkedBy: 'Marcus Ndip',
-          approvedBy: 'Dr. AmÃ©lie Fotso',
+          approvedBy: 'Dr. Amélie Fotso',
           description: `Verified ${moduleType} document record ID ${recordId}.`,
         };
       }
@@ -10927,7 +10926,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
   </div>
   
   <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; margin: 0;">
-    This is a system generated notification on behalf of MADECC Group (YaoundÃ© / Douala, Cameroon). Please do not reply directly to this email. For any legal inquiries, please contact our support team at <a href="mailto:contact@madecc.com" style="color: #d97706; text-decoration: none; font-weight: 600;">contact@madecc.com</a>.
+    This is a system generated notification on behalf of MADECC Group (Yaoundé / Douala, Cameroon). Please do not reply directly to this email. For any legal inquiries, please contact our support team at <a href="mailto:contact@madecc.com" style="color: #d97706; text-decoration: none; font-weight: 600;">contact@madecc.com</a>.
   </p>
 </div>
         `;
@@ -11481,7 +11480,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
       const isPaidInFull = remBalNum <= 0;
 
       const verificationUrl = `${req.protocol}://${req.get('host')}/?verify=${verificationToken}`;
-      const subject = `[RECEIPT CERTIFICATE] MADECC Group SARL â€” Receipt Ref: ${receiptNo}`;
+      const subject = `[RECEIPT CERTIFICATE] MADECC Group SARL — Receipt Ref: ${receiptNo}`;
       const text = `Dear ${clientName},\n\nYour payment for project "${receiptProject}" was received and certified.\nReceipt Ref: ${receiptNo}\nAmount Paid: ${totalPaid.toLocaleString()} ${currency}\nTotal Invoice Amount: ${invTotalNum.toLocaleString()} ${currency}\nRemaining Balance: ${isPaidInFull ? `0 ${currency} (PAID IN FULL)` : remBalNum.toLocaleString() + ' ' + currency}\n\nVerify online: ${verificationUrl}`;
 
       const html = `
@@ -11547,7 +11546,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
   </div>
   
   <p style="font-size: 12px; line-height: 1.5; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; margin: 0;">
-    This is an automated administrative transmission from MADECC Group (YaoundÃ© / Douala, Cameroon). Please do not reply directly. For billing queries, please contact <a href="mailto:finance@madecc.com" style="color: #d97706; text-decoration: none; font-weight: 600;">finance@madecc.com</a>.
+    This is an automated administrative transmission from MADECC Group (Yaoundé / Douala, Cameroon). Please do not reply directly. For billing queries, please contact <a href="mailto:finance@madecc.com" style="color: #d97706; text-decoration: none; font-weight: 600;">finance@madecc.com</a>.
   </p>
 </div>
       `;
@@ -11661,7 +11660,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
         projectName: projectName || 'Untitled Structural Project',
         clientName: clientName || 'Valued Client',
         clientEmail: clientEmail || null,
-        location: location || 'Douala / YaoundÃ©',
+        location: location || 'Douala / Yaoundé',
         preparedBy: preparedBy || req.dbUser.fullName || 'MADECC Structural Engineer',
         status: 'DRAFT',
         designInputs: designInputs || {},
@@ -11828,7 +11827,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
         projectName: body.projectName || 'Untitled Labour Project',
         clientName: body.clientName || 'Valued Client',
         clientEmail: body.clientEmail || null,
-        location: body.location || 'Douala / YaoundÃ©',
+        location: body.location || 'Douala / Yaoundé',
         projectType: body.projectType || 'Commercial Building',
         buildingFloors: body.buildingFloors || 1,
         date: body.date || new Date().toISOString().split('T')[0],
@@ -11952,7 +11951,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
     }
 
     try {
-      const subject = `[OFFICIAL LABOUR QUOTATION] MADECC Group SARL â€” Ref: ${quotationRef}`;
+      const subject = `[OFFICIAL LABOUR QUOTATION] MADECC Group SARL — Ref: ${quotationRef}`;
       const text = `Dear ${clientName},\n\nPlease find attached/below your official labour estimation quotation for project "${projectName}".\nQuotation Ref: ${quotationRef}\nGrand Total Net: ${parseFloat(grandTotal || 0).toLocaleString()} ${currency || 'XAF'}\nPrepared By: ${preparedBy}\n\nThank you for choosing MADECC Group.`;
 
       const html = `
@@ -12003,7 +12002,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
   </p>
 
   <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; font-size: 11px; color: #94a3b8;">
-    MADECC Group S.A.R.L. | Douala & YaoundÃ©, Cameroon | Contact: +237 600 000 000 | info@madecc-group.cm
+    MADECC Group S.A.R.L. | Douala & Yaoundé, Cameroon | Contact: +237 600 000 000 | info@madecc-group.cm
   </div>
 </div>
       `;
@@ -12425,7 +12424,7 @@ ${lessonPlan}${depthMode === 'veteran' ? '\n- [VETERAN EDITION ACTIVE]: Please g
         projectName = 'MADECC Construction Project',
         clientName = 'Valued Enterprise Client',
         clientEmail = 'client@madecc.cm',
-        location = 'Douala / YaoundÃ©, Cameroon',
+        location = 'Douala / Yaoundé, Cameroon',
         projectStoreys = 1
       } = req.body;
 
@@ -12544,7 +12543,7 @@ Return ONLY clean valid JSON. No markdown backticks.`;
 
       // Stage 10: Quantity Takeoff Calculations
       const quantitiesData = computeQuantitiesFromElements(detectedElements, projectStoreys);
-      addLog('Stage 10: Quantity Takeoff', 'SUCCESS', `Calculated: ${quantitiesData.blockCount} blocks, ${quantitiesData.concreteVolumeM3} mÂ³ concrete, ${quantitiesData.steelRebarKg} kg steel rebar, ${quantitiesData.excavationM3} mÂ³ excavation.`);
+      addLog('Stage 10: Quantity Takeoff', 'SUCCESS', `Calculated: ${quantitiesData.blockCount} blocks, ${quantitiesData.concreteVolumeM3} m³ concrete, ${quantitiesData.steelRebarKg} kg steel rebar, ${quantitiesData.excavationM3} m³ excavation.`);
 
       // Stage 11: Labour Calculator Auto-Integration
       const labourEstimateData = computeLabourEstimateFromQuantities(quantitiesData);
@@ -12800,12 +12799,12 @@ Return ONLY clean valid JSON. No markdown backticks.`;
         const text = `Hello,\n\nHere is the AI Drawing Takeoff and Quantity Report for "${takeoff.projectName}" (${takeoff.drawingName}).\n\nTakeoff Ref: ${takeoff.takeoffRef}\nConcrete Vol: ${(takeoff.quantitiesData as any)?.concreteVolumeM3 || 0} m3\nSteel Rebar: ${(takeoff.quantitiesData as any)?.steelRebarKg || 0} kg\nGrand Total Labour: ${((takeoff.labourEstimateData as any)?.grandTotal || 0).toLocaleString()} XAF\n\nView Online Report: ${shareUrl}`;
         const html = `
           <div style="font-family: sans-serif; max-width: 600px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
-            <h2 style="color: #d97706;">MADECC Group â€” AI Drawing & Quantity Takeoff</h2>
+            <h2 style="color: #d97706;">MADECC Group — AI Drawing & Quantity Takeoff</h2>
             <p>Dear Client / Partner,</p>
             <p>Please review the automated quantity takeoff and labour rate estimation report for <strong>${takeoff.projectName}</strong>.</p>
             <ul>
               <li><strong>Drawing Name:</strong> ${takeoff.drawingName}</li>
-              <li><strong>Concrete Volume:</strong> ${(takeoff.quantitiesData as any)?.concreteVolumeM3 || 0} mÂ³</li>
+              <li><strong>Concrete Volume:</strong> ${(takeoff.quantitiesData as any)?.concreteVolumeM3 || 0} m³</li>
               <li><strong>Steel Rebar:</strong> ${(takeoff.quantitiesData as any)?.steelRebarKg || 0} kg</li>
               <li><strong>Estimated Labour (Silver Tier):</strong> ${((takeoff.labourEstimateData as any)?.grandTotal || 0).toLocaleString()} XAF</li>
             </ul>
@@ -13074,20 +13073,20 @@ Return JSON with exact structure:
 
       if (strat === 'WhatsApp') {
         generatedCta = isFr 
-          ? `ðŸ’¬ Discutez de votre projet sur WhatsApp avec MADECC Group S.A. : https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`
-          : `ðŸ’¬ Chat with MADECC Group S.A. on WhatsApp for instant quotations: https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`;
+          ? `💬 Discutez de votre projet sur WhatsApp avec MADECC Group S.A. : https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`
+          : `💬 Chat with MADECC Group S.A. on WhatsApp for instant quotations: https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`;
       } else if (strat === 'Facebook') {
         generatedCta = isFr
-          ? `ðŸ“˜ Suivez et contactez MADECC Group S.A. sur Facebook : ${fbPageUrl}\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`
-          : `ðŸ“˜ Follow and message MADECC Group S.A. on Facebook: ${fbPageUrl}\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`;
+          ? `📘 Suivez et contactez MADECC Group S.A. sur Facebook : ${fbPageUrl}\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`
+          : `📘 Follow and message MADECC Group S.A. on Facebook: ${fbPageUrl}\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`;
       } else if (strat === 'Call') {
         generatedCta = isFr
-          ? `ðŸ“ž Appelez directement nos ingÃ©nieurs agrÃ©Ã©s MADECC Group S.A. :\nðŸ“± ${callNums}\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`
-          : `ðŸ“ž Speak directly with MADECC Group S.A. civil engineering specialists:\nðŸ“± ${callNums}\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`;
+          ? `📞 Appelez directement nos ingénieurs agréés MADECC Group S.A. :\n📱 ${callNums}\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`
+          : `📞 Speak directly with MADECC Group S.A. civil engineering specialists:\n📱 ${callNums}\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`;
       } else {
         generatedCta = isFr
-          ? `Ready to build with confidence in Cameroon?\n\nðŸ’¬ WhatsApp MADECC Group: https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\nðŸ“˜ Facebook: ${fbPageUrl}\nðŸ“ž Appels directs: ${callNums}\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`
-          : `Ready to start your civil engineering & building construction project?\n\nðŸ’¬ WhatsApp MADECC Group: https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\nðŸ“˜ Follow on Facebook: ${fbPageUrl}\nðŸ“ž Call MADECC Specialists: ${callNums}\nâœ‰ï¸ contact@madeccgroup.online | ðŸŒ https://madeccgroup.online`;
+          ? `Ready to build with confidence in Cameroon?\n\n💬 WhatsApp MADECC Group: https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\n📘 Facebook: ${fbPageUrl}\n📞 Appels directs: ${callNums}\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`
+          : `Ready to start your civil engineering & building construction project?\n\n💬 WhatsApp MADECC Group: https://wa.me/237${waNum.replace(/\s+/g, '')} (${waNum})\n📘 Follow on Facebook: ${fbPageUrl}\n📞 Call MADECC Specialists: ${callNums}\n✉️ contact@madeccgroup.online | 🌐 https://madeccgroup.online`;
       }
 
       res.json({
@@ -13103,8 +13102,8 @@ Return JSON with exact structure:
         },
         title: `[MADECC Spotlight] ${topicStr} in Central Africa`,
         caption: isFr
-          ? `ðŸ—ï¸ MADECC Group S.A. prÃ©sente : Excellence & RÃ©alisation sur ${topicStr}.\n\nPour vos projets de construction au Cameroun (Douala, YaoundÃ©, Kribi), nos ingÃ©nieurs agrÃ©Ã©s ONIGC et mÃ©treurs certifiÃ©s garantissent le respect strict des normes Eurocode et la maÃ®trise budgÃ©taire (BOQ).`
-          : `ðŸ—ï¸ MADECC Group S.A. Spotlight: Strategic Insights on ${topicStr}.\n\nExecuting high-grade civil engineering and commercial building projects across Douala, YaoundÃ©, and Central Africa require accurate quantity surveying and structural integrity built to Eurocode 2 standards.`,
+          ? `🏗️ MADECC Group S.A. présente : Excellence & Réalisation sur ${topicStr}.\n\nPour vos projets de construction au Cameroun (Douala, Yaoundé, Kribi), nos ingénieurs agréés ONIGC et métreurs certifiés garantissent le respect strict des normes Eurocode et la maîtrise budgétaire (BOQ).`
+          : `🏗️ MADECC Group S.A. Spotlight: Strategic Insights on ${topicStr}.\n\nExecuting high-grade civil engineering and commercial building projects across Douala, Yaoundé, and Central Africa require accurate quantity surveying and structural integrity built to Eurocode 2 standards.`,
         hashtags: `#MADECCGroup #${topicStr.replace(/\s+/g, '')} #CivilEngineering #QuantitySurveying #Cameroon #Construction`,
         cta: generatedCta,
         ctaText: generatedCta
@@ -13834,7 +13833,7 @@ Return JSON with exact structure:
       {
         id: 'cnt-3',
         number: '689 115 595',
-        label: 'YaoundÃ© Central Capital Desk',
+        label: 'Yaoundé Central Capital Desk',
         department: 'Capital Civil Projects',
         whatsappEnabled: true,
         callEnabled: true,
@@ -14374,12 +14373,12 @@ Return JSON with exact structure:
 async function startServer() {
   validateEnvironmentVariables();
   console.log('========================================================================');
-  console.log(`ðŸš€ Starting MADECC Group Portal (Node.js ${process.version})`);
-  console.log(`ðŸŒ Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`ðŸ“¡ Port: ${PORT}`);
-  console.log(`ðŸ—„ï¸ Database: ${process.env.DATABASE_URL ? 'CONFIGURED' : 'MISSING'}`);
-  console.log(`ðŸ¤– Gemini AI Assistant: ${process.env.GEMINI_API_KEY ? 'ACTIVE (Key found)' : 'OFFLINE (Fallback replies enabled)'}`);
-  console.log(`ðŸ“§ SMTP Transporter: ${process.env.SMTP_USER && process.env.SMTP_PASS ? 'CONFIGURED' : 'CONSOLE FALLBACK (Missing credentials)'}`);
+  console.log(`🚀 Starting MADECC Group Portal (Node.js ${process.version})`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📡 Port: ${PORT}`);
+  console.log(`🗄️ Database: ${process.env.DATABASE_URL ? 'CONFIGURED' : 'MISSING'}`);
+  console.log(`🤖 Gemini AI Assistant: ${process.env.GEMINI_API_KEY ? 'ACTIVE (Key found)' : 'OFFLINE (Fallback replies enabled)'}`);
+  console.log(`📧 SMTP Transporter: ${process.env.SMTP_USER && process.env.SMTP_PASS ? 'CONFIGURED' : 'CONSOLE FALLBACK (Missing credentials)'}`);
   console.log('========================================================================');
 
   const app = await getApp();
@@ -14407,7 +14406,7 @@ async function startServer() {
 
 
 /**
- * MADECC — Signed Cloudinary browser upload ticket.
+ * MADECC � Signed Cloudinary browser upload ticket.
  *
  * IMPORTANT:
  * CLOUDINARY_API_SECRET never leaves the server.
