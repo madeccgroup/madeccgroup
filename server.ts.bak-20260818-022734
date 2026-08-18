@@ -1,5 +1,4 @@
-﻿import { createCloudinarySignedUploadTicket } from "./server/cloudinary/cloudinarySigner";
-import { registerMediaRoutes } from "./server/media/mediaRoutes";
+﻿import { registerMediaRoutes } from "./server/media/mediaRoutes";
 import { registerMediaRoutes } from "./src/server/media/mediaRoutes";
 import express from 'express';
 import path from 'path';
@@ -14405,26 +14404,6 @@ async function startServer() {
     });
   }
 
-
-/**
- * MADECC — Signed Cloudinary browser upload ticket.
- *
- * IMPORTANT:
- * CLOUDINARY_API_SECRET never leaves the server.
- */
-app.get("/api/cloudinary-signature", async (req: Request, res: Response) => {
-  try {
-    const ticket = createCloudinarySignedUploadTicket();
-
-    return res.json(ticket);
-  } catch (error) {
-    console.error("[Cloudinary Signature]", error);
-
-    return res.status(500).json({
-      message: "Unable to obtain Cloudinary upload signature.",
-    });
-  }
-});
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);
   });
@@ -14441,7 +14420,6 @@ const isServerless =
 if (!isServerless) {
   startServer();
 }
-
 
 
 

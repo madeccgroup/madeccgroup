@@ -1,5 +1,4 @@
-﻿import os from "node:os";
-import {
+﻿import {
   Router,
   Request,
   Response,
@@ -45,7 +44,12 @@ import {
 const router =
   Router();
 
-const uploadDir = path.join(os.tmpdir(), "madecc-ai");
+const uploadDir =
+  path.join(
+    process.cwd(),
+    "tmp",
+    "madecc-ai"
+  );
 
 const aiMediaDirectoryReady = fs.mkdir(
   uploadDir,
@@ -54,10 +58,11 @@ const aiMediaDirectoryReady = fs.mkdir(
   }
 );
 
-const maxServerUploadMB =
+const maxUploadMB =
   Number(
-    process.env.MADECC_AI_SERVER_UPLOAD_MB ||
-    "4"
+    process.env
+      .MADECC_AI_MAX_UPLOAD_MB ||
+      "500"
   );
 
 const upload =
@@ -66,7 +71,9 @@ const upload =
 
     limits: {
       fileSize:
-        maxServerUploadMB * 1024 * 1024,
+        maxUploadMB *
+        1024 *
+        1024,
     },
   });
 
@@ -1892,7 +1899,3 @@ router.delete(
 );
 
 export default router;
-
-
-
-

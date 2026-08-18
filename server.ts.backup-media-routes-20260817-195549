@@ -1,10 +1,7 @@
-﻿import { createCloudinarySignedUploadTicket } from "./server/cloudinary/cloudinarySigner";
-import { registerMediaRoutes } from "./server/media/mediaRoutes";
-import { registerMediaRoutes } from "./src/server/media/mediaRoutes";
+﻿import { registerMediaRoutes } from './server/media/mediaRoutes';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import os from 'node:os';
 import multer from 'multer';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
@@ -14293,81 +14290,6 @@ Return JSON with exact structure:
     }
   });
 
-  // ==========================================
-  // MADECC AI STUDIO MEDIA ROUTES
-  // ==========================================
-  //
-  // Registered after middleware setup and before
-  // getApp() returns the Express application.
-  //
-  // IMPORTANT:
-  // This application uses direct Express app.get/app.post/
-  // app.delete registration rather than app.use(Router).
-  //
-  registerMediaRoutes(app, {
-    requireAuth,
-
-    getMediaAsset: async (
-      mediaId: string,
-      userId: string
-    ) => {
-      const asset = await db.query.aiMediaAssets.findFirst({
-        where: (assets, { and, eq }) =>
-          and(
-            eq(assets.id, mediaId),
-            eq(assets.userId, userId)
-          )
-      });
-
-      if (!asset) {
-        return null;
-      }
-
-      const downloadUrl =
-        (asset as any).secureUrl ||
-        (asset as any).url ||
-        (asset as any).cloudinaryUrl ||
-        null;
-
-      return {
-        id: String(asset.id),
-        userId: String(asset.userId),
-        name: String(
-          (asset as any).name ||
-          (asset as any).filename ||
-          "madecc-media"
-        ),
-        mimeType: String(
-          (asset as any).mimeType ||
-          "application/octet-stream"
-        ),
-        downloadUrl: downloadUrl
-          ? String(downloadUrl)
-          : ""
-      };
-    },
-
-    archiveMedia: async (
-      mediaId: string,
-      userId: string
-    ) => {
-      await db
-        .update(aiMediaAssets)
-        .set({
-          archivedAt: new Date()
-        })
-        .where(
-          and(
-            eq(aiMediaAssets.id, mediaId),
-            eq(aiMediaAssets.userId, userId)
-          )
-        );
-    }
-  });
-
-  // MADECC AI Media API routes
-  registerMediaRoutes(app);
-  
   return app;
 }
 
@@ -14405,26 +14327,6 @@ async function startServer() {
     });
   }
 
-
-/**
- * MADECC — Signed Cloudinary browser upload ticket.
- *
- * IMPORTANT:
- * CLOUDINARY_API_SECRET never leaves the server.
- */
-app.get("/api/cloudinary-signature", async (req: Request, res: Response) => {
-  try {
-    const ticket = createCloudinarySignedUploadTicket();
-
-    return res.json(ticket);
-  } catch (error) {
-    console.error("[Cloudinary Signature]", error);
-
-    return res.status(500).json({
-      message: "Unable to obtain Cloudinary upload signature.",
-    });
-  }
-});
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);
   });
@@ -14441,9 +14343,4 @@ const isServerless =
 if (!isServerless) {
   startServer();
 }
-
-
-
-
-
 

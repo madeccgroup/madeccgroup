@@ -1,0 +1,664 @@
+﻿import React, {
+  useState,
+} from "react";
+
+import {
+  deleteMedia,
+  exportMediaAudio,
+} from "../lib/mediaApi";
+
+type MediaType =
+  | "image"
+  | "audio"
+  | "video"
+  | "text"
+  | "document"
+  | "other";
+
+export interface AIMediaItem {
+  id: string;
+
+  name?: string;
+
+  filename?: string;
+
+  mediaType: MediaType | string;
+
+  mimeType?: string;
+
+  sizeBytes?: number;
+
+  url?: string;
+
+  secureUrl?: string;
+
+  downloadUrl?: string;
+
+  createdAt?: string;
+
+  content?: string;
+
+  text?: string;
+}
+
+interface AIMediaExportPanelProps {
+  items: AIMediaItem[];
+
+  onDeleted?: (
+    item: AIMediaItem
+  ) => void;
+
+  className?: string;
+}
+
+
+type TextExportFormat =
+  | "txt"
+  | "docx"
+  | "pdf";
+
+
+function formatBytes(
+  bytes?: number
+): string {
+  if (
+    !bytes ||
+    bytes <= 0
+  ) {
+    return "Unknown size";
+  }
+
+  const units = [
+    "B",
+    "KB",
+    "MB",
+    "GB",
+  ];
+
+  let value = bytes;
+  let unitIndex = 0;
+
+  while (
+    value >= 1024 &&
+    unitIndex <
+      units.length - 1
+  ) {
+    value /= 1024;
+    unitIndex++;
+  }
+
+  return `${value.toFixed(
+    value >= 10 ||
+      unitIndex === 0
+      ? 0
+      : 1
+  )} ${units[unitIndex]}`;
+}
+
+
+function getMediaLabel(
+  item: AIMediaItem
+): string {
+  return (
+    item.name ||
+    item.filename ||
+    "MADECC Media"
+  );
+}
+
+
+function getMediaUrl(
+  item: AIMediaItem
+): string | null {
+  return (
+    item.secureUrl ||
+    item.downloadUrl ||
+    item.url ||
+    null
+  );
+}
+
+
+async function downloadTextExport(
+  item: AIMediaItem,
+  format: TextExportFormat
+): Promise<void> {
+  const text =
+    item.content ||
+    item.text ||
+    "";
+
+  if (!text.trim()) {
+    throw new Error(
+      "This media item does not contain text content to export."
+    );
+  }
+
+  let blob: Blob;
+  let extension = format;
+
+  if (format === "txt") {
+    blob = new Blob(
+      [text],
+      {
+        type: "text/plain;charset=utf-8",
+      }
+    );
+  } else {
+    /*
+     * DOCX/PDF generation is performed by the backend.
+     *
+     * The browser falls back to the existing media URL
+     * only when the backend export endpoint is unavailable.
+     */
+    const response =
+      await fetch(
+        `/api/ai/media/${encodeURIComponent(
+          item.id
+        )}/export?format=${encodeURIComponent(
+          format
+        )}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Accept:
+              format === "pdf"
+                ? "application/pdf"
+                : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          },
+          body: JSON.stringify({
+            title:
+              getMediaLabel(item),
+            content: text,
+          }),
+        }
+      );
+
+    if (!response.ok) {
+      const contentType =
+        response.headers.get(
+          "Content-Type"
+        ) || "";
+
+      let message =
+        `Unable to create ${format.toUpperCase()} export.`;
+
+      if (
+        contentType.includes(
+          "application/json"
+        )
+      ) {
+        try {
+          const data =
+            await response.json();
+
+          message =
+            data?.error ||
+            data?.message ||
+            message;
+        } catch {
+          // Keep default error.
+        }
+      }
+
+      throw new Error(
+        message
+      );
+    }
+
+    blob =
+      await response.blob();
+
+    const disposition =
+      response.headers.get(
+        "Content-Disposition"
+      );
+
+    const match =
+      disposition?.match(
+        /filename="([^"]+)"/
+      );
+
+    const filename =
+      match?.[1] ||
+      `${getMediaLabel(item)
+        .replace(/[^\w.-]+/g, "_")
+        .replace(
+          /\.[^.]+$/,
+          ""
+        )}.${extension}`;
+
+    triggerDownload(
+      blob,
+      filename
+    );
+
+    return;
+  }
+
+  const filename =
+    `${getMediaLabel(item)
+      .replace(/[^\w.-]+/g, "_")
+      .replace(
+        /\.[^.]+$/,
+        ""
+      )}.${extension}`;
+
+  triggerDownload(
+    blob,
+    filename
+  );
+}
+
+
+function triggerDownload(
+  blob: Blob,
+  filename: string
+): void {
+  const url =
+    URL.createObjectURL(blob);
+
+  const link =
+    document.createElement(
+      "a"
+    );
+
+  link.href = url;
+
+  link.download =
+    filename;
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+
+  link.remove();
+
+  URL.revokeObjectURL(
+    url
+  );
+}
+
+
+export default function AIMediaExportPanel({
+  items,
+  onDeleted,
+  className = "",
+}: AIMediaExportPanelProps) {
+  const [
+    busyId,
+    setBusyId,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(
+    null
+  );
+
+  async function handleAudioExport(
+    item: AIMediaItem,
+    format: "mp3" | "wav"
+  ) {
+    try {
+      setError(null);
+
+      setBusyId(
+        `${item.id}:${format}`
+      );
+
+      await exportMediaAudio(
+        item.id,
+        format
+      );
+    } catch (err: any) {
+      console.error(
+        "[MEDIA_AUDIO_EXPORT]",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Audio export failed."
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+
+  async function handleTextExport(
+    item: AIMediaItem,
+    format: TextExportFormat
+  ) {
+    try {
+      setError(null);
+
+      setBusyId(
+        `${item.id}:${format}`
+      );
+
+      await downloadTextExport(
+        item,
+        format
+      );
+    } catch (err: any) {
+      console.error(
+        "[MEDIA_TEXT_EXPORT]",
+        err
+      );
+
+      setError(
+        err?.message ||
+          `${format.toUpperCase()} export failed.`
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+
+  async function handleDelete(
+    item: AIMediaItem
+  ) {
+    const confirmed =
+      window.confirm(
+        `Archive "${getMediaLabel(
+          item
+        )}" from MADECC AI Media?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError(null);
+
+      setBusyId(
+        `${item.id}:delete`
+      );
+
+      await deleteMedia(
+        item.id
+      );
+
+      onDeleted?.(
+        item
+      );
+    } catch (err: any) {
+      console.error(
+        "[MEDIA_DELETE]",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Unable to delete media."
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+
+  if (!items.length) {
+    return (
+      <section
+        className={`rounded-xl border p-6 ${className}`}
+      >
+        <div className="text-sm text-gray-500">
+          No AI media assets available.
+        </div>
+      </section>
+    );
+  }
+
+
+  return (
+    <section
+      className={`space-y-4 ${className}`}
+    >
+      <div>
+        <h2 className="text-lg font-semibold">
+          AI Media Exports
+        </h2>
+
+        <p className="text-sm text-gray-500">
+          Download generated media or
+          export text-based AI content.
+        </p>
+      </div>
+
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {error}
+        </div>
+      )}
+
+
+      <div className="grid gap-4">
+        {items.map(
+          (item) => {
+            const label =
+              getMediaLabel(item);
+
+            const mediaUrl =
+              getMediaUrl(item);
+
+            const audioMp3Busy =
+              busyId ===
+              `${item.id}:mp3`;
+
+            const audioWavBusy =
+              busyId ===
+              `${item.id}:wav`;
+
+            const txtBusy =
+              busyId ===
+              `${item.id}:txt`;
+
+            const docxBusy =
+              busyId ===
+              `${item.id}:docx`;
+
+            const pdfBusy =
+              busyId ===
+              `${item.id}:pdf`;
+
+            const deleteBusy =
+              busyId ===
+              `${item.id}:delete`;
+
+
+            return (
+              <article
+                key={item.id}
+                className="rounded-xl border bg-white p-4 shadow-sm"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="font-medium">
+                      {label}
+                    </div>
+
+                    <div className="mt-1 text-xs text-gray-500">
+                      {item.mediaType}
+
+                      {item.mimeType
+                        ? ` • ${item.mimeType}`
+                        : ""}
+
+                      {item.sizeBytes
+                        ? ` • ${formatBytes(
+                            item.sizeBytes
+                          )}`
+                        : ""}
+                    </div>
+
+                    {mediaUrl && (
+                      <a
+                        href={mediaUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block truncate text-xs text-blue-600 hover:underline"
+                      >
+                        Open media
+                      </a>
+                    )}
+                  </div>
+
+
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      item.mediaType ===
+                        "audio" ||
+                      item.mediaType ===
+                        "video"
+                    ) && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={
+                            busyId !==
+                              null
+                          }
+                          onClick={() =>
+                            handleAudioExport(
+                              item,
+                              "mp3"
+                            )
+                          }
+                          className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {audioMp3Busy
+                            ? "Exporting..."
+                            : "MP3"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={
+                            busyId !==
+                              null
+                          }
+                          onClick={() =>
+                            handleAudioExport(
+                              item,
+                              "wav"
+                            )
+                          }
+                          className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {audioWavBusy
+                            ? "Exporting..."
+                            : "WAV"}
+                        </button>
+                      </>
+                    )}
+
+
+                    {item.mediaType ===
+                      "text" && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={
+                            busyId !==
+                              null
+                          }
+                          onClick={() =>
+                            handleTextExport(
+                              item,
+                              "txt"
+                            )
+                          }
+                          className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {txtBusy
+                            ? "Exporting..."
+                            : "TXT"}
+                        </button>
+
+
+                        <button
+                          type="button"
+                          disabled={
+                            busyId !==
+                              null
+                          }
+                          onClick={() =>
+                            handleTextExport(
+                              item,
+                              "docx"
+                            )
+                          }
+                          className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {docxBusy
+                            ? "Exporting..."
+                            : "DOCX"}
+                        </button>
+
+
+                        <button
+                          type="button"
+                          disabled={
+                            busyId !==
+                              null
+                          }
+                          onClick={() =>
+                            handleTextExport(
+                              item,
+                              "pdf"
+                            )
+                          }
+                          className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {pdfBusy
+                            ? "Exporting..."
+                            : "PDF"}
+                        </button>
+                      </>
+                    )}
+
+
+                    <button
+                      type="button"
+                      disabled={
+                        busyId !==
+                        null
+                      }
+                      onClick={() =>
+                        handleDelete(
+                          item
+                        )
+                      }
+                      className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deleteBusy
+                        ? "Deleting..."
+                        : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          }
+        )}
+      </div>
+    </section>
+  );
+}

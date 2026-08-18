@@ -1,0 +1,1355 @@
+﻿=== ADMIN.TSX CLOUDINARY PATTERN ===
+
+
+============================================================
+FILE: src/components/Admin.tsx
+============================================================
+
+--- lines 358-383 ---
+358:       alert(`File is too large! Maximum limit is 150MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB.`);
+359:       return;
+360:     }
+361: 
+362:     setUploadingFile(true);
+363:     setUploadProgress('Preparing file upload...');
+364: 
+365:     try {
+366:       const token = await getAuthToken();
+367: 
+368:       // Step A: Try to get a signed direct upload ticket for Cloudinary
+369:       let signedTicket: any = null;
+370:       try {
+371:         const sigRes = await fetch('/api/cloudinary-signature', {
+372:           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+373:         });
+374:         if (sigRes.ok) {
+375:           signedTicket = await sigRes.json();
+376:         }
+377:       } catch (err) {
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+
+--- lines 361-386 ---
+361: 
+362:     setUploadingFile(true);
+363:     setUploadProgress('Preparing file upload...');
+364: 
+365:     try {
+366:       const token = await getAuthToken();
+367: 
+368:       // Step A: Try to get a signed direct upload ticket for Cloudinary
+369:       let signedTicket: any = null;
+370:       try {
+371:         const sigRes = await fetch('/api/cloudinary-signature', {
+372:           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+373:         });
+374:         if (sigRes.ok) {
+375:           signedTicket = await sigRes.json();
+376:         }
+377:       } catch (err) {
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+
+--- lines 368-393 ---
+368:       // Step A: Try to get a signed direct upload ticket for Cloudinary
+369:       let signedTicket: any = null;
+370:       try {
+371:         const sigRes = await fetch('/api/cloudinary-signature', {
+372:           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+373:         });
+374:         if (sigRes.ok) {
+375:           signedTicket = await sigRes.json();
+376:         }
+377:       } catch (err) {
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+
+--- lines 374-399 ---
+374:         if (sigRes.ok) {
+375:           signedTicket = await sigRes.json();
+376:         }
+377:       } catch (err) {
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+
+--- lines 375-400 ---
+375:           signedTicket = await sigRes.json();
+376:         }
+377:       } catch (err) {
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+--- lines 376-401 ---
+376:         }
+377:       } catch (err) {
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+
+--- lines 377-402 ---
+377:       } catch (err) {
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+402:         setUploadProgress('Uploading to secure server (0%)...');
+
+--- lines 378-403 ---
+378:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+402:         setUploadProgress('Uploading to secure server (0%)...');
+403:       }
+
+--- lines 379-404 ---
+379:       }
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+402:         setUploadProgress('Uploading to secure server (0%)...');
+403:       }
+404: 
+
+--- lines 380-405 ---
+380: 
+381:       const xhr = new XMLHttpRequest();
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+402:         setUploadProgress('Uploading to secure server (0%)...');
+403:       }
+404: 
+405:       xhr.upload.onprogress = (event) => {
+
+--- lines 382-407 ---
+382:       const formData = new FormData();
+383: 
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+402:         setUploadProgress('Uploading to secure server (0%)...');
+403:       }
+404: 
+405:       xhr.upload.onprogress = (event) => {
+406:         if (event.lengthComputable) {
+407:           const percentComplete = Math.round((event.loaded / event.total) * 100);
+
+--- lines 384-409 ---
+384:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+385:         // Direct Signed Cloudinary Upload (high speed, supports Netlify, bypasses 6MB serverless limits!)
+386:         formData.append('file', file);
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+402:         setUploadProgress('Uploading to secure server (0%)...');
+403:       }
+404: 
+405:       xhr.upload.onprogress = (event) => {
+406:         if (event.lengthComputable) {
+407:           const percentComplete = Math.round((event.loaded / event.total) * 100);
+408:           setUploadProgress(`Uploading: ${percentComplete}% (${(event.loaded / (1024 * 1024)).toFixed(1)}MB / ${(event.total / (1024 * 1024)).toFixed(1)}MB)`);
+409:         }
+
+--- lines 387-412 ---
+387:         formData.append('api_key', signedTicket.apiKey);
+388:         formData.append('timestamp', signedTicket.timestamp.toString());
+389:         formData.append('signature', signedTicket.signature);
+390:         formData.append('folder', signedTicket.folder || 'madecc');
+391: 
+392:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+393:         xhr.open('POST', uploadUrl, true);
+394:         setUploadProgress('Uploading directly to Cloudinary (0%)...');
+395:       } else {
+396:         // Fallback: Proxy Upload via backend server
+397:         formData.append('file', file);
+398:         xhr.open('POST', '/api/upload', true);
+399:         if (token) {
+400:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+401:         }
+402:         setUploadProgress('Uploading to secure server (0%)...');
+403:       }
+404: 
+405:       xhr.upload.onprogress = (event) => {
+406:         if (event.lengthComputable) {
+407:           const percentComplete = Math.round((event.loaded / event.total) * 100);
+408:           setUploadProgress(`Uploading: ${percentComplete}% (${(event.loaded / (1024 * 1024)).toFixed(1)}MB / ${(event.total / (1024 * 1024)).toFixed(1)}MB)`);
+409:         }
+410:       };
+411: 
+412:       xhr.onload = () => {
+
+--- lines 408-433 ---
+408:           setUploadProgress(`Uploading: ${percentComplete}% (${(event.loaded / (1024 * 1024)).toFixed(1)}MB / ${(event.total / (1024 * 1024)).toFixed(1)}MB)`);
+409:         }
+410:       };
+411: 
+412:       xhr.onload = () => {
+413:         setUploadingFile(false);
+414:         setUploadProgress('');
+415:         if (xhr.status >= 200 && xhr.status < 300) {
+416:           try {
+417:             const data = JSON.parse(xhr.responseText);
+418:             // Cloudinary returns secure_url, our proxy returns url
+419:             const finalUrl = data.secure_url || data.url;
+420:             if (finalUrl) {
+421:               if (targetField === 'projImage') setProjImage(finalUrl);
+422:               if (targetField === 'projVideo') setProjVideoUrl(finalUrl);
+423:               if (targetField === 'blogImage') setBlogImage(finalUrl);
+424:               if (targetField === 'blogVideo') setBlogVideoUrl(finalUrl);
+425:               if (targetField === 'docUrl') setDocUrl(finalUrl);
+426:               if (targetField === 'galImage') setGalImage(finalUrl);
+427:               if (targetField === 'galVideo') setGalVideoUrl(finalUrl);
+428:               if (targetField === 'bannerImage') setBannerImage(finalUrl);
+429:               if (targetField === 'bannerVideo') setBannerVideoUrl(finalUrl);
+430:               if (targetField === 'teamImage') setTeamImage(finalUrl);
+431:               showToast('File uploaded successfully!', 'success');
+432:             } else {
+433:               showToast('Upload succeeded but no asset URL was found.', 'error');
+
+--- lines 439-464 ---
+439:           showToast(`Upload failed: ${xhr.statusText || xhr.status || 'Server Error'}`, 'error');
+440:         }
+441:       };
+442: 
+443:       xhr.onerror = () => {
+444:         setUploadingFile(false);
+445:         setUploadProgress('');
+446:         alert('Network error occurred during file upload.');
+447:       };
+448: 
+449:       xhr.send(formData);
+450: 
+451:     } catch (err: any) {
+452:       console.error(err);
+453:       setUploadingFile(false);
+454:       setUploadProgress('');
+455:       alert('Failed to initiate upload: ' + (err.message || err));
+456:     }
+457:   };
+458: 
+459:   // Synchronous loading helper
+460:   const fetchAdminData = async () => {
+461:     if (!dbUser || (dbUser.role !== 'admin' && dbUser.role !== 'staff')) return;
+462:     setLoadingData(true);
+463:     try {
+464:       const token = await getAuthToken();
+
+--- lines 564-589 ---
+564:           headers: { 'Authorization': `Bearer ${token}` }
+565:         });
+566:         if (res.ok) {
+567:           const data = await res.json();
+568:           const newBackupTime = data.lastBackupTime;
+569:           
+570:           setLastBackupTime((prev) => {
+571:             if (prev && prev !== newBackupTime) {
+572:               // A new backup has executed! Show a toast alert outside of the state updater function
+573:               setTimeout(() => {
+574:                 showToast(`Scheduled database backup task executed successfully! [Timestamp: ${new Date(newBackupTime).toLocaleTimeString()}]`, 'success');
+575:               }, 0);
+576:             }
+577:             return newBackupTime;
+578:           });
+579:         }
+580:       } catch (err) {
+581:         console.warn('Failed to fetch backup status (this is normal during server restarts):', err);
+582:       }
+583:     };
+584: 
+585:     // Run immediately
+586:     checkBackupStatus();
+587: 
+588:     // Poll every 15 seconds
+589:     const interval = setInterval(checkBackupStatus, 15000);
+
+--- lines 4544-4569 ---
+4544:                   value={auditSearch}
+4545:                   onChange={(e) => setAuditSearch(e.target.value)}
+4546:                 />
+4547:               </div>
+4548:             </div>
+4549: 
+4550:             <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+4551:               <table className="w-full text-left border-collapse text-xs">
+4552:                 <thead>
+4553:                   <tr className="bg-slate-900/60 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+4554:                     <th className="p-4">Timestamp Log</th>
+4555:                     <th className="p-4">Action Flag</th>
+4556:                     <th className="p-4">Operator Email</th>
+4557:                     <th className="p-4">Detailed Modification Metrics</th>
+4558:                   </tr>
+4559:                 </thead>
+4560:                 <tbody className="divide-y divide-slate-850">
+4561:                   {filterAuditLogs.map((log) => (
+4562:                     <tr key={log.id} className="hover:bg-slate-900/30 transition-colors">
+4563:                       <td className="p-4 font-mono text-slate-400">{formatDateTime(log.timestamp)}</td>
+4564:                       <td className="p-4">
+4565:                         <span className="font-mono font-bold text-amber-400 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10 text-[10px] uppercase">
+4566:                           {log.action}
+4567:                         </span>
+4568:                       </td>
+4569:                       <td className="p-4 font-bold text-white">{log.userEmail || 'system'}</td>
+
+--- lines 4553-4578 ---
+4553:                   <tr className="bg-slate-900/60 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+4554:                     <th className="p-4">Timestamp Log</th>
+4555:                     <th className="p-4">Action Flag</th>
+4556:                     <th className="p-4">Operator Email</th>
+4557:                     <th className="p-4">Detailed Modification Metrics</th>
+4558:                   </tr>
+4559:                 </thead>
+4560:                 <tbody className="divide-y divide-slate-850">
+4561:                   {filterAuditLogs.map((log) => (
+4562:                     <tr key={log.id} className="hover:bg-slate-900/30 transition-colors">
+4563:                       <td className="p-4 font-mono text-slate-400">{formatDateTime(log.timestamp)}</td>
+4564:                       <td className="p-4">
+4565:                         <span className="font-mono font-bold text-amber-400 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10 text-[10px] uppercase">
+4566:                           {log.action}
+4567:                         </span>
+4568:                       </td>
+4569:                       <td className="p-4 font-bold text-white">{log.userEmail || 'system'}</td>
+4570:                       <td className="p-4 text-slate-300 font-sans">{log.details}</td>
+4571:                     </tr>
+4572:                   ))}
+4573:                 </tbody>
+4574:               </table>
+4575:             </div>
+4576:           </div>
+4577:         )}
+4578: 
+
+--- lines 4831-4856 ---
+4831:           const allHistoryItems = [
+4832:             ...signedContracts.map(c => ({
+4833:               id: c.id,
+4834:               type: 'contract' as const,
+4835:               refNo: c.contractNo,
+4836:               clientName: c.clientName,
+4837:               project: c.contractProject,
+4838:               value: parseFloat(c.contractValue || '0'),
+4839:               verificationToken: c.verificationToken,
+4840:               signedAt: c.signedAt || c.contractDate || '',
+4841:               isSigned: !!c.drawnClientSignature || !!c.typedClientSignature
+4842:             })),
+4843:             ...signedReceipts.map(r => ({
+4844:               id: r.id,
+4845:               type: 'receipt' as const,
+4846:               refNo: r.receiptNo,
+4847:               clientName: r.clientName,
+4848:               project: r.receiptProject,
+4849:               value: parseFloat(r.receiptAmount || '0') * (1 + parseFloat(r.receiptTaxRate || '19.25') / 100),
+4850:               verificationToken: r.verificationToken,
+4851:               signedAt: r.signedAt || '',
+4852:               isSigned: true // Receipts are stamped on generation
+4853:             }))
+4854:           ].sort((a, b) => new Date(b.signedAt).getTime() - new Date(a.signedAt).getTime());
+4855: 
+4856:           const filteredHistoryItems = allHistoryItems.filter(item => {
+
+--- lines 4861-4886 ---
+4861:               item.clientName.toLowerCase().includes(term) ||
+4862:               item.project.toLowerCase().includes(term) ||
+4863:               item.verificationToken.toLowerCase().includes(term);
+4864:             return matchesType && matchesSearch;
+4865:           });
+4866: 
+4867:           // Metrics calculations
+4868:           const totalGenerated = allHistoryItems.length;
+4869:           const contractsCount = signedContracts.length;
+4870:           const receiptsCount = signedReceipts.length;
+4871:           const signedContractsCount = signedContracts.filter(c => !!c.drawnClientSignature || !!c.typedClientSignature).length;
+4872:           const authenticityRate = totalGenerated > 0 
+4873:             ? Math.round(((signedContractsCount + receiptsCount) / totalGenerated) * 100) 
+4874:             : 100;
+4875: 
+4876:           const totalFinancialFlow = signedReceipts.reduce((sum, r) => {
+4877:             const amt = parseFloat(r.receiptAmount || '0');
+4878:             const tax = parseFloat(r.receiptTaxRate || '19.25');
+4879:             return sum + amt * (1 + tax / 100);
+4880:           }, 0);
+4881: 
+4882:           return (
+4883:             <div className="space-y-8 animate-in fade-in duration-500">
+4884:               {/* Header block */}
+4885:               <div className="border-b border-slate-800 pb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+4886:                 <div className="space-y-1">
+
+--- lines 5305-5330 ---
+5305:                           <td className="py-1.5">varchar(255)</td>
+5306:                           <td className="py-1.5">NULLABLE</td>
+5307:                         </tr>
+5308:                         <tr>
+5309:                           <td className="py-1.5 text-white">role</td>
+5310:                           <td className="py-1.5">varchar(50)</td>
+5311:                           <td className="py-1.5">DEFAULT 'client' (admin|staff|client)</td>
+5312:                         </tr>
+5313:                         <tr>
+5314:                           <td className="py-1.5 text-white">created_at</td>
+5315:                           <td className="py-1.5">timestamp</td>
+5316:                           <td className="py-1.5">DEFAULT now()</td>
+5317:                         </tr>
+5318:                       </tbody>
+5319:                     </table>
+5320:                   </div>
+5321:                 </div>
+5322: 
+5323:                 {/* Projects Table Schema */}
+5324:                 <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+5325:                   <div className="flex justify-between items-center">
+5326:                     <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-black">projects</span>
+5327:                     <span className="text-[10px] text-slate-500 font-mono">Infrastructure Civil Works</span>
+5328:                   </div>
+5329:                   <div className="overflow-x-auto">
+5330:                     <table className="w-full text-left font-mono text-[11px] text-slate-400">
+
+--- lines 5361-5386 ---
+5361:                           <td className="py-1.5">varchar(50)</td>
+5362:                           <td className="py-1.5">DEFAULT 'planning'</td>
+5363:                         </tr>
+5364:                         <tr>
+5365:                           <td className="py-1.5 text-white">owner_id</td>
+5366:                           <td className="py-1.5">integer</td>
+5367:                           <td className="py-1.5 text-sky-400">REFERENCES users(id)</td>
+5368:                         </tr>
+5369:                         <tr>
+5370:                           <td className="py-1.5 text-white">created_at</td>
+5371:                           <td className="py-1.5">timestamp</td>
+5372:                           <td className="py-1.5">DEFAULT now()</td>
+5373:                         </tr>
+5374:                       </tbody>
+5375:                     </table>
+5376:                   </div>
+5377:                 </div>
+5378: 
+5379:                 {/* Appointments Schema */}
+5380:                 <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+5381:                   <div className="flex justify-between items-center">
+5382:                     <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-black">appointments</span>
+5383:                     <span className="text-[10px] text-slate-500 font-mono">Technical Consultations</span>
+5384:                   </div>
+5385:                   <div className="overflow-x-auto">
+5386:                     <table className="w-full text-left font-mono text-[11px] text-slate-400">
+
+--- lines 5422-5447 ---
+5422:                           <td className="py-1.5">text</td>
+5423:                           <td className="py-1.5">NULLABLE</td>
+5424:                         </tr>
+5425:                         <tr>
+5426:                           <td className="py-1.5 text-white">status</td>
+5427:                           <td className="py-1.5">varchar(50)</td>
+5428:                           <td className="py-1.5">DEFAULT 'pending'</td>
+5429:                         </tr>
+5430:                         <tr>
+5431:                           <td className="py-1.5 text-white">created_at</td>
+5432:                           <td className="py-1.5">timestamp</td>
+5433:                           <td className="py-1.5">DEFAULT now()</td>
+5434:                         </tr>
+5435:                       </tbody>
+5436:                     </table>
+5437:                   </div>
+5438:                 </div>
+5439: 
+5440:                 {/* Audit Logs Table Schema */}
+5441:                 <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5 space-y-3">
+5442:                   <div className="flex justify-between items-center">
+5443:                     <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-black">audit_logs</span>
+5444:                     <span className="text-[10px] text-slate-500 font-mono">System Security Tracking</span>
+5445:                   </div>
+5446:                   <div className="overflow-x-auto">
+5447:                     <table className="w-full text-left font-mono text-[11px] text-slate-400">
+
+--- lines 5473-5498 ---
+5473:                           <td className="py-1.5">varchar(255)</td>
+5474:                           <td className="py-1.5">NULLABLE</td>
+5475:                         </tr>
+5476:                         <tr>
+5477:                           <td className="py-1.5 text-white">details</td>
+5478:                           <td className="py-1.5">text</td>
+5479:                           <td className="py-1.5">NULLABLE</td>
+5480:                         </tr>
+5481:                         <tr>
+5482:                           <td className="py-1.5 text-white">created_at</td>
+5483:                           <td className="py-1.5">timestamp</td>
+5484:                           <td className="py-1.5">DEFAULT now()</td>
+5485:                         </tr>
+5486:                       </tbody>
+5487:                     </table>
+5488:                   </div>
+5489:                 </div>
+5490: 
+5491:               </div>
+5492:             </div>
+5493: 
+5494:             {/* REST API Endpoints Documentation */}
+5495:             <div className="space-y-6">
+5496:               <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+5497:                 <Code className="text-amber-500 w-5 h-5" />
+5498:                 <h2 className="text-lg font-bold text-white">REST API Endpoint Specification</h2>
+
+--- lines 5591-5616 ---
+5591:                   <div className="space-y-2">
+5592:                     <span className="text-xs font-bold text-slate-400 block">Database Table Schema (social_media_channels):</span>
+5593:                     <pre className="bg-slate-950 text-amber-400 p-3 rounded-xl font-mono text-xs border border-slate-900 overflow-x-auto">
+5594: {`TABLE social_media_channels (
+5595:   id SERIAL PRIMARY KEY,
+5596:   provider VARCHAR(50) NOT NULL, -- linkedin, facebook, instagram, twitter, youtube
+5597:   account_name VARCHAR(150),
+5598:   access_token TEXT NOT NULL, -- AES-256-GCM Encrypted
+5599:   refresh_token TEXT, -- AES-256-GCM Encrypted
+5600:   status VARCHAR(20) DEFAULT 'connected',
+5601:   connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+5602:   token_expires_at TIMESTAMP
+5603: );`}
+5604:                     </pre>
+5605:                   </div>
+5606:                 </div>
+5607: 
+5608:               </div>
+5609:             </div>
+5610:           </div>
+5611:         )}
+5612: 
+5613:         {/* CAD TAKE-OFF QUANTITY STUDIO VIEW */}
+5614:         {activeAdminTab === 'drawing-studio' && (
+5615:           <div className="space-y-8 animate-in fade-in duration-300">
+5616:             <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/20 border border-slate-800 p-8 rounded-3xl relative overflow-hidden shadow-2xl">
+
+--- lines 5592-5617 ---
+5592:                     <span className="text-xs font-bold text-slate-400 block">Database Table Schema (social_media_channels):</span>
+5593:                     <pre className="bg-slate-950 text-amber-400 p-3 rounded-xl font-mono text-xs border border-slate-900 overflow-x-auto">
+5594: {`TABLE social_media_channels (
+5595:   id SERIAL PRIMARY KEY,
+5596:   provider VARCHAR(50) NOT NULL, -- linkedin, facebook, instagram, twitter, youtube
+5597:   account_name VARCHAR(150),
+5598:   access_token TEXT NOT NULL, -- AES-256-GCM Encrypted
+5599:   refresh_token TEXT, -- AES-256-GCM Encrypted
+5600:   status VARCHAR(20) DEFAULT 'connected',
+5601:   connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+5602:   token_expires_at TIMESTAMP
+5603: );`}
+5604:                     </pre>
+5605:                   </div>
+5606:                 </div>
+5607: 
+5608:               </div>
+5609:             </div>
+5610:           </div>
+5611:         )}
+5612: 
+5613:         {/* CAD TAKE-OFF QUANTITY STUDIO VIEW */}
+5614:         {activeAdminTab === 'drawing-studio' && (
+5615:           <div className="space-y-8 animate-in fade-in duration-300">
+5616:             <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/20 border border-slate-800 p-8 rounded-3xl relative overflow-hidden shadow-2xl">
+5617:               <span className="text-[10px] font-mono uppercase tracking-widest text-amber-500 font-bold bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20">
+
+
+============================================================
+FILE: src/components/LessonStudio.tsx
+============================================================
+
+--- lines 253-278 ---
+253:   const [activeSubTab, setActiveSubTab] = useState<'plan' | 'lecture' | 'slides' | 'worksheet' | 'quiz' | 'metadata' | 'media'>('plan');
+254: 
+255:   // Media Cloud Upload states
+256:   const [uploadedMediaFiles, setUploadedMediaFiles] = useState<any[]>([]);
+257:   const [isUploadingMedia, setIsUploadingMedia] = useState<boolean>(false);
+258:   const [mediaUploadProgress, setMediaUploadProgress] = useState<string>('');
+259:   const [dragOverActive, setDragOverActive] = useState<boolean>(false);
+260: 
+261:   const handleMediaUpload = async (file: File) => {
+262:     setIsUploadingMedia(true);
+263:     setMediaUploadProgress('Initializing direct-signed upload signature...');
+264:     try {
+265:       const token = await getAuthToken() || '';
+266:       
+267:       // Step A: Try to get a signed direct upload ticket for Cloudinary
+268:       let signedTicket: any = null;
+269:       try {
+270:         const sigRes = await fetch('/api/cloudinary-signature', {
+271:           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+272:         });
+273:         if (sigRes.ok) {
+274:           signedTicket = await sigRes.json();
+275:         }
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+
+--- lines 257-282 ---
+257:   const [isUploadingMedia, setIsUploadingMedia] = useState<boolean>(false);
+258:   const [mediaUploadProgress, setMediaUploadProgress] = useState<string>('');
+259:   const [dragOverActive, setDragOverActive] = useState<boolean>(false);
+260: 
+261:   const handleMediaUpload = async (file: File) => {
+262:     setIsUploadingMedia(true);
+263:     setMediaUploadProgress('Initializing direct-signed upload signature...');
+264:     try {
+265:       const token = await getAuthToken() || '';
+266:       
+267:       // Step A: Try to get a signed direct upload ticket for Cloudinary
+268:       let signedTicket: any = null;
+269:       try {
+270:         const sigRes = await fetch('/api/cloudinary-signature', {
+271:           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+272:         });
+273:         if (sigRes.ok) {
+274:           signedTicket = await sigRes.json();
+275:         }
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+
+--- lines 260-285 ---
+260: 
+261:   const handleMediaUpload = async (file: File) => {
+262:     setIsUploadingMedia(true);
+263:     setMediaUploadProgress('Initializing direct-signed upload signature...');
+264:     try {
+265:       const token = await getAuthToken() || '';
+266:       
+267:       // Step A: Try to get a signed direct upload ticket for Cloudinary
+268:       let signedTicket: any = null;
+269:       try {
+270:         const sigRes = await fetch('/api/cloudinary-signature', {
+271:           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+272:         });
+273:         if (sigRes.ok) {
+274:           signedTicket = await sigRes.json();
+275:         }
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+
+--- lines 267-292 ---
+267:       // Step A: Try to get a signed direct upload ticket for Cloudinary
+268:       let signedTicket: any = null;
+269:       try {
+270:         const sigRes = await fetch('/api/cloudinary-signature', {
+271:           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+272:         });
+273:         if (sigRes.ok) {
+274:           signedTicket = await sigRes.json();
+275:         }
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+
+--- lines 273-298 ---
+273:         if (sigRes.ok) {
+274:           signedTicket = await sigRes.json();
+275:         }
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+
+--- lines 274-299 ---
+274:           signedTicket = await sigRes.json();
+275:         }
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+--- lines 275-300 ---
+275:         }
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+
+--- lines 276-301 ---
+276:       } catch (err) {
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+301:         setMediaUploadProgress('Uploading to secure server (0%)...');
+
+--- lines 277-302 ---
+277:         console.warn('Could not fetch Cloudinary upload ticket, falling back to proxy upload:', err);
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+301:         setMediaUploadProgress('Uploading to secure server (0%)...');
+302:       }
+
+--- lines 278-303 ---
+278:       }
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+301:         setMediaUploadProgress('Uploading to secure server (0%)...');
+302:       }
+303: 
+
+--- lines 279-304 ---
+279: 
+280:       const xhr = new XMLHttpRequest();
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+301:         setMediaUploadProgress('Uploading to secure server (0%)...');
+302:       }
+303: 
+304:       xhr.upload.onprogress = (event) => {
+
+--- lines 281-306 ---
+281:       const formData = new FormData();
+282: 
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+301:         setMediaUploadProgress('Uploading to secure server (0%)...');
+302:       }
+303: 
+304:       xhr.upload.onprogress = (event) => {
+305:         if (event.lengthComputable) {
+306:           const percentComplete = Math.round((event.loaded / event.total) * 100);
+
+--- lines 283-308 ---
+283:       if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+284:         // Direct Signed Cloudinary Upload (Netlify-compatible, bypassing 6MB serverless limits!)
+285:         formData.append('file', file);
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+301:         setMediaUploadProgress('Uploading to secure server (0%)...');
+302:       }
+303: 
+304:       xhr.upload.onprogress = (event) => {
+305:         if (event.lengthComputable) {
+306:           const percentComplete = Math.round((event.loaded / event.total) * 100);
+307:           setMediaUploadProgress(`Uploading: ${percentComplete}% (${(event.loaded / (1024 * 1024)).toFixed(1)}MB / ${(event.total / (1024 * 1024)).toFixed(1)}MB)`);
+308:         }
+
+--- lines 286-311 ---
+286:         formData.append('api_key', signedTicket.apiKey);
+287:         formData.append('timestamp', signedTicket.timestamp.toString());
+288:         formData.append('signature', signedTicket.signature);
+289:         formData.append('folder', signedTicket.folder || 'minesec_media');
+290: 
+291:         const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+292:         xhr.open('POST', uploadUrl, true);
+293:         setMediaUploadProgress('Uploading directly to Cloudinary (0%)...');
+294:       } else {
+295:         // Fallback: Proxy Upload via backend server
+296:         formData.append('file', file);
+297:         xhr.open('POST', '/api/upload', true);
+298:         if (token) {
+299:           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+300:         }
+301:         setMediaUploadProgress('Uploading to secure server (0%)...');
+302:       }
+303: 
+304:       xhr.upload.onprogress = (event) => {
+305:         if (event.lengthComputable) {
+306:           const percentComplete = Math.round((event.loaded / event.total) * 100);
+307:           setMediaUploadProgress(`Uploading: ${percentComplete}% (${(event.loaded / (1024 * 1024)).toFixed(1)}MB / ${(event.total / (1024 * 1024)).toFixed(1)}MB)`);
+308:         }
+309:       };
+310: 
+311:       xhr.onload = () => {
+
+--- lines 336-361 ---
+336:           showToast(`Upload failed with status code ${xhr.status}`, 'error');
+337:         }
+338:       };
+339: 
+340:       xhr.onerror = () => {
+341:         setIsUploadingMedia(false);
+342:         setMediaUploadProgress('');
+343:         showToast('Network error occurred during media upload.', 'error');
+344:       };
+345: 
+346:       xhr.send(formData);
+347: 
+348:     } catch (err: any) {
+349:       setIsUploadingMedia(false);
+350:       setMediaUploadProgress('');
+351:       showToast(`Upload failed: ${err.message || err}`, 'error');
+352:     }
+353:   };
+354: 
+355:   const handleDeleteMedia = (id: string) => {
+356:     if (window.confirm('Remove this media file from your gallery?')) {
+357:       setUploadedMediaFiles(prev => prev.filter(f => f.id !== id));
+358:       showToast('Media removed from gallery.', 'success');
+359:     }
+360:   };
+361: 
+
+--- lines 2788-2813 ---
+2788:                                 Clear Cache
+2789:                               </button>
+2790:                             )}
+2791:                           </h3>
+2792: 
+2793:                           {uploadedMediaFiles.length === 0 ? (
+2794:                             <div className="text-center py-12 bg-slate-950/20 rounded-xl border border-dashed border-slate-850 text-slate-500 text-xs flex flex-col items-center justify-center gap-3">
+2795:                               <Image className="w-8 h-8 text-slate-600" />
+2796:                               <p>No media files uploaded yet</p>
+2797:                               <p className="text-[11px] text-slate-600 max-w-xs">
+2798:                                 Uploaded items are securely stored on Cloudinary and will appear here for fast embedding into your course materials.
+2799:                               </p>
+2800:                             </div>
+2801:                           ) : (
+2802:                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+2803:                               {uploadedMediaFiles.map((file) => {
+2804:                                 const isImage = file.type?.startsWith('image/');
+2805:                                 const isVideo = file.type?.startsWith('video/');
+2806:                                 return (
+2807:                                   <div key={file.id} className="bg-slate-950/80 rounded-xl border border-slate-850 p-4 flex flex-col gap-4 hover:border-slate-700 transition-all">
+2808:                                     <div className="flex gap-3">
+2809:                                       {/* Preview Container */}
+2810:                                       <div className="w-20 h-20 rounded-lg bg-slate-900 flex items-center justify-center overflow-hidden border border-slate-800 shrink-0 relative">
+2811:                                         {isImage ? (
+2812:                                           <img src={file.url} alt={file.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+2813:                                         ) : isVideo ? (
+
+
+============================================================
+FILE: C:\Users\Uer Obam Inf\Desktop\madecc-group1\src\components\MADECCAIStudio.tsx
+CURRENT AI STUDIO UPLOAD SECTION
+============================================================
+
+371:       setResult({
+372:         text:
+373:           data.translation,
+374:       });
+375:     } catch (err: any) {
+376:       setError(
+377:         err.message ||
+378:           "Translation failed."
+379:       );
+380:     } finally {
+381:       setLoading(false);
+382:     }
+383:   }
+384: 
+385:   async function uploadAndAnalyze(
+386:     endpoint: string,
+387:     file: File
+388:   ) {
+389:     setLoading(true);
+390:     setError("");
+391:     setResult(null);
+392: 
+393:     try {
+394:       const form =
+395:         new FormData();
+396: 
+397:       form.append(
+398:         "file",
+399:         file
+400:       );
+401: 
+402:       if (projectId) {
+403:         form.append(
+404:           "projectId",
+405:           projectId
+406:         );
+407:       }
+408: 
+409:       if (prompt.trim()) {
+410:         form.append(
+411:           "prompt",
+412:           prompt
+413:         );
+414:       }
+415: 
+416:       const response =
+417:         await fetch(
+418:           endpoint,
+419:           {
+420:             method:
+421:               "POST",
+422:             credentials:
+423:               "include",
+424:             body: form,
+425:           }
+426:         );
+427: 
+428:       const data =
+429:         await response
+430:           .json()
+431:           .catch(() => ({}));
+432: 
+433:       if (!response.ok) {
+434:         throw new Error(
+435:           data.message ||
+436:             "Media processing failed."
+437:         );
+438:       }
+439: 
+440:       setResult(data);
+441:       await loadMedia();
+442:     } catch (err: any) {
+443:       setError(
+444:         err.message ||
+445:           "Media processing failed."
+446:       );
+447:     } finally {
+448:       setLoading(false);
+449:     }
+450:   }
+451: 
+452:   function handleFile(
+453:     event: ChangeEvent<HTMLInputElement>
+454:   ) {
+455:     const file =
+456:       event.target.files?.[0];
+457: 
+458:     if (!file) return;
+459: 
+460:     if (
+461:       tab ===
+462:       "transcribe"
+463:     ) {
+464:       void uploadAndAnalyze(
+465:         "/api/ai/transcribe",
+466:         file
+467:       );
+468:     }
+469: 
+470:     if (
+471:       tab ===
+472:       "video"
+473:     ) {
+474:       void uploadAndAnalyze(
+475:         "/api/ai/video/analyze",
+476:         file
+477:       );
+478:     }
+479: 
+480:     if (
+481:       tab ===
+482:       "media"
+483:     ) {
+484:       void uploadAndAnalyze(
+485:         "/api/ai/image/analyze",
+486:         file
+487:       );
+488:     }
+489: 
+490:     if (
+491:       tab ===
+492:       "documents"
+493:     ) {
+494:       void uploadAndAnalyze(
+495:         "/api/ai/document/analyze",
+496:         file
+497:       );
+498:     }
+499: 
+500:     if (
+501:       tab ===
+502:       "drawings"
+503:     ) {
+504:       void uploadAndAnalyze(
+505:         "/api/ai/drawing/analyze",
+506:         file
+507:       );
+508:     }
+509: 
+510:     event.target.value =
+511:       "";
+512:   }
+513: 
+514:   function downloadText(
+515:     text: string,
+516:     filename =
+517:       "madecc-ai-output.txt"
+518:   ) {
+519:     const blob =
+520:       new Blob(
+521:         [text],
+522:         {
+523:           type:
+524:             "text/plain;charset=utf-8",
+525:         }
+526:       );
+527: 
+528:     const url =
+529:       URL.createObjectURL(
+530:         blob
+531:       );
