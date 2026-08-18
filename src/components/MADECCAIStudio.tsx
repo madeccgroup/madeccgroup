@@ -187,42 +187,42 @@ const tabs: {
   {
     id: "chat",
     label: "AI Chat",
-    icon: "✦",
+    icon: "âœ¦",
   },
   {
     id: "video",
     label: "Video",
-    icon: "🎬",
+    icon: "ðŸŽ¬",
   },
   {
     id: "audio",
     label: "Audio",
-    icon: "🔊",
+    icon: "ðŸ”Š",
   },
   {
     id: "media",
     label: "Media",
-    icon: "🖼",
+    icon: "ðŸ–¼",
   },
   {
     id: "documents",
     label: "Documents",
-    icon: "📄",
+    icon: "ðŸ“„",
   },
   {
     id: "drawings",
-    label: "Drawings → BOQ",
-    icon: "🏗",
+    label: "Drawings â†’ BOQ",
+    icon: "ðŸ—",
   },
   {
     id: "transcribe",
     label: "Transcribe",
-    icon: "🎙",
+    icon: "ðŸŽ™",
   },
   {
     id: "global",
     label: "Global",
-    icon: "🌍",
+    icon: "ðŸŒ",
   },
 ];
 
@@ -310,18 +310,31 @@ export default function MADECCAIStudio() {
     url: string,
     body: unknown
   ) {
+    const token =
+      await getAuthToken();
+
+    if (!token) {
+      throw new Error(
+        "Authentication required. Please sign in again."
+      );
+    }
+
     const response =
-      await fetch(url, {
-        method: "POST",
-        credentials:
-          "include",
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-        body:
-          JSON.stringify(body),
-      });
+      await fetch(
+        url,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type":
+              "application/json",
+            Authorization:
+              `Bearer ${token}`,
+          },
+          body:
+            JSON.stringify(body),
+        }
+      );
 
     const data =
       await response
@@ -331,13 +344,12 @@ export default function MADECCAIStudio() {
     if (!response.ok) {
       throw new Error(
         data.message ||
-          "MADECC AI request failed."
+          `MADECC AI request failed (${response.status}).`
       );
     }
 
     return data;
   }
-
   async function runText() {
     if (!prompt.trim()) return;
 
@@ -544,6 +556,15 @@ export default function MADECCAIStudio() {
     setResult(null);
 
     try {
+      const token =
+        await getAuthToken();
+
+      if (!token) {
+        throw new Error(
+          "Authentication required. Please sign in again."
+        );
+      }
+
       const form =
         new FormData();
 
@@ -570,38 +591,77 @@ export default function MADECCAIStudio() {
         await fetch(
           endpoint,
           {
-            method:
-              "POST",
-            credentials:
-              "include",
+            method: "POST",
+            credentials: "include",
+
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+
             body: form,
           }
         );
 
-      const data =
-        await response
-          .json()
-          .catch(() => ({}));
+      const raw =
+        await response.text();
+
+      let data: any = {};
+
+      try {
+        data =
+          raw
+            ? JSON.parse(raw)
+            : {};
+      } catch {
+        data = {
+          message:
+            raw ||
+            "The server returned an invalid response.",
+        };
+      }
 
       if (!response.ok) {
         throw new Error(
           data.message ||
+            data.error ||
+            `Media processing failed (${response.status}).`
+        );
+      }
+
+      if (
+        data.success === false
+      ) {
+        throw new Error(
+          data.message ||
+            data.error ||
             "Media processing failed."
         );
       }
 
       setResult(data);
+
       await loadMedia();
     } catch (err: any) {
+      console.error(
+        "[MADECC_AI_STUDIO_MEDIA]",
+        {
+          endpoint,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          error: err,
+        }
+      );
+
       setError(
-        err.message ||
+        err?.message ||
           "Media processing failed."
       );
     } finally {
       setLoading(false);
     }
   }
-
   function handleFile(
     event: ChangeEvent<HTMLInputElement>
   ) {
@@ -644,12 +704,80 @@ export default function MADECCAIStudio() {
       tab ===
       "documents"
     ) {
+      const allowedDocumentTypes = [
+        "application/pdf",
+        "text/plain",
+        "text/csv",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      ];
+
+      const allowedDocumentExtensions = [
+        ".pdf",
+        ".txt",
+        ".csv",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+      ];
+
+      const lowerName =
+        file.name.toLowerCase();
+
+      const extensionAllowed =
+        allowedDocumentExtensions.some(
+          (extension) =>
+            lowerName.endsWith(extension)
+        );
+
+      const typeAllowed =
+        allowedDocumentTypes.includes(
+          file.type
+        );
+
+      if (
+        !typeAllowed &&
+        !extensionAllowed
+      ) {
+        setError(
+          "Unsupported document type. Please upload PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT or CSV."
+        );
+
+        event.target.value =
+          "";
+
+        return;
+      }
+
+      const maxDocumentSize =
+        50 * 1024 * 1024;
+
+      if (
+        file.size >
+        maxDocumentSize
+      ) {
+        setError(
+          "Document is too large. Maximum supported document size is 50 MB."
+        );
+
+        event.target.value =
+          "";
+
+        return;
+      }
+
       void uploadAndAnalyze(
         "/api/ai/document/analyze",
         file
       );
     }
-
     if (
       tab ===
       "drawings"
@@ -883,11 +1011,11 @@ export default function MADECCAIStudio() {
 
       <div className="madecc-ai-top">
         <div className="madecc-ai-title">
-          ✦ MADECC AI Studio
+          âœ¦ MADECC AI Studio
         </div>
 
         <div className="madecc-ai-subtitle">
-          Create • Transform • Analyze • Automate
+          Create â€¢ Transform â€¢ Analyze â€¢ Automate
         </div>
       </div>
 
@@ -1112,7 +1240,7 @@ export default function MADECCAIStudio() {
                   loading
                 }
               >
-                ✦ Ask MADECC AI
+                âœ¦ Ask MADECC AI
               </button>
             )}
 
@@ -1128,7 +1256,7 @@ export default function MADECCAIStudio() {
                     loading
                   }
                 >
-                  🎬 Generate Video
+                  ðŸŽ¬ Generate Video
                 </button>
 
                 <button
@@ -1137,7 +1265,7 @@ export default function MADECCAIStudio() {
                     fileRef.current?.click()
                   }
                 >
-                  🎥 Analyze Video
+                  ðŸŽ¥ Analyze Video
                 </button>
               </>
             )}
@@ -1153,7 +1281,7 @@ export default function MADECCAIStudio() {
                   loading
                 }
               >
-                🔊 Generate Voice
+                ðŸ”Š Generate Voice
               </button>
             )}
 
@@ -1169,7 +1297,7 @@ export default function MADECCAIStudio() {
                     loading
                   }
                 >
-                  🎨 Generate Image
+                  ðŸŽ¨ Generate Image
                 </button>
 
                 <button
@@ -1178,7 +1306,7 @@ export default function MADECCAIStudio() {
                     fileRef.current?.click()
                   }
                 >
-                  🖼 Analyze Image
+                  ðŸ–¼ Analyze Image
                 </button>
               </>
             )}
@@ -1191,7 +1319,7 @@ export default function MADECCAIStudio() {
                   fileRef.current?.click()
                 }
               >
-                🎙 Upload Audio
+                ðŸŽ™ Upload Audio
               </button>
             )}
 
@@ -1203,7 +1331,7 @@ export default function MADECCAIStudio() {
                   fileRef.current?.click()
                 }
               >
-                📄 Analyze Document
+                ðŸ“„ Analyze Document
               </button>
             )}
 
@@ -1215,7 +1343,7 @@ export default function MADECCAIStudio() {
                   fileRef.current?.click()
                 }
               >
-                🏗 Generate BOQ
+                ðŸ— Generate BOQ
               </button>
             )}
 
@@ -1230,7 +1358,7 @@ export default function MADECCAIStudio() {
                   loading
                 }
               >
-                🌍 Translate
+                ðŸŒ Translate
               </button>
             )}
           </div>
@@ -1269,7 +1397,7 @@ export default function MADECCAIStudio() {
                 borderRadius:10,
               }}
             >
-              ⏳ MADECC AI is
+              â³ MADECC AI is
               processing your
               request...
             </div>
@@ -1277,7 +1405,7 @@ export default function MADECCAIStudio() {
 
           {error && (
             <div className="madecc-ai-error">
-              ⚠ {error}
+              âš  {error}
             </div>
           )}
 
@@ -1345,7 +1473,7 @@ export default function MADECCAIStudio() {
                         )
                       }
                     >
-                      ⬇ Download TXT
+                      â¬‡ Download TXT
                     </button>
                   </div>
                 </>
@@ -1368,7 +1496,7 @@ export default function MADECCAIStudio() {
                       )
                     }
                   >
-                    ⬇ Download Transcript
+                    â¬‡ Download Transcript
                   </button>
                 </>
               )}
@@ -1390,7 +1518,7 @@ export default function MADECCAIStudio() {
                       )
                     }
                   >
-                    ⬇ Download Analysis
+                    â¬‡ Download Analysis
                   </button>
                 </>
               )}
@@ -1420,7 +1548,7 @@ export default function MADECCAIStudio() {
                       )
                     }
                   >
-                    ⬇ Download BOQ JSON
+                    â¬‡ Download BOQ JSON
                   </button>
                 </div>
               )}
@@ -1524,3 +1652,4 @@ export default function MADECCAIStudio() {
     </div>
   );
 }
+

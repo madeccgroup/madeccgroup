@@ -1,7 +1,8 @@
-import {
+﻿import {
   GoogleGenAI,
 } from "@google/genai";
 
+import * as wav from "wav";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -210,6 +211,36 @@ export async function generateImage(
   };
 }
 
+
+function pcmToWav(
+  pcmData: Buffer,
+  sampleRate = 24000,
+  channels = 1,
+  bitDepth = 16
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+
+    const writer = new wav.Writer({
+      channels,
+      sampleRate,
+      bitDepth,
+    });
+
+    writer.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+
+    writer.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+
+    writer.on("error", reject);
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
 export async function generateSpeech(
   text: string,
   options?: {
@@ -283,17 +314,23 @@ ${text}
     );
   }
 
-  const buffer =
-    Buffer.from(
-      audio.data,
-      "base64"
-    );
+  const pcmBuffer = Buffer.from(
+    audio.data,
+    "base64"
+  );
+
+  const buffer = await pcmToWav(
+    pcmBuffer,
+    24000,
+    1,
+    16
+  );
 
   const uploaded =
     await uploadMADECCAIStream(
       buffer,
       {
-        type: "video",
+        type: "audio",
         format: "wav",
       }
     );
@@ -377,20 +414,54 @@ export async function uploadGeminiFile(
   const client =
     ensureAI();
 
-  const file =
-    await client.files.upload(
-      {
-        file: filePath,
+  if (!filePath) {
+    throw new Error(
+      "AI upload failed: file path is missing."
+    );
+  }
 
-        config: {
-          mimeType,
-        },
+  const normalizedMimeType =
+    mimeType ||
+    "application/octet-stream";
+
+  try {
+    const file =
+      await client.files.upload(
+        {
+          file: filePath,
+
+          config: {
+            mimeType:
+              normalizedMimeType,
+          },
+        }
+      );
+
+    if (!file?.uri) {
+      throw new Error(
+        "Gemini file upload completed without a file URI."
+      );
+    }
+
+    return file;
+  } catch (error) {
+    console.error(
+      "[MADECC_GEMINI_FILE_UPLOAD]",
+      {
+        filePath,
+        mimeType:
+          normalizedMimeType,
+        error,
       }
     );
 
-  return file;
+    throw new Error(
+      error instanceof Error
+        ? `Gemini file upload failed: ${error.message}`
+        : "Gemini file upload failed."
+    );
+  }
 }
-
 export async function analyzeFile(
   filePath: string,
   mimeType: string,
@@ -399,69 +470,122 @@ export async function analyzeFile(
   const client =
     ensureAI();
 
+  const normalizedMimeType =
+    String(
+      mimeType || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  if (!normalizedMimeType) {
+    throw new Error(
+      "Document analysis failed: MIME type is missing."
+    );
+  }
+
   const uploaded =
     await uploadGeminiFile(
       filePath,
-      mimeType
+      normalizedMimeType
     );
 
   const category =
-    mimeType.startsWith(
+    normalizedMimeType.startsWith(
       "video/"
     )
       ? "video"
-      : mimeType.startsWith(
+      : normalizedMimeType.startsWith(
           "audio/"
         )
       ? "audio"
-      : mimeType ===
-          "application/pdf"
-      ? "document"
-      : mimeType.startsWith(
+      : normalizedMimeType.startsWith(
           "image/"
         )
       ? "image"
       : "document";
 
-  const interaction =
-    await client.interactions.create(
+  console.log(
+    "[MADECC_GEMINI_ANALYZE]",
+    {
+      category,
+      mimeType:
+        uploaded.mimeType ||
+        normalizedMimeType,
+      uri:
+        uploaded.uri,
+    }
+  );
+
+  try {
+    const interaction =
+      await client.interactions.create(
+        {
+          model:
+            VISION_MODEL,
+
+          system_instruction:
+            SYSTEM_INSTRUCTION,
+
+          input: [
+            {
+              type:
+                category,
+
+              uri:
+                uploaded.uri,
+
+              mime_type:
+                uploaded.mimeType ||
+                normalizedMimeType,
+            },
+
+            {
+              type:
+                "text",
+
+              text:
+                prompt,
+            },
+          ],
+        }
+      );
+
+    return {
+      text:
+        interaction.output_text ||
+        "",
+
+      model:
+        VISION_MODEL,
+
+      interactionId:
+        interaction.id,
+
+      geminiFile:
+        uploaded.uri,
+    };
+  } catch (error) {
+    console.error(
+      "[MADECC_GEMINI_ANALYZE_FAILED]",
       {
-        model:
-          VISION_MODEL,
-
-        system_instruction:
-          SYSTEM_INSTRUCTION,
-
-        input: [
-          {
-            type: category,
-            uri: uploaded.uri,
-            mime_type:
-              uploaded.mimeType ||
-              mimeType,
-          },
-
-          {
-            type: "text",
-            text: prompt,
-          },
-        ],
+        category,
+        mimeType:
+          uploaded.mimeType ||
+          normalizedMimeType,
+        error,
       }
     );
 
-  return {
-    text:
-      interaction.output_text ||
-      "",
-    model:
-      VISION_MODEL,
-    interactionId:
-      interaction.id,
-    geminiFile:
-      uploaded.uri,
-  };
-}
+    const message =
+      error instanceof Error
+        ? error.message
+        : String(error);
 
+    throw new Error(
+      `Gemini document analysis failed: ${message}`
+    );
+  }
+}
 export async function transcribeAudio(
   filePath: string,
   mimeType: string,
@@ -764,3 +888,6 @@ being used as a contractual BOQ.
       interaction.id,
   };
 }
+
+
+

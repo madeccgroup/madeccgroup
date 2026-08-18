@@ -1,4 +1,4 @@
-import os from "node:os";
+﻿import os from "node:os";
 import {
   Router,
   Request,
@@ -8,6 +8,7 @@ import {
 import multer from "multer";
 
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -56,7 +57,7 @@ const uploadDir = path.join(os.tmpdir(), "madecc-ai");
  * os.tmpdir() gives us the runtime temporary directory instead
  * of attempting to write into the deployed /var/task directory.
  */
-fs.mkdirSync(uploadDir, {
+fsSync.mkdirSync(uploadDir, {
   recursive: true,
 });
 
@@ -119,7 +120,7 @@ async function createJob(
           projectId || null,
         type,
         status: "running",
-        provider: "google",
+        provider: "cloudinary",
         input: input as any,
         startedAt:
           new Date(),
@@ -213,7 +214,7 @@ async function saveMedia(
         size:
           values.size,
         provider:
-          "google",
+          "cloudinary",
         model:
           values.model,
         url:
@@ -650,8 +651,19 @@ router.post(
       });
     } catch (error) {
       console.error(
-        "[MADECC_AI_IMAGE]",
-        error
+        "[MADECC_AI_IMAGE] IMAGE GENERATION ERROR",
+        {
+          model: IMAGE_MODEL,
+          error,
+          message:
+            error instanceof Error
+              ? error.message
+              : String(error),
+          stack:
+            error instanceof Error
+              ? error.stack
+              : undefined,
+        }
       );
 
       return res
@@ -1898,6 +1910,8 @@ router.delete(
 );
 
 export default router;
+
+
 
 
 
