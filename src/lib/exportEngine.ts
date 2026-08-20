@@ -319,12 +319,13 @@ export function exportSupplierDossierPDF(app: any) {
 }
 
 /**
- * Export Tender Opportunity Notice to PDF
+ * Export Tender Opportunity Notice to A4 PDF
  */
 export function exportTenderNoticePDF(tender: any) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const timestamp = new Date().toLocaleString();
 
+  // Header Banner
   doc.setFillColor(15, 23, 42);
   doc.rect(0, 0, 210, 32, 'F');
   doc.setFillColor(217, 119, 6);
@@ -332,78 +333,346 @@ export function exportTenderNoticePDF(tender: any) {
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text('MADECC GROUP — OFFICIAL TENDER OPPORTUNITY NOTICE', 14, 15);
+  doc.setFontSize(14);
+  doc.text('MADECC GROUP — OFFICIAL TENDER OPPORTUNITY NOTICE', 14, 14);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(203, 213, 225);
-  doc.text(`Ref: ${tender.tenderNumber} | Status: ${tender.status} | Printed: ${timestamp}`, 14, 22);
+  doc.text(`Ref: ${tender.tenderNumber} | Status: ${tender.status} | Published: ${formatDate(tender.openingDate)} | Printed: ${timestamp}`, 14, 22);
 
   let currentY = 40;
 
   doc.setTextColor(15, 23, 42);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text(tender.title, 14, currentY);
-  currentY += 7;
+  doc.setFontSize(12);
+  const splitTitle = doc.splitTextToSize(tender.title || 'Procurement Tender Notice', 182);
+  doc.text(splitTitle, 14, currentY);
+  currentY += splitTitle.length * 5 + 4;
 
   const metaTable = [
-    ['Tender Reference', tender.tenderNumber, 'Category', tender.categoryName],
-    ['Client / Project', tender.clientProject, 'Location', tender.location],
-    ['Opening Date', formatDate(tender.openingDate), 'Closing Date', formatDate(tender.closingDate)],
-    ['Submission Method', tender.submissionMethod || 'Online & Hard Copy', 'Status', tender.status]
+    ['Tender Reference', tender.tenderNumber || 'N/A', 'Category', tender.categoryName || 'General Works'],
+    ['Client / Project', tender.clientProject || 'MADECC Cameroon Infrastructure', 'Location', tender.location || 'Douala / Yaoundé, Cameroon'],
+    ['Notice Opening Date', formatDate(tender.openingDate), 'Submission Deadline', formatDate(tender.closingDate)],
+    ['Submission Method', tender.submissionMethod || 'Online EOI & Hard Copy at MADECC Office', 'Current Status', tender.status || 'OPEN']
   ];
 
   autoTable(doc, {
     startY: currentY,
     body: metaTable,
     theme: 'grid',
-    styles: { fontSize: 8.5, cellPadding: 3 },
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 2.5, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 14, right: 14 }
+  });
+
+  currentY = (doc as any).lastAutoTable.finalY + 7;
+
+  // 1. Overview & Project Context
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('1. Overview & Project Context', 14, currentY);
+  currentY += 4.5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+  const splitDesc = doc.splitTextToSize(tender.description || '', 182);
+  doc.text(splitDesc, 14, currentY);
+  currentY += splitDesc.length * 4.2 + 5;
+
+  // 2. Detailed Scope of Work
+  if (currentY > 240) { doc.addPage(); currentY = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('2. Detailed Scope of Work', 14, currentY);
+  currentY += 4.5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+  const splitScope = doc.splitTextToSize(tender.scopeOfWork || '', 182);
+  doc.text(splitScope, 14, currentY);
+  currentY += splitScope.length * 4.2 + 5;
+
+  // 3. Eligibility & Technical Prequalification
+  if (currentY > 240) { doc.addPage(); currentY = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('3. Eligibility & Technical Prequalification', 14, currentY);
+  currentY += 4.5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+  const splitElig = doc.splitTextToSize(tender.eligibility || '', 182);
+  doc.text(splitElig, 14, currentY);
+  currentY += splitElig.length * 4.2 + 5;
+
+  // 4. Mandatory Supporting Documents
+  if (tender.requiredDocuments) {
+    if (currentY > 240) { doc.addPage(); currentY = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(180, 83, 9);
+    doc.text('4. Mandatory Supporting Documents', 14, currentY);
+    currentY += 4.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 41, 59);
+    const splitDocs = doc.splitTextToSize(tender.requiredDocuments || '', 182);
+    doc.text(splitDocs, 14, currentY);
+    currentY += splitDocs.length * 4.2 + 5;
+  }
+
+  // Submission & Contact Notes
+  if (currentY > 240) { doc.addPage(); currentY = 20; }
+  doc.setFillColor(241, 245, 249);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(14, currentY, 182, 22, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Procurement Clarifications & Direct Contact:', 18, currentY + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(tender.contactInstructions || 'Email: procurement@madeccgroup.com | Hotline: +237 683 316 486 / +237 670 00 00 00', 18, currentY + 12);
+  doc.text('Physical Dossiers: MADECC Group Headquarters, Douala & Yaoundé, Cameroon.', 18, currentY + 17);
+
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`MADECC GROUP PLC • Procurement & Tendering Department • Ref: ${tender.tenderNumber} • Page ${i} of ${pageCount}`, 14, 287);
+  }
+
+  doc.save(`MADECC_Tender_Notice_${tender.tenderNumber}.pdf`);
+}
+
+/**
+ * Export Single Expression of Interest (EOI) Dossier Evaluation Report to A4 PDF
+ */
+export function exportEoiDossierPDF(eoi: any, tender?: any) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const timestamp = new Date().toLocaleString();
+
+  // Header Banner
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 32, 'F');
+  doc.setFillColor(217, 119, 6);
+  doc.rect(0, 32, 210, 2, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('MADECC GROUP — EOI EVALUATION DOSSIER', 14, 14);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(203, 213, 225);
+  doc.text(`EOI Code: ${eoi.submissionNumber} | Tender Ref: ${eoi.tenderReference} | Date: ${formatDate(eoi.createdAt)}`, 14, 22);
+
+  let currentY = 40;
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(`Candidate Enterprise: ${eoi.companyName}`, 14, currentY);
+  currentY += 6;
+
+  const candidateTable = [
+    ['Candidate Enterprise', eoi.companyName, 'Submission Code', eoi.submissionNumber],
+    ['Contact Person', eoi.contactPerson || 'N/A', 'Contact Email', eoi.email || 'N/A'],
+    ['Phone / WhatsApp', eoi.phone || 'N/A', 'Submission Date', formatDate(eoi.createdAt)],
+    ['Target Tender Ref', eoi.tenderReference, 'Evaluation Status', eoi.status || 'SUBMITTED']
+  ];
+
+  autoTable(doc, {
+    startY: currentY,
+    body: candidateTable,
+    theme: 'grid',
+    styles: { fontSize: 8.5, cellPadding: 2.8, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { left: 14, right: 14 }
   });
 
   currentY = (doc as any).lastAutoTable.finalY + 8;
 
+  // Technical Capacity Summary
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('1. Project Description & Context', 14, currentY);
+  doc.setFontSize(10.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('Technical Capacity & Execution Statement', 14, currentY);
   currentY += 5;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  const splitDesc = doc.splitTextToSize(tender.description || '', 182);
-  doc.text(splitDesc, 14, currentY);
-  currentY += splitDesc.length * 4.5 + 6;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('2. Scope of Work', 14, currentY);
-  currentY += 5;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  const splitScope = doc.splitTextToSize(tender.scopeOfWork || '', 182);
-  doc.text(splitScope, 14, currentY);
-  currentY += splitScope.length * 4.5 + 6;
+  doc.setTextColor(30, 41, 59);
+  const splitStatement = doc.splitTextToSize(eoi.expressionOfInterest || 'No statement provided.', 182);
+  doc.text(splitStatement, 14, currentY);
+  currentY += splitStatement.length * 4.3 + 7;
 
+  // Attached Technical Dossier
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('3. Eligibility & Experience Requirements', 14, currentY);
+  doc.setFontSize(10.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('Attached Technical Dossiers & Files', 14, currentY);
   currentY += 5;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  const splitElig = doc.splitTextToSize(tender.eligibility || '', 182);
-  doc.text(splitElig, 14, currentY);
-  currentY += splitElig.length * 4.5 + 6;
+
+  const docs = Array.isArray(eoi.supportingDocuments) ? eoi.supportingDocuments : [];
+  if (docs.length > 0) {
+    const docRows = docs.map((d: any, idx: number) => [
+      String(idx + 1),
+      d.title || d.fileName || 'Attached Technical Document',
+      d.fileUrl || 'Uploaded to secure repository'
+    ]);
+    autoTable(doc, {
+      startY: currentY,
+      head: [['#', 'Document Name', 'Document Link / Reference']],
+      body: docRows,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      margin: { left: 14, right: 14 }
+    });
+    currentY = (doc as any).lastAutoTable.finalY + 8;
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('No separate digital files attached with initial submission.', 14, currentY);
+    currentY += 8;
+  }
+
+  // Internal Evaluation & Review Notes
+  if (currentY > 220) { doc.addPage(); currentY = 20; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('Procurement Evaluation Committee Review', 14, currentY);
+  currentY += 5;
+
+  const evalTable = [
+    ['Current Status', eoi.status || 'SUBMITTED'],
+    ['Evaluated By', eoi.evaluatedBy || 'MADECC Procurement Board'],
+    ['Internal Remarks', eoi.internalEvaluationNotes || eoi.reviewNotes || 'Pending formal review against minimum qualification criteria.']
+  ];
+
+  autoTable(doc, {
+    startY: currentY,
+    body: evalTable,
+    theme: 'grid',
+    styles: { fontSize: 8.5, cellPadding: 3, textColor: [30, 41, 59] },
+    margin: { left: 14, right: 14 }
+  });
 
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
-    doc.text(`MADECC GROUP Procurement Department | Tender ${tender.tenderNumber} | Page ${i} of ${pageCount}`, 14, 287);
+    doc.text(`MADECC GROUP • Candidate Evaluation Dossier • ${eoi.submissionNumber} • Page ${i} of ${pageCount}`, 14, 287);
   }
 
-  doc.save(`MADECC_Tender_Notice_${tender.tenderNumber}.docx.pdf`);
+  doc.save(`MADECC_EOI_${eoi.submissionNumber}.pdf`);
+}
+
+/**
+ * Export All Tenders Master Register to A4 PDF
+ */
+export function exportAllTendersPDF(tendersList: any[]) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const timestamp = new Date().toLocaleString();
+
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 297, 24, 'F');
+  doc.setFillColor(217, 119, 6);
+  doc.rect(0, 24, 297, 2, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('MADECC GROUP — MASTER TENDERS & PROCUREMENT REGISTER', 14, 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(203, 213, 225);
+  doc.text(`Total Records: ${tendersList.length} | Exported: ${timestamp}`, 14, 19);
+
+  const rows = tendersList.map((t, idx) => [
+    String(idx + 1),
+    t.tenderNumber,
+    t.title,
+    t.categoryName || 'Structural Works',
+    t.location || 'Douala / Yaoundé',
+    formatDate(t.openingDate),
+    formatDate(t.closingDate),
+    t.status
+  ]);
+
+  autoTable(doc, {
+    startY: 32,
+    head: [['#', 'Tender Ref', 'Title', 'Category', 'Location', 'Opening', 'Closing', 'Status']],
+    body: rows,
+    theme: 'grid',
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+    styles: { fontSize: 7.5, cellPadding: 2 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 10, right: 10 }
+  });
+
+  doc.save(`MADECC_Tenders_Master_Register_${Date.now()}.pdf`);
+}
+
+/**
+ * Export All Expressions of Interest Submissions to A4 PDF
+ */
+export function exportAllEoisPDF(eoiList: any[]) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const timestamp = new Date().toLocaleString();
+
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 297, 24, 'F');
+  doc.setFillColor(217, 119, 6);
+  doc.rect(0, 24, 297, 2, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('MADECC GROUP — EXPRESSIONS OF INTEREST (EOI) REGISTER', 14, 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(203, 213, 225);
+  doc.text(`Total Candidate Submissions: ${eoiList.length} | Exported: ${timestamp}`, 14, 19);
+
+  const rows = eoiList.map((e, idx) => [
+    String(idx + 1),
+    e.submissionNumber,
+    e.tenderReference,
+    e.companyName,
+    e.contactPerson || 'N/A',
+    e.email,
+    e.phone,
+    formatDate(e.createdAt),
+    e.status || 'SUBMITTED'
+  ]);
+
+  autoTable(doc, {
+    startY: 32,
+    head: [['#', 'EOI Code', 'Tender Ref', 'Company Name', 'Contact Person', 'Email', 'Phone', 'Date', 'Status']],
+    body: rows,
+    theme: 'grid',
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+    styles: { fontSize: 7.5, cellPadding: 2 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 10, right: 10 }
+  });
+
+  doc.save(`MADECC_EOI_Submissions_Register_${Date.now()}.pdf`);
 }
 
 

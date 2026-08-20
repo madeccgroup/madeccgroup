@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import SignaturePad from './SignaturePad.tsx';
-import {
-  ShieldCheck,
-  AlertTriangle,
-  FileText,
-  Calendar,
-  DollarSign,
-  MapPin,
-  ArrowLeft,
+import { 
+  ShieldCheck, 
+  AlertTriangle, 
+  FileText, 
+  Calendar, 
+  DollarSign, 
+  MapPin, 
+  ArrowLeft, 
   Building,
   Camera,
   QrCode,
@@ -130,13 +130,13 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
       }
 
       const newDoc = await response.json();
-
+      
       // Clear form
       setCompName('');
       setCompEmail('');
       setCompNiu('');
       setCompSignature('');
-
+      
       // Update URL parameters
       const url = new URL(window.location.href);
       url.searchParams.set('verify', newDoc.verificationToken);
@@ -170,7 +170,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
       setError(null);
       const isReceipt = activeToken.startsWith('REC-');
       try {
-        const url = isReceipt
+        const url = isReceipt 
           ? `/api/receipts/verify/${activeToken}`
           : `/api/contracts/verify/${activeToken}`;
         const response = await fetch(url);
@@ -200,21 +200,21 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
   // QR Code camera scanner subscription logic
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
-
+    
     if (scannerActive) {
       setScanError(null);
       // Wait for DOM layout to ensure the scanner element with id="scanner-view" is fully rendered
       setTimeout(() => {
         try {
           html5QrCode = new Html5Qrcode("scanner-view");
-          const config = {
-            fps: 10,
+          const config = { 
+            fps: 10, 
             qrbox: (width: number, height: number) => {
               const size = Math.min(width, height) * 0.7;
               return { width: size, height: size };
             }
           };
-
+          
           html5QrCode.start(
             { facingMode: "environment" },
             config,
@@ -231,16 +231,16 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                   extractedToken = parts[1].split('&')[0];
                 }
               }
-
+              
               if (extractedToken) {
                 // Update URL parameters
                 const url = new URL(window.location.href);
                 url.searchParams.set('verify', extractedToken);
                 window.history.pushState({}, '', url.toString());
-
+                
                 setActiveToken(extractedToken);
                 setScannerActive(false);
-
+                
                 if (html5QrCode) {
                   html5QrCode.stop().catch(err => console.error('Failed to stop camera scanner:', err));
                 }
@@ -376,7 +376,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
           <div className="relative max-w-md mx-auto aspect-square rounded-xl overflow-hidden border border-slate-800 bg-slate-900/60 shadow-inner animate-pulse">
             {/* Holographic scanner target guide lines */}
             <div className="absolute inset-0 border-2 border-slate-800/20 z-10 pointer-events-none" />
-
+            
             {/* Glowing Corner Accents */}
             <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-amber-500 z-20" />
             <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-amber-500 z-20" />
@@ -402,8 +402,8 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
             <button
               onClick={() => setPortalSubTab('verify')}
               className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                portalSubTab === 'verify'
-                  ? 'bg-amber-500 text-slate-950 shadow-md'
+                portalSubTab === 'verify' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md' 
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -413,8 +413,8 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
             <button
               onClick={() => setPortalSubTab('submit')}
               className={`flex-1 py-2.5 px-4 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                portalSubTab === 'submit'
-                  ? 'bg-amber-500 text-slate-950 shadow-md'
+                portalSubTab === 'submit' 
+                  ? 'bg-amber-500 text-slate-950 shadow-md' 
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -462,7 +462,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                 </div>
 
                 {/* Card Option B: Manual Input Key */}
-                <form
+                <form 
                   onSubmit={handleManualVerify}
                   className="bg-slate-900/40 border border-slate-850 p-6 rounded-xl space-y-4 flex flex-col justify-between hover:border-slate-800 transition-colors"
                 >
@@ -657,7 +657,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                     <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono block">
                       Live Document Blueprint Preview
                     </span>
-
+                    
                     {/* The elegant document sheet */}
                     <div className="bg-white text-slate-950 p-6 rounded-xl shadow-2xl relative border-2 border-slate-300 min-h-[420px] font-sans flex flex-col justify-between">
                       {/* Holographic Watermark */}
@@ -825,7 +825,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                 </div>
                 <h1 className="text-base font-bold text-white">MADECC Secure Verification Registry</h1>
                 <p className="text-xs text-slate-400">
-                  {activeToken.startsWith('REC-')
+                  {activeToken.startsWith('REC-') 
                     ? 'This receipt is certified valid and registered under the Cameroon General Tax Code (CGI).'
                     : 'This document is certified valid and registered under Cameroon Civil Code Art. 1779.'}
                 </p>
@@ -953,7 +953,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                     {(() => {
                       const barcodeDataUrl = generateBarcodeBase64(contract.receiptNo);
                       return barcodeDataUrl ? (
-                        <img
+                        <img 
                           src={barcodeDataUrl}
                           alt="Receipt Document Barcode"
                           className="max-h-16 object-contain"
@@ -976,7 +976,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                     <div>
                       <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Authorizing Corporate Officer</span>
                       <p className="text-xs font-bold text-slate-200 mt-2">{contract.receiptSignatory}</p>
-
+                      
                       {contract.drawnCfoSignature ? (
                         <div className="bg-slate-900 border border-slate-800/40 rounded-lg p-2 flex items-center justify-center h-14 w-full max-w-[200px] mx-auto mt-2 overflow-hidden">
                           <img
@@ -1172,7 +1172,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                         </span>
                       </div>
                     </div>
-
+                    
                     <div className="p-4 bg-slate-950 border border-slate-900 rounded-xl text-center flex flex-col justify-between space-y-2.5 min-h-[160px]">
                       <div>
                         <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Client Legal Signatory</span>
@@ -1190,7 +1190,7 @@ export default function VerifyContract({ token, onBackToHome }: VerifyContractPr
                         )}
                         <p className="text-[10px] text-slate-500 italic font-mono mt-1">{contract.signatoryTitle || 'Legal Representative'}</p>
                       </div>
-
+                      
                       <div className="pt-2">
                         {contract.drawnClientSignature ? (
                           <div className="space-y-1">

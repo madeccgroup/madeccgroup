@@ -1484,3 +1484,15 @@ export const reviewerCredentials = pgTable('reviewer_credentials', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+
+
+
+
+
+
+
+
+
+
+

@@ -304,7 +304,7 @@ export const ProjectBudgetCalculator: React.FC<ProjectBudgetCalculatorProps> = (
       doc.setTextColor(148, 163, 184);
       doc.text('DISCLAIMER: This document is an indicative preliminary budget estimate calculated using MADECC Group standard rate library data.', 14, yPos);
       doc.text('It does not constitute a final binding quotation, architectural drawing, or contractual offer. Final costs are subject to engineering surveys.', 14, yPos + 4);
-      doc.text('Contact MADECC Group: +237 671 063 511 / +237 683 316 486 (WhatsApp) | Email: madeccco5@gmail.com', 14, yPos + 8);
+      doc.text('Contact MADECC Group: +237 671 063 511 / +237 683 316 486 (WhatsApp) | Email: kreboya603@gmail.com', 14, yPos + 8);
 
       doc.save(`MADECC-Budget-Estimate-${ref}.pdf`);
       if (showToast) showToast('PDF downloaded successfully.', 'success');

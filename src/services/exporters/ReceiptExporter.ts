@@ -46,7 +46,7 @@ export class ReceiptExporter {
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
     doc.text('Civil Engineering, Logistics & Development', padding, padding + 8.5);
-    doc.text('Akwa Boulevard, Douala, Cameroon', padding, padding + 12);
+    doc.text('Yaoundé Mbankolo, Cameroon', padding, padding + 12);
     if (model.clientEmail) {
       doc.text(`Client Reference Contact: ${model.clientEmail}`, padding, padding + 15.5);
     }
@@ -319,7 +319,7 @@ export class ReceiptExporter {
               alignment: AlignmentType.CENTER,
               children: [
                 new TextRun({
-                  text: 'Civil Engineering, Logistics & Development — Akwa Boulevard, Douala, Cameroon',
+                  text: 'Civil Engineering, Logistics & Development — Yaoundé Mbankolo, Cameroon',
                   italics: true,
                   size: 18,
                   color: '64748B',

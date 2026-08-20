@@ -69,6 +69,7 @@ import {
   sanitizeMediaUrl,
   FALLBACK_ENGINEERING_IMAGES
 } from '../utils/mediaClassifier.ts';
+import { parseApiResponse } from '../utils/apiHelper.ts';
 import MediaPreviewImage from './MediaPreviewImage.tsx';
 
 export interface ExtendedChannelItem extends SocialChannelItem {
@@ -353,25 +354,116 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
   const [publishingDiagnostics, setPublishingDiagnostics] = useState<any>(null);
   const [isDiagnosingPublishing, setIsDiagnosingPublishing] = useState<boolean>(false);
 
-  // --- LOCAL FILE UPLOAD REF & HANDLER ---
+  // --- CLOUDINARY MEDIA UPLOAD STATE & HANDLER ---
+  const [isUploadingMedia, setIsUploadingMedia] = useState<boolean>(false);
+  const [uploadProgressText, setUploadProgressText] = useState<string>('');
   const mediaFileInputRef = React.useRef<HTMLInputElement>(null);
-  const handleMediaFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleMediaFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const isVideo = file.type.startsWith('video/');
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      if (dataUrl) {
-        setGeneratedPost((prev: any) => ({
-          ...prev,
-          mediaUrl: dataUrl,
-          mediaType: isVideo ? 'video' : 'image'
-        }));
-        if (showToast) showToast(`✓ Attached local ${isVideo ? 'video' : 'image'}: ${file.name}`, 'success');
+    const detectedMediaType: 'image' | 'video' = isVideo ? 'video' : 'image';
+
+    // Temporary object URL for instant UI preview during upload
+    const tempObjectUrl = URL.createObjectURL(file);
+    setGeneratedPost((prev: any) => ({
+      ...prev,
+      mediaUrl: tempObjectUrl,
+      mediaType: detectedMediaType
+    }));
+
+    setIsUploadingMedia(true);
+    setUploadProgressText(`Uploading ${isVideo ? 'video' : 'image'} to Cloudinary (0%)...`);
+    if (showToast) showToast(`Uploading ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB) to Cloudinary...`, 'info');
+
+    try {
+      let signedTicket: any = null;
+      try {
+        const sigRes = await fetch('/api/cloudinary-signature');
+        if (sigRes.ok) {
+          signedTicket = await sigRes.json();
+        }
+      } catch (ticketErr) {
+        console.warn('Signed ticket error, using proxy upload:', ticketErr);
       }
-    };
-    reader.readAsDataURL(file);
+
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+
+      if (signedTicket && signedTicket.signature && signedTicket.cloudName) {
+        formData.append('file', file);
+        formData.append('api_key', signedTicket.apiKey);
+        formData.append('timestamp', signedTicket.timestamp.toString());
+        formData.append('signature', signedTicket.signature);
+        formData.append('folder', signedTicket.folder || 'madecc_social');
+
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${signedTicket.cloudName}/auto/upload`;
+        xhr.open('POST', uploadUrl, true);
+      } else {
+        formData.append('file', file);
+        xhr.open('POST', '/api/upload', true);
+      }
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          const loadedMb = (event.loaded / (1024 * 1024)).toFixed(1);
+          const totalMb = (event.total / (1024 * 1024)).toFixed(1);
+          setUploadProgressText(`Uploading: ${percent}% (${loadedMb}MB / ${totalMb}MB)`);
+        }
+      };
+
+      xhr.onload = async () => {
+        setIsUploadingMedia(false);
+        setUploadProgressText('');
+        URL.revokeObjectURL(tempObjectUrl);
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            const secureUrl = data.secure_url || data.url;
+            if (secureUrl) {
+              const updatedPost = {
+                ...generatedPost,
+                mediaUrl: secureUrl,
+                mediaType: detectedMediaType
+              };
+              setGeneratedPost(updatedPost);
+
+              // Auto-save post with Cloudinary URL to Neon PostgreSQL
+              await handleSaveDraft(updatedPost, true);
+
+              addAuditLog('MEDIA_UPLOAD_CLOUDINARY', `Uploaded ${detectedMediaType} (${file.name}) to Cloudinary: ${data.public_id || secureUrl}`, 'CONTENT', 'SUCCESS');
+              if (showToast) showToast(`✓ ${isVideo ? 'Video' : 'Image'} uploaded to Cloudinary!`, 'success');
+            } else {
+              throw new Error('No secure URL returned from upload');
+            }
+          } catch (parseErr: any) {
+            console.error('[CLOUDINARY_PARSE_ERROR]', parseErr);
+            if (showToast) showToast(`Upload processing failed: ${parseErr.message}`, 'error');
+          }
+        } else {
+          console.error('[CLOUDINARY_UPLOAD_HTTP_ERROR]', xhr.status, xhr.responseText);
+          if (showToast) showToast(`Upload failed (HTTP ${xhr.status}). Check network or file size.`, 'error');
+        }
+      };
+
+      xhr.onerror = () => {
+        setIsUploadingMedia(false);
+        setUploadProgressText('');
+        URL.revokeObjectURL(tempObjectUrl);
+        if (showToast) showToast('Network error during media upload', 'error');
+      };
+
+      xhr.send(formData);
+    } catch (err: any) {
+      setIsUploadingMedia(false);
+      setUploadProgressText('');
+      URL.revokeObjectURL(tempObjectUrl);
+      if (showToast) showToast(`Failed to initiate upload: ${err.message}`, 'error');
+    }
   };
 
   // --- SOCIAL POSTS STATE ---
@@ -615,27 +707,17 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
     window.addEventListener('message', handlePopupMessage);
 
+    // One-time cleanup of legacy browser storage for social studio (ensuring zero browser storage usage)
     try {
-      const savedPosts = localStorage.getItem('madecc_social_posts');
-      const savedContacts = localStorage.getItem('madecc_phone_contacts');
-      const savedFbUrl = localStorage.getItem('madecc_fb_page_url');
-      if (savedPosts) {
-        const parsed = JSON.parse(savedPosts);
-        if (Array.isArray(parsed)) {
-          const seen = new Set();
-          const uniquePosts = parsed.map((p: ExtendedPostItem, i: number) => {
-            if (!p.id || seen.has(p.id)) {
-              return { ...p, id: `post-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 7)}` };
-            }
-            seen.add(p.id);
-            return p;
-          });
-          setPosts(uniquePosts);
-        }
-      }
-      if (savedContacts) setPhoneContacts(JSON.parse(savedContacts));
-      if (savedFbUrl) setFacebookPageUrl(savedFbUrl);
+      localStorage.removeItem('madecc_social_posts');
+      localStorage.removeItem('madecc_social_channels');
+      localStorage.removeItem('madecc_phone_contacts');
+      localStorage.removeItem('madecc_fb_page_url');
+    } catch (cleanErr) {
+      console.warn('[STORAGE_CLEANUP_WARN]', cleanErr);
+    }
 
+    try {
       // Check URL search parameters for OAuth Redirect Results
       const params = new URLSearchParams(window.location.search);
       const socialStatus = params.get('social_status');
@@ -665,11 +747,11 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
   const handleConnectOAuth = async (provider: string, reconnectChannelId?: number) => {
     addAuditLog('OAUTH_FLOW_INITIATED', `Initiating official OAuth authorization for ${provider}`, 'ACCOUNT', 'SUCCESS');
-
+    
     try {
       const query = reconnectChannelId ? `?reconnect_channel_id=${reconnectChannelId}` : '';
       const res = await fetch(`/api/social/oauth/${provider.toLowerCase()}/url${query}`);
-
+      
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
@@ -713,6 +795,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
+  // State update helpers (in-memory React state, source of truth is Neon PostgreSQL)
   const persistPosts = (updatedPosts: ExtendedPostItem[]) => {
     const seen = new Set();
     const uniquePosts = updatedPosts.map((p, i) => {
@@ -723,11 +806,6 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       return p;
     });
     setPosts(uniquePosts);
-    try {
-      localStorage.setItem('madecc_social_posts', JSON.stringify(uniquePosts));
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   const persistChannels = (updatedChannels: ExtendedChannelItem[]) => {
@@ -740,20 +818,10 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       return c;
     });
     setChannels(uniqueChannels);
-    try {
-      localStorage.setItem('madecc_social_channels', JSON.stringify(uniqueChannels));
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   const persistPhoneContacts = (updatedContacts: MadeccPhoneContact[]) => {
     setPhoneContacts(updatedContacts);
-    try {
-      localStorage.setItem('madecc_phone_contacts', JSON.stringify(updatedContacts));
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   // --- AI GENERATION & CTA STRATEGY STATE ---
@@ -1045,7 +1113,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
     if (showToast) showToast(`Testing connection to ${webhookItem.name}...`, 'info');
     try {
       const res = await fetch(`/api/social/webhooks/${webhookItem.id}/test`, { method: 'POST' });
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       if (data.success) {
         addAuditLog('WEBHOOK_TESTED', `Health check to ${webhookItem.name} succeeded (${data.durationMs}ms) - 200 OK`, 'WEBHOOK', 'SUCCESS');
         if (showToast) showToast(`✓ Connected to ${webhookItem.name} in ${data.durationMs}ms`, 'success');
@@ -1146,7 +1214,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
         persistPosts(updated);
         return updated;
       });
-      if (!isSilent && showToast) showToast('Saved post locally (offline cache)', 'info');
+      if (!isSilent && showToast) showToast('Database save temporarily unavailable — changes kept in active session memory.', 'warning');
       return fallbackPost;
     }
   };
@@ -1156,7 +1224,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
     setIsDiagnosingPublishing(true);
     try {
       const targetP = platforms && platforms.length > 0 ? platforms : targetPlatformsInput;
-      const res = await fetch('/api/social/diagnose-publishing', {
+      const res = await fetch('/api/social/preflight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1165,7 +1233,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
           mediaType: mediaType || generatedPost?.mediaType || 'image'
         })
       });
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       setPublishingDiagnostics(data);
       setShowPublishDiagnosticsModal(true);
       addAuditLog('PUBLISHING_DIAGNOSTICS_RUN', `Executed pre-flight readiness check for ${targetP.length} destinations. Ready: ${data.readyCount}/${data.totalDestinations}`, 'PUBLISHING', 'SUCCESS');
@@ -1205,7 +1273,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
         })
       });
 
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       const retriedResults = data.results || data.retriedJobs || [];
 
       // Merge retried results into current modal results
@@ -1216,7 +1284,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
       const newSuccessCount = updatedResults.filter(r => r.status === 'SUCCESS' || r.status === 'PUBLISHED').length;
       const newFailureCount = updatedResults.filter(r => r.status === 'FAILED').length;
-      const newOverallStatus: 'PUBLISHED' | 'PARTIALLY_PUBLISHED' | 'FAILED' =
+      const newOverallStatus: 'PUBLISHED' | 'PARTIALLY_PUBLISHED' | 'FAILED' = 
         newFailureCount === 0 && newSuccessCount > 0 ? 'PUBLISHED' :
         newSuccessCount > 0 && newFailureCount > 0 ? 'PARTIALLY_PUBLISHED' : 'FAILED';
 
@@ -1232,10 +1300,10 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       });
 
       if (post) {
-        const updatedPosts = posts.map(p => p.id === post.id ? {
-          ...p,
-          status: newOverallStatus,
-          publishedAt: newOverallStatus !== 'FAILED' ? new Date().toISOString() : p.publishedAt
+        const updatedPosts = posts.map(p => p.id === post.id ? { 
+          ...p, 
+          status: newOverallStatus, 
+          publishedAt: newOverallStatus !== 'FAILED' ? new Date().toISOString() : p.publishedAt 
         } : p);
         persistPosts(updatedPosts);
       }
@@ -1262,8 +1330,15 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
   };
 
   const handlePublishNow = async (postId: number | string) => {
-    const targetPost = posts.find(p => p.id === postId) || generatedPost;
+    let targetPost = posts.find(p => p.id === postId) || generatedPost;
     if (!targetPost) return;
+
+    if (targetPost.mediaUrl && targetPost.mediaUrl.startsWith('data:')) {
+      if (showToast) {
+        showToast('Please upload media to Cloudinary before broadcasting. Local base64 data URLs cannot be sent.', 'error');
+      }
+      return;
+    }
 
     setIsBroadcasting(true);
     const platformsToPublish = targetPost.targetPlatforms && targetPost.targetPlatforms.length > 0
@@ -1271,24 +1346,41 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       : targetPlatformsInput;
 
     try {
+      // 1. Ensure the post draft exists in Neon PostgreSQL
+      const isNumericDbId = typeof targetPost.id === 'number' && !isNaN(targetPost.id) && targetPost.id < 1000000000;
+      if (!isNumericDbId) {
+        const saved = await handleSaveDraft(targetPost, true);
+        if (saved && saved.id) {
+          targetPost = saved;
+        }
+      }
+
+      // 2. Prepare lightweight broadcast payload (identifiers and target platform list only)
+      const broadcastPayload = {
+        postId: targetPost.id,
+        campaignName: targetPost.seoTopic || 'MADECC Broadcast',
+        targetPlatforms: platformsToPublish,
+        targetWebhookIds: customWebhooks.filter(w => w.enabled).map(w => w.id)
+      };
+
+      const payloadString = JSON.stringify(broadcastPayload);
+      const payloadBytes = new Blob([payloadString]).size;
+      const payloadKb = (payloadBytes / 1024).toFixed(2);
+
+      console.log(`[SOCIAL_BROADCAST_REQUEST] Post ID: ${targetPost.id} | Platforms: ${platformsToPublish.join(', ')} | Size: ${payloadKb} KB`);
+      addAuditLog('BROADCAST_REQUEST_DISPATCHED', `Dispatched broadcast request for Post #${targetPost.id} (${payloadKb} KB payload)`, 'PUBLISHING', 'SUCCESS');
+
+      if (payloadBytes > 500 * 1024) {
+        throw new Error('PAYLOAD_TOO_LARGE: Broadcast command must contain database/media references only.');
+      }
+
       const response = await fetch('/api/social/publish-broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postId: targetPost.id,
-          campaignName: targetPost.seoTopic || 'MADECC Broadcast',
-          title: targetPost.title,
-          caption: targetPost.caption,
-          mediaUrl: targetPost.mediaUrl,
-          mediaType: targetPost.mediaType || 'image',
-          hashtags: targetPost.hashtags,
-          ctaText: targetPost.ctaText,
-          targetPlatforms: platformsToPublish,
-          targetWebhookIds: customWebhooks.filter(w => w.enabled).map(w => w.id)
-        })
+        body: payloadString
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
       const rawResults = data.results || data.jobs || [];
 
       const calculatedStatus: 'PUBLISHED' | 'PARTIALLY_PUBLISHED' | 'FAILED' = data.overallStatus || (
@@ -1322,6 +1414,9 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
         return p;
       });
       persistPosts(updated);
+
+      // Re-sync authoritative posts list from Neon PostgreSQL
+      fetchPostsFromApi();
 
       if (calculatedStatus === 'FAILED') {
         addAuditLog('BROADCAST_FAILED', `Broadcast ID ${data.broadcastId} failed across all channels: ${data.message || 'Error'}`, 'PUBLISHING', 'FAILED');
@@ -1371,7 +1466,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
           scheduleAt
         })
       });
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       // Create new republished post entry linked to parentPostId
       const republishedPost: ExtendedPostItem = {
@@ -1431,7 +1526,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
   const handleOpenVersionHistory = async (post: ExtendedPostItem) => {
     try {
       const response = await fetch(`/api/marketing/posts/${post.id}/versions`);
-      const data = await response.json();
+      const data = await parseApiResponse(response);
       setSelectedPostVersions(data);
     } catch (e) {
       setSelectedPostVersions([
@@ -1535,11 +1630,11 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       });
       setShowTestResultModal(true);
 
-      const updated = channels.map(c => c.id === channel.id ? {
-        ...c,
-        status: data.success ? 'CONNECTED' : 'EXPIRED',
-        healthStatus: data.success ? 'HEALTHY' as const : 'REAUTHENTICATION REQUIRED' as const,
-        lastSynced: 'Just now'
+      const updated = channels.map(c => c.id === channel.id ? { 
+        ...c, 
+        status: data.success ? 'CONNECTED' : 'EXPIRED', 
+        healthStatus: data.success ? 'HEALTHY' as const : 'REAUTHENTICATION REQUIRED' as const, 
+        lastSynced: 'Just now' 
       } : c);
       persistChannels(updated);
 
@@ -1906,7 +2001,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
   return (
     <div className="p-4 sm:p-6 bg-slate-900 text-slate-100 min-h-screen space-y-6 font-sans">
-
+      
       {/* HEADER BANNER */}
       <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="absolute -top-10 -right-10 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -2022,7 +2117,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       {/* ==================================================================== */}
       {activeTab === 'creator' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
+          
           {/* LEFT PANEL: AI GENERATOR & CTA CONTROLS */}
           <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
@@ -2260,7 +2355,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
             {generatedPost ? (
               <div className="space-y-4 text-xs">
-
+                
                 {/* 1. OVERVIEW & STANDARD EDIT CANVAS */}
                 {previewPlatformTab === 'overview' && (
                   <>
@@ -2359,13 +2454,19 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                         />
                         <button
                           type="button"
+                          disabled={isUploadingMedia}
                           onClick={() => mediaFileInputRef.current?.click()}
-                          className="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl font-bold border border-indigo-500/40 shrink-0 text-xs flex items-center gap-1.5 transition-all"
+                          className={`px-3 py-2 rounded-xl font-bold border shrink-0 text-xs flex items-center gap-1.5 transition-all ${
+                            isUploadingMedia
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse cursor-not-allowed'
+                              : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border-indigo-500/40'
+                          }`}
                         >
-                          <UploadCloud className="w-3.5 h-3.5" /> Upload File
+                          <UploadCloud className="w-3.5 h-3.5" /> {isUploadingMedia ? 'Uploading to Cloudinary...' : 'Upload Media'}
                         </button>
                         <button
                           type="button"
+                          disabled={isUploadingMedia}
                           onClick={() => {
                             const sampleImgs = [
                               'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1200&q=80',
@@ -2375,21 +2476,38 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                             const randomImg = sampleImgs[Math.floor(Math.random() * sampleImgs.length)];
                             setGeneratedPost({ ...generatedPost, mediaUrl: randomImg, mediaType: 'image' });
                           }}
-                          className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold border border-slate-800 shrink-0 text-xs"
+                          className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl font-bold border border-slate-800 shrink-0 text-xs disabled:opacity-50"
                         >
                           Sample Image
                         </button>
                         <button
                           type="button"
+                          disabled={isUploadingMedia}
                           onClick={() => {
                             const ytSample = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
                             setGeneratedPost({ ...generatedPost, mediaUrl: ytSample, mediaType: 'video' });
                           }}
-                          className="px-3 py-2 bg-red-950/40 hover:bg-red-900/40 text-red-300 rounded-xl font-bold border border-red-800/40 shrink-0 text-xs flex items-center gap-1"
+                          className="px-3 py-2 bg-red-950/40 hover:bg-red-900/40 text-red-300 rounded-xl font-bold border border-red-800/40 shrink-0 text-xs flex items-center gap-1 disabled:opacity-50"
                         >
                           <Youtube className="w-3 h-3" /> Sample Video
                         </button>
                       </div>
+
+                      {/* CLOUDINARY UPLOAD PROGRESS INDICATOR */}
+                      {isUploadingMedia && (
+                        <div className="mt-2 p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex items-center gap-3">
+                          <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between text-xs font-mono mb-1">
+                              <span className="text-indigo-300 font-bold">Cloudinary Storage Upload</span>
+                              <span className="text-indigo-200">{uploadProgressText || 'Uploading...'}</span>
+                            </div>
+                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div className="bg-indigo-500 h-full rounded-full animate-pulse w-full" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* LIVE MEDIA VALIDATION AND PLATFORM COMPATIBILITY WARNINGS */}
                       {generatedPost.mediaUrl && (() => {
@@ -2814,10 +2932,10 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       {/* ==================================================================== */}
       {activeTab === 'library' && (
         <div className="space-y-4">
-
+          
           {/* LIBRARY CONTROLS BAR */}
           <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-
+            
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-64">
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
@@ -2867,9 +2985,9 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post) => (
                 <div key={`post-${post.id}`} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3 flex flex-col justify-between shadow-xl">
-
+                  
                   <div className="space-y-3">
-
+                    
                     {/* TOP PLATFORMS & STATUS BADGE */}
                     <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -3024,7 +3142,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
       {/* ==================================================================== */}
       {activeTab === 'channels' && (
         <div className="space-y-4">
-
+          
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-lg gap-3">
             <div>
               <h2 className="text-sm font-black text-white flex items-center gap-2">
@@ -3179,29 +3297,29 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[11px]">
                   {[
-                    {
-                      provider: 'Google / YouTube (OAuth + PKCE)',
-                      var: 'YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET',
+                    { 
+                      provider: 'Google / YouTube (OAuth + PKCE)', 
+                      var: 'YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET', 
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/youtube/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/youtube/callback`
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/youtube/callback` 
                     },
-                    {
-                      provider: 'Meta (Facebook & Instagram)',
-                      var: 'META_CLIENT_ID / META_CLIENT_SECRET',
+                    { 
+                      provider: 'Meta (Facebook & Instagram)', 
+                      var: 'META_CLIENT_ID / META_CLIENT_SECRET', 
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/facebook/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/facebook/callback`
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/facebook/callback` 
                     },
-                    {
-                      provider: 'TikTok Business (PKCE)',
-                      var: 'TIKTOK_CLIENT_ID / TIKTOK_CLIENT_SECRET',
+                    { 
+                      provider: 'TikTok Business (PKCE)', 
+                      var: 'TIKTOK_CLIENT_ID / TIKTOK_CLIENT_SECRET', 
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/tiktok/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/tiktok/callback`
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/tiktok/callback` 
                     },
-                    {
-                      provider: 'WhatsApp Business API',
-                      var: 'WHATSAPP_CLIENT_ID / WHATSAPP_CLIENT_SECRET',
+                    { 
+                      provider: 'WhatsApp Business API', 
+                      var: 'WHATSAPP_CLIENT_ID / WHATSAPP_CLIENT_SECRET', 
                       prodCallback: 'https://madeccgroup.online/api/social/oauth/whatsapp/callback',
-                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/whatsapp/callback`
+                      currentCallback: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/social/oauth/whatsapp/callback` 
                     }
                   ].map((item, idx) => (
                     <div key={idx} className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg space-y-1.5">
@@ -3209,7 +3327,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                         <span className="text-amber-400 font-bold">{item.provider}</span>
                         <span className="text-slate-500 text-[9px]">Env: {item.var}</span>
                       </div>
-
+                      
                       <div className="space-y-1">
                         <div className="text-[10px] text-emerald-400 flex items-center justify-between font-sans font-semibold">
                           <span>Official Production Callback:</span>
@@ -3263,7 +3381,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
               const isMenuOpen = openActionMenuId === chan.id;
               return (
                 <div key={`chan-${chan.id}`} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3.5 shadow-xl relative">
-
+                  
                   {/* TOP HEADER & ACTIONS DROPDOWN MENU */}
                   <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-3">
                     <div className="flex items-center gap-2.5">
@@ -3288,7 +3406,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                       {/* DROPDOWN MENU PANEL */}
                       {isMenuOpen && (
                         <div className="absolute right-0 mt-1 w-52 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-30 overflow-hidden text-xs py-1 divide-y divide-slate-800">
-
+                          
                           <div className="py-1">
                             <button
                               onClick={() => {
@@ -3568,7 +3686,6 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                   value={facebookPageUrl}
                   onChange={(e) => {
                     setFacebookPageUrl(e.target.value);
-                    localStorage.setItem('madecc_fb_page_url', e.target.value);
                   }}
                   placeholder="https://facebook.com/madeccgroup"
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white font-mono focus:border-blue-500 focus:outline-none"
@@ -4268,21 +4385,27 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
             </div>
 
             {/* SUMMARY STATS BAR */}
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="grid grid-cols-4 gap-2 text-center text-xs">
               <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Targets</span>
                 <span className="text-white font-extrabold text-sm">{broadcastResultModal.results?.length || 0}</span>
               </div>
               <div className="p-2.5 bg-emerald-950/20 border border-emerald-800/40 rounded-xl">
-                <span className="text-emerald-400 block text-[10px] uppercase font-bold">Published</span>
+                <span className="text-emerald-400 block text-[10px] uppercase font-bold">Published Live</span>
                 <span className="text-emerald-300 font-extrabold text-sm">
-                  {broadcastResultModal.results?.filter(r => r.status === 'SUCCESS' || r.status === 'PUBLISHED').length || 0}
+                  {broadcastResultModal.results?.filter(r => r.status === 'PUBLISHED' || r.status === 'MESSAGE_ACCEPTED' || r.status === 'SUCCESS').length || 0}
+                </span>
+              </div>
+              <div className="p-2.5 bg-amber-950/20 border border-amber-800/40 rounded-xl">
+                <span className="text-amber-400 block text-[10px] uppercase font-bold">Processing</span>
+                <span className="text-amber-300 font-extrabold text-sm">
+                  {broadcastResultModal.results?.filter(r => r.status === 'PENDING_PROCESSING').length || 0}
                 </span>
               </div>
               <div className="p-2.5 bg-rose-950/20 border border-rose-800/40 rounded-xl">
                 <span className="text-rose-400 block text-[10px] uppercase font-bold">Failed / Review</span>
                 <span className="text-rose-300 font-extrabold text-sm">
-                  {broadcastResultModal.results?.filter(r => r.status === 'FAILED').length || 0}
+                  {broadcastResultModal.results?.filter(r => r.status === 'FAILED' || r.status === 'NOT_CONNECTED' || r.status === 'REQUIRES_REVIEW').length || 0}
                 </span>
               </div>
             </div>
@@ -4291,41 +4414,51 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                  Destination Status & Live Post Links
+                  Destination Verification & Live Status
                 </span>
-                {broadcastResultModal.results?.some(r => (r.status === 'SUCCESS' || r.status === 'PUBLISHED') && r.externalUrl) && (
+                {broadcastResultModal.results?.some(r => (r.status === 'SUCCESS' || r.status === 'PUBLISHED' || r.status === 'MESSAGE_ACCEPTED') && (r.permalink || r.externalUrl)) && (
                   <button
                     type="button"
                     onClick={() => {
                       broadcastResultModal.results
-                        ?.filter(r => (r.status === 'SUCCESS' || r.status === 'PUBLISHED') && r.externalUrl)
+                        ?.filter(r => (r.status === 'SUCCESS' || r.status === 'PUBLISHED' || r.status === 'MESSAGE_ACCEPTED') && (r.permalink || r.externalUrl))
                         .forEach(r => {
-                          if (r.externalUrl) window.open(r.externalUrl, '_blank', 'noopener,noreferrer');
+                          const target = r.permalink || r.externalUrl;
+                          if (target) window.open(target, '_blank', 'noopener,noreferrer');
                         });
                     }}
                     className="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/40 flex items-center gap-1.5 transition-colors"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> Open All Live Destinations
+                    <ExternalLink className="w-3.5 h-3.5" /> Open All Live Links
                   </button>
                 )}
               </div>
 
               <div className="space-y-2">
                 {broadcastResultModal.results?.map((res, idx) => {
-                  const isSuccess = res.status === 'SUCCESS' || res.status === 'PUBLISHED';
+                  const isPublished = res.status === 'PUBLISHED' || res.status === 'MESSAGE_ACCEPTED' || res.status === 'SUCCESS';
+                  const isProcessing = res.status === 'PENDING_PROCESSING';
+                  const isFailed = !isPublished && !isProcessing;
+
                   return (
                     <div
                       key={idx}
                       className={`p-3.5 rounded-xl border transition-all ${
-                        isSuccess
+                        isPublished
                           ? 'bg-slate-950/90 border-emerald-500/30'
+                          : isProcessing
+                          ? 'bg-slate-950/90 border-amber-500/30'
                           : 'bg-slate-950 border-rose-500/30'
                       }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5">
                           <div className={`p-2 rounded-lg border ${
-                            isSuccess ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                            isPublished
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              : isProcessing
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                              : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
                           }`}>
                             {res.platform?.toLowerCase() === 'facebook' && <Facebook className="w-4 h-4" />}
                             {res.platform?.toLowerCase() === 'instagram' && <Instagram className="w-4 h-4" />}
@@ -4345,23 +4478,35 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                               <h4 className="text-xs font-black text-white capitalize">
                                 {res.destinationName || res.platform}
                               </h4>
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                isSuccess ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
-                              }`}>
-                                {isSuccess ? '✓ Published Live' : '✕ Action Required'}
-                              </span>
+                              {isPublished && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 flex items-center gap-1">
+                                  <CheckCircle2 className="w-2.5 h-2.5" />
+                                  {res.status === 'MESSAGE_ACCEPTED' ? 'Delivered' : (res.verified ? 'Verified Live' : 'Published')}
+                                </span>
+                              )}
+                              {isProcessing && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5 animate-spin" /> Transcoding / Ingesting
+                                </span>
+                              )}
+                              {isFailed && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300">
+                                  {res.status === 'NOT_CONNECTED' ? '✕ Not Connected' : '✕ Action Required'}
+                                </span>
+                              )}
                             </div>
                             <span className="text-[10px] text-slate-500 font-mono">
                               Platform: {res.platform} {res.durationMs || res.latencyMs ? `• ${res.durationMs || res.latencyMs}ms` : ''}
+                              {res.remotePostId ? ` • ID: ${res.remotePostId}` : ''}
                             </span>
                           </div>
                         </div>
 
                         {/* RIGHT ACTION BUTTON OR LINK */}
                         <div className="flex items-center gap-2 shrink-0">
-                          {isSuccess && res.externalUrl && (
+                          {isPublished && (res.permalink || res.externalUrl) && (
                             <a
-                              href={res.externalUrl}
+                              href={res.permalink || res.externalUrl}
                               target="_blank"
                               rel="noreferrer"
                               className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
@@ -4370,7 +4515,36 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                             </a>
                           )}
 
-                          {!isSuccess && (
+                          {isProcessing && res.jobId && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const vRes = await fetch(`/api/social/publish-jobs/${res.jobId}/verify`, { method: 'POST' });
+                                  if (vRes.ok) {
+                                    const vData = await vRes.json();
+                                    if (vData.verified) {
+                                      if (showToast) showToast(`Verified ${res.platform} post is live!`, 'success');
+                                      setBroadcastResultModal(prev => {
+                                        if (!prev) return null;
+                                        return {
+                                          ...prev,
+                                          results: prev.results.map(r => r.jobId === res.jobId ? { ...r, status: 'PUBLISHED', verified: true, externalUrl: vData.externalUrl, permalink: vData.externalUrl } : r)
+                                        };
+                                      });
+                                    } else {
+                                      if (showToast) showToast(`${res.platform} is still processing media.`, 'info');
+                                    }
+                                  }
+                                } catch (e) {}
+                              }}
+                              className="px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 text-[11px] font-bold rounded-lg border border-amber-500/40 flex items-center gap-1 transition-colors"
+                            >
+                              <RefreshCw className="w-3 h-3" /> Check Verification
+                            </button>
+                          )}
+
+                          {isFailed && (
                             <button
                               onClick={() => handleRetryFailedBroadcast([res])}
                               disabled={broadcastResultModal.isRetrying}
@@ -4382,8 +4556,8 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                         </div>
                       </div>
 
-                      {/* DETAILED REASON & ACTION REQUIRED IF FAILED */}
-                      {!isSuccess && (
+                      {/* DETAILED REASON & ACTION REQUIRED IF FAILED OR PROCESSING */}
+                      {isFailed && (
                         <div className="mt-2.5 pt-2.5 border-t border-slate-800/80 space-y-1.5 text-xs">
                           {res.errorCode && (
                             <div className="flex items-center gap-1.5">
@@ -4409,7 +4583,7 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                           )}
 
                           {/* QUICK ACTION BUTTON FOR AUTH / CONNECTION */}
-                          {['facebook', 'instagram', 'youtube', 'tiktok', 'whatsapp'].includes(res.platform?.toLowerCase()) && (
+                          {['facebook', 'instagram', 'youtube', 'tiktok', 'whatsapp', 'linkedin', 'twitter'].includes(res.platform?.toLowerCase()) && (
                             <div className="pt-1 flex items-center gap-2">
                               <button
                                 onClick={() => {
@@ -4423,6 +4597,12 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                               </button>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {isProcessing && res.reason && (
+                        <div className="mt-2.5 pt-2.5 border-t border-slate-800/80 text-xs text-amber-300/90">
+                          <strong>Note:</strong> {res.reason}
                         </div>
                       )}
                     </div>
@@ -4841,8 +5021,8 @@ export default function SocialMediaStudio({ currentUser }: SocialMediaStudioProp
                   type="button"
                   onClick={handleToggleReviewerStatus}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    metaReviewerStatus?.disabled
-                      ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30'
+                    metaReviewerStatus?.disabled 
+                      ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30' 
                       : 'bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-500/30'
                   }`}
                 >

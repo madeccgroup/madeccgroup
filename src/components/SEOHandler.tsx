@@ -72,6 +72,18 @@ const TAB_META: Record<string, { title: string; description: string; keywords: s
     keywords: 'construction cost guide Cameroon, cement prices Douala, steel rates Yaounde, labor cost per day',
     ogType: 'article'
   },
+  faq: {
+    title: 'Frequently Asked Questions & Help Centre | MADECC Group',
+    description: 'Get verified answers to technical questions about building permits, construction costs in Cameroon, subcontracting tenders, soil testing, and project guarantees.',
+    keywords: 'construction FAQ Cameroon, building permits Douala, civil engineering questions, building cost per m2, MADECC help centre',
+    ogType: 'website'
+  },
+  tenders: {
+    title: 'Tenders & Procurement Opportunities | MADECC Group',
+    description: 'Explore live procurement notices, trade subcontracting packages, materials supply tenders, and submit Expressions of Interest (EOI) to MADECC Group.',
+    keywords: 'tenders Cameroon, construction procurement Douala, civil engineering contracts, subcontractor prequalification, EOI MADECC',
+    ogType: 'website'
+  },
   terms: {
     title: 'Terms of Service & Usage Agreements | MADECC Group',
     description: 'Official terms of service, intellectual property guidelines, and contractual policies governing the MADECC Group digital platform.',
@@ -178,21 +190,21 @@ export default function SEOHandler({ currentTab, selectedProjectId }: SEOHandler
             '@type': 'LocalBusiness',
             '@id': `${origin}/#localbusiness`,
             'name': 'MADECC Group Cameroon HQ',
-            'description': 'Cameroon’s leading multi-disciplinary construction and civil engineering firm.',
-            'telephone': '+237600000000',
+            'description': 'Cameroon and Pan-Africa leading multi-disciplinary construction, civil engineering, and infrastructure group.',
+            'telephone': '+237683316486',
             'email': 'kreboya603@gmail.com',
             'address': {
               '@type': 'PostalAddress',
-              'streetAddress': 'Rue de la Joie, Akwa',
-              'addressLocality': 'Douala',
-              'addressRegion': 'Littoral',
+              'streetAddress': 'Yaoundé Mbankolo',
+              'addressLocality': 'Yaoundé',
+              'addressRegion': 'Centre',
               'postalCode': '00237',
               'addressCountry': 'CM'
             },
             'geo': {
               '@type': 'GeoCoordinates',
-              'latitude': '4.0511',
-              'longitude': '9.7679'
+              'latitude': '3.8964',
+              'longitude': '11.4888'
             },
             'url': origin,
             'image': shareImage

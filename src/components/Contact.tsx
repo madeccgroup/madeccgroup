@@ -109,7 +109,7 @@ export default function Contact() {
                <span className="text-xs font-bold text-amber-500 uppercase tracking-widest font-mono">{t('headquarters_location')}</span>
               <h2 className="text-2xl font-bold text-white">MADECC Group Cameroon</h2>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Our central corporate offices occupy the prestigious MADECC Tower in the commercial hub of Bonanjo, Douala, housing our project management pods and engineering directorate.
+                Our central corporate headquarters and technical directorate are located in Yaoundé Mbankolo, Cameroon. MADECC Group executes multi-disciplinary civil engineering, infrastructure, residential, and industrial construction everywhere across Cameroon and throughout Africa.
               </p>
             </div>
 
@@ -120,7 +120,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <h4 className="font-bold text-white">{t('registered_address')}</h4>
-                  <p className="text-slate-400 mt-1">MADECC Group Tower, Rue Joss,<br />Bonanjo, Douala, Cameroon</p>
+                  <p className="text-slate-400 mt-1">Yaoundé Mbankolo, Cameroon<br /><span className="text-xs text-amber-400 font-mono">Operating Everywhere in Cameroon &amp; Across Africa</span></p>
                 </div>
               </div>
 
@@ -147,7 +147,7 @@ export default function Contact() {
                 <div>
                   <h4 className="font-bold text-white">{t('digital_inboxes')}</h4>
                   <p className="text-slate-400 mt-1">
-                    General & Tenders: madeccco5@gmail.com<br />
+                    General & Tenders: kreboya603@gmail.com<br />
                     Construction Services: madecccons@gmail.com
                   </p>
                 </div>

@@ -111,11 +111,12 @@ export default function Footer({ setCurrentTab }: FooterProps) {
               {[
                 { label: 'Home Page', id: 'home' },
                 { label: 'Our Services', id: 'services' },
-                { label: 'Request a Quote', id: 'request-a-quote' },
+                { label: 'Tenders & Procurement', id: 'tenders' },
+                { label: 'FAQ / Help Centre', id: 'faq' },
                 { label: 'Projects Portfolio', id: 'projects' },
                 { label: 'Project Budget Calculator', id: 'budget-calculator' },
                 { label: 'Construction Cost Guide', id: 'construction-cost-guide' },
-                { label: 'Schedule Consultation', id: 'schedule-consultation' },
+                { label: 'Request a Quote', id: 'request-a-quote' },
                 { label: 'About MADECC', id: 'about' },
                 { label: 'Contact Office', id: 'contact' },
               ].map((link) => (
@@ -123,6 +124,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
                   <button
                     onClick={() => setCurrentTab(link.id)}
                     className="hover:text-amber-400 transition-colors text-left"
+                    id={`footer-link-${link.id}`}
                   >
                     {link.label}
                   </button>
@@ -137,7 +139,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <span>MADECC Group Tower, Rue Joss,<br />Bonanjo, Douala, Cameroon</span>
+                <span>Yaoundé Mbankolo, Cameroon<br /><span className="text-xs text-amber-400 font-mono">Operating Nationwide in Cameroon &amp; Across Africa</span></span>
               </li>
               <li className="flex flex-col gap-2">
                 <div className="flex items-center gap-3">
@@ -151,7 +153,7 @@ export default function Footer({ setCurrentTab }: FooterProps) {
               <li className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-amber-500 shrink-0" />
-                  <a href="mailto:madeccco5@gmail.com" className="hover:text-amber-400 transition-colors font-mono">madeccco5@gmail.com</a>
+                  <a href="mailto:kreboya603@gmail.com" className="hover:text-amber-400 transition-colors font-mono">kreboya603@gmail.com</a>
                 </div>
                 <div className="flex items-center gap-3 pl-8">
                   <a href="mailto:madecccons@gmail.com" className="hover:text-amber-400 transition-colors font-mono">madecccons@gmail.com</a>

@@ -172,7 +172,7 @@ export const ConstructionCostGuide: React.FC<ConstructionCostGuideProps> = ({
       doc.setFontSize(7);
       doc.setTextColor(148, 163, 184);
       doc.text('DISCLAIMER: Prices shown are indicative market rates for feasibility estimation and do not constitute a binding quotation.', 14, y);
-      doc.text('Contact MADECC Group for formal BOQs: +237 671 063 511 / +237 683 316 486 | madeccco5@gmail.com', 14, y + 4);
+      doc.text('Contact MADECC Group for formal BOQs: +237 671 063 511 / +237 683 316 486 | kreboya603@gmail.com', 14, y + 4);
 
       doc.save(`MADECC-Cameroon-Construction-Cost-Guide-${selectedRegion}-2026.pdf`);
       if (showToast) showToast('Cost guide PDF downloaded successfully.', 'success');

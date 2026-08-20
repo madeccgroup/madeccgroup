@@ -118,8 +118,8 @@ export default function LegalPage({ type, setCurrentTab }: LegalPageProps) {
                 </p>
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-400 space-y-1">
                   <p><strong>Entity:</strong> MADECC Group Compliance & Legal Department</p>
-                  <p><strong>Headquarters:</strong> Rue de la Joie, Akwa, Douala, Republic of Cameroon</p>
-                  <p><strong>Official Email:</strong> <a href="mailto:kreboya603@gmail.com" className="text-amber-400">kreboya603@gmail.com</a> / <a href="mailto:procurement@madeccgroup.com" className="text-amber-400">procurement@madeccgroup.com</a></p>
+                  <p><strong>Headquarters:</strong> Yaoundé Mbankolo, Republic of Cameroon (Operating Nationwide &amp; Pan-Africa)</p>
+                  <p><strong>Official Email:</strong> <a href="mailto:kreboya603@gmail.com" className="text-amber-400">kreboya603@gmail.com</a> / <a href="mailto:madecccons@gmail.com" className="text-amber-400">madecccons@gmail.com</a></p>
                 </div>
               </section>
             </>

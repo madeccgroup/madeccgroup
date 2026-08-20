@@ -25,6 +25,8 @@ import { Services } from './components/Services.tsx';
 import { RequestQuote } from './components/RequestQuote.tsx';
 import { ScheduleConsultation } from './components/ScheduleConsultation.tsx';
 import LegalPage from './components/LegalPage.tsx';
+import FAQ from './components/FAQ.tsx';
+import { Tenders } from './components/Tenders.tsx';
 
 import { ThemeProvider, useTheme } from './lib/ThemeContext.tsx';
 import { LanguageProvider } from './lib/LanguageContext.tsx';
@@ -64,27 +66,27 @@ function AppContent({
     switch (currentTab) {
       case 'home':
         return (
-          <Home
-            setCurrentTab={setCurrentTab}
-            setSelectedProjectId={setSelectedProjectId}
+          <Home 
+            setCurrentTab={setCurrentTab} 
+            setSelectedProjectId={setSelectedProjectId} 
           />
         );
       case 'services':
         return (
-          <Services
+          <Services 
             onNavigateToTab={handleNavigateWithState}
           />
         );
       case 'request-a-quote':
         return (
-          <RequestQuote
+          <RequestQuote 
             onNavigateToTab={handleNavigateWithState}
             preselectedService={preselectedService}
           />
         );
       case 'schedule-consultation':
         return (
-          <ScheduleConsultation
+          <ScheduleConsultation 
             onNavigateToTab={handleNavigateWithState}
           />
         );
@@ -92,9 +94,9 @@ function AppContent({
         return <About />;
       case 'projects':
         return (
-          <Projects
-            selectedProjectId={selectedProjectId}
-            setSelectedProjectId={setSelectedProjectId}
+          <Projects 
+            selectedProjectId={selectedProjectId} 
+            setSelectedProjectId={setSelectedProjectId} 
           />
         );
       case 'blog':
@@ -103,19 +105,19 @@ function AppContent({
         return <Contact />;
       case 'booking':
         return (
-          <ScheduleConsultation
+          <ScheduleConsultation 
             onNavigateToTab={handleNavigateWithState}
           />
         );
       case 'budget-calculator':
         return (
-          <ProjectBudgetCalculator
+          <ProjectBudgetCalculator 
             onNavigateToTab={handleNavigateWithState}
           />
         );
       case 'construction-cost-guide':
         return (
-          <ConstructionCostGuide
+          <ConstructionCostGuide 
             onNavigateToTab={handleNavigateWithState}
           />
         );
@@ -125,10 +127,14 @@ function AppContent({
         return <LegalPage type="privacy" setCurrentTab={setCurrentTab} />;
       case 'safety':
         return <LegalPage type="safety" setCurrentTab={setCurrentTab} />;
+      case 'faq':
+        return <FAQ onNavigateToTab={handleNavigateWithState} />;
+      case 'tenders':
+        return <Tenders onNavigateToTab={handleNavigateWithState} />;
       case 'verify':
         return (
-          <VerifyContract
-            token={verificationToken}
+          <VerifyContract 
+            token={verificationToken} 
             onBackToHome={() => {
               const url = new URL(window.location.href);
               url.searchParams.delete('verify');
@@ -136,23 +142,23 @@ function AppContent({
               window.history.pushState({}, '', url.toString());
               setCurrentTab('home');
               setVerificationToken('');
-            }}
+            }} 
           />
         );
       case 'admin':
         return (
-          <Admin
-            dbUser={dbUser}
-            setDbUser={setDbUser}
-            setCurrentTab={setCurrentTab}
+          <Admin 
+            dbUser={dbUser} 
+            setDbUser={setDbUser} 
+            setCurrentTab={setCurrentTab} 
             setVerificationToken={setVerificationToken}
           />
         );
       default:
         return (
-          <Home
-            setCurrentTab={setCurrentTab}
-            setSelectedProjectId={setSelectedProjectId}
+          <Home 
+            setCurrentTab={setCurrentTab} 
+            setSelectedProjectId={setSelectedProjectId} 
           />
         );
     }
@@ -165,16 +171,16 @@ function AppContent({
         : 'bg-[#0A0A0B] text-slate-200 selection:bg-amber-500 selection:text-slate-950'
     }`}>
       <SEOHandler currentTab={currentTab} selectedProjectId={selectedProjectId} />
-
+      
       {/* Header Navigation Section */}
-      <Navbar
-        currentTab={currentTab}
+      <Navbar 
+        currentTab={currentTab} 
         setCurrentTab={(tab) => {
           setCurrentTab(tab);
           if (tab !== 'projects') setSelectedProjectId(null); // Reset selection
-        }}
-        dbUser={dbUser}
-        setDbUser={setDbUser}
+        }} 
+        dbUser={dbUser} 
+        setDbUser={setDbUser} 
         loadingAuth={loadingAuth}
       />
 
@@ -191,11 +197,11 @@ function AppContent({
       </main>
 
       {/* Footer Navigation section */}
-      <Footer
+      <Footer 
         setCurrentTab={(tab) => {
           setCurrentTab(tab);
           if (tab !== 'projects') setSelectedProjectId(null); // Reset selection
-        }}
+        }} 
       />
 
       {/* Floating Interactive Live Hub widget */}
@@ -219,6 +225,8 @@ export default function App() {
     if (path.includes('terms')) return 'terms';
     if (path.includes('privacy')) return 'privacy';
     if (path.includes('safety') || path.includes('qhse')) return 'safety';
+    if (path.includes('faq') || path.includes('help')) return 'faq';
+    if (path.includes('tender') || path.includes('procurement')) return 'tenders';
     if (path.includes('about')) return 'about';
     if (path.includes('projects')) return 'projects';
     if (path.includes('blog')) return 'blog';

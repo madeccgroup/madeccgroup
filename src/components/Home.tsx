@@ -803,8 +803,8 @@ export default function Home({ setCurrentTab, setSelectedProjectId }: HomeProps)
           <div className="space-y-4" id="faq-accordions-group">
             {[
               {
-                q: "What regions in Cameroon does MADECC Group cover for construction projects?",
-                a: "While our administrative headquarters and logistics hub are located in Douala (Rue Joss, Bonanjo), MADECC Group executes complex civil engineering, road networks, residential villas, and industrial structures across the entire national territory of Cameroon. We have active sites and personnel deployed in Douala, Yaoundé, Kribi, Limbe, Bafoussam, and Garoua."
+                q: "Where is MADECC Group located and what geographical regions are covered?",
+                a: "MADECC Group is headquartered in Yaoundé Mbankolo, Cameroon. We operate everywhere across the entire national territory of Cameroon (all 10 regions: Centre, Littoral, West, South-West, North-West, South, East, Adamawa, North, Far North) and across Africa. We deploy dedicated project managers, mobile site units, and specialized equipment to urban and remote project locations across Cameroon and Pan-Africa."
               },
               {
                 q: "How are construction estimates, structural bills, and budgets formulated?",

@@ -121,7 +121,7 @@ export default function CareerStudio({ mode, showToast }: CareerStudioProps) {
       professionalTitle: 'Senior Civil Engineer & Project Director',
       email: 'jp.kamga@madecc.com',
       phone: '+237 677 890 123',
-      address: 'Rue Joss, Bonanjo, Douala, Cameroon',
+      address: 'Yaoundé Mbankolo, Cameroon',
       website: 'www.madecc.com',
       niu: 'M12090001423X',
       summary: 'Dynamic and results-driven Senior Civil Engineer with over 12 years of hands-on experience in public infrastructure, geotechnical engineering, and eco-friendly urban construction. Proven expertise in directing multi-million dollar architectural tenders, supervising site operations in Central Africa, and ensuring strict structural compliance.',
@@ -254,12 +254,12 @@ export default function CareerStudio({ mode, showToast }: CareerStudioProps) {
       senderTitle: 'Senior Civil Engineer',
       senderEmail: 'jp.kamga@madecc.com',
       senderPhone: '+237 677 890 123',
-      senderAddress: 'Rue Joss, Bonanjo, Douala, Cameroon',
+      senderAddress: 'Yaoundé Mbankolo, Cameroon',
       senderNiu: 'M12090001423X',
       recipientName: 'The Managing Director',
       recipientTitle: 'Human Resources & Engineering Board',
       recipientCompany: 'MADECC Group SARL',
-      recipientAddress: 'Bonanjo, Douala, Cameroon',
+      recipientAddress: 'Yaoundé Mbankolo, Cameroon',
       date: new Date().toLocaleDateString('en-GB'),
       subject: 'APPLICATION FOR THE POSITION OF SENIOR PROJECTS INFRASTRUCTURE DIRECTOR',
       salutation: 'Dear Board of Directors,',
@@ -2348,7 +2348,7 @@ export default function CareerStudio({ mode, showToast }: CareerStudioProps) {
                           value={cvForm.address || ''}
                           onChange={(e) => setCvForm({ ...cvForm, address: e.target.value })}
                           className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded-lg p-2.5 text-white outline-none"
-                          placeholder="Rue Joss, Bonanjo, Douala, Cameroon"
+                          placeholder="Yaoundé Mbankolo, Cameroon"
                         />
                       </div>
 

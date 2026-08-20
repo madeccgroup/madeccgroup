@@ -77,7 +77,7 @@ export default function FloatingContactHub() {
       console.error('Chat error:', err);
       const botMsg: ChatMessage = {
         sender: 'bot',
-        text: 'I apologize, I am experiencing a temporary connection issue. Please feel free to call our direct lines directly at +237 683 316 486 or email us at madeccco5@gmail.com.',
+        text: 'I apologize, I am experiencing a temporary connection issue. Please feel free to call our direct lines directly at +237 683 316 486 or email us at kreboya603@gmail.com.',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
@@ -95,7 +95,7 @@ export default function FloatingContactHub() {
   ];
 
   const emails = [
-    { label: 'Tenders & Estimates', email: 'madeccco5@gmail.com' },
+    { label: 'Tenders & Estimates', email: 'kreboya603@gmail.com' },
     { label: 'General Construction Services', email: 'madecccons@gmail.com' }
   ];
 

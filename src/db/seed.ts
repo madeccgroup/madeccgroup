@@ -1101,7 +1101,7 @@ export async function seedDatabase() {
         // Update user contacts
         await db.execute(sql`
           UPDATE users
-          SET email = 'madeccco5@gmail.com'
+          SET email = 'kreboya603@gmail.com'
           WHERE email = 'info@madecc.com';
         `);
       } catch (err) {
@@ -1267,7 +1267,7 @@ export async function seedDatabase() {
     // Create an author user for blog posts
     const seedAuthor = await db.insert(users).values({
       uid: 'seed-author-uid',
-      email: 'madeccco5@gmail.com',
+      email: 'kreboya603@gmail.com',
       name: 'Arthur Sterling',
       role: 'staff',
     }).returning();
