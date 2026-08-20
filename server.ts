@@ -5,6 +5,7 @@ import multer from 'multer';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { setupSocialOAuthRoutes, executePublishBroadcast, encryptToken, decryptToken, validateWebhookUrl, getPlatformCapabilities } from './src/server/socialOAuth.js';
+import { executeCentralBroadcast } from './src/server/social/publisher.js';
 import { db } from './src/db/index.ts';
 import {
   users,
@@ -13605,7 +13606,7 @@ Return JSON with exact structure:
       }
 
       // 3. Delegate to Real Multi-Platform Broadcast Engine
-      const broadcastResult = await executePublishBroadcast({
+      const broadcastResult = await executeCentralBroadcast({
         postId: !isNaN(numId) ? numId : postId,
         campaignName: postRecord?.campaignName || req.body.campaignName || 'MADECC Marketing Post',
         title: req.body.title || postRecord?.title || 'MADECC Group Announcement',
